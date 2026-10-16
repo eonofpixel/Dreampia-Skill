@@ -1,6 +1,6 @@
 {
   "name": "dreampia-skill",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "contextFileName": "ai-dev-execution/SKILL.md",
   "mcpServers": {
     "dreampia-skill": {

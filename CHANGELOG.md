@@ -1,3 +1,7 @@
+# 0.6.2
+
+- 접두사 없는 표준 운영 슬래시·CLI 명령어 체계(/version, /status, /doctor, /config, /update, /uninstall, /release, /clean) 및 29종 MCP 서버 도구 일원화
+
 # 0.6.1
 
 - 비관리 `.dreampia/` 사용자 데이터 폴더 충돌 감지 및 `.dreampia-skill/` 상태 디렉터리 자동 격리.

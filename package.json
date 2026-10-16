@@ -1,6 +1,6 @@
 {
   "name": "@dreampia/dev-skill",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "private": false,
   "description": "Dreampia AI Dev Execution Skill and Cross-Platform Autonomous Engineering Harness",
   "license": "Apache-2.0",
@@ -29,6 +29,7 @@
     ".cursor-plugin/plugin.json",
     "plugin.json",
     "gemini-extension.json",
+    "commands/*.md",
     "README.md",
     "README.ko.md",
     "README.ja.md",
@@ -151,7 +152,7 @@
     "ai-dev-execution/references/role-handoff.md",
     "ai-dev-execution/references/team-contract.md",
     "ai-dev-execution/references/workflow.md",
-    "docs/REVIEW_FIX_0.6.1.ko.md"
+    "docs/REVIEW_FIX_0.6.2.ko.md"
   ],
   "dependencies": {}
 }

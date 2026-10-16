@@ -15,11 +15,12 @@ from collections import deque
 from dataclasses import dataclass
 import datetime
 import hashlib
+import json
 import os
 from pathlib import Path, PurePosixPath
 import re
 
-SDD_LEDGER_VERSION = "0.6.1"
+SDD_LEDGER_VERSION = "0.6.2"
 DEFAULT_SDD_LEDGER_REL = "evidence/sdd-ledger.json"
 
 _IGNORED_DIRS: frozenset[str] = frozenset(
@@ -79,6 +80,37 @@ def _sha256_bytes(data: bytes) -> str:
 def _sha256_text(text: str) -> str:
     normalized = " ".join(text.strip().split())
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
+def resolve_sdd_id_patterns(root: Path | None = None) -> dict[str, str]:
+    """프로젝트 설정 또는 기본값에서 요구사항(req_pattern), 작업(task_pattern), 테스트(test_pattern) ID 정규식을 반환한다."""
+    defaults = {
+        "req_pattern": r"\b(PRD-R\d{3,4}|REQ-\d{3,4}|SPEC-\d{3,5})\b",
+        "task_pattern": r"\b(TASK-\d{3,4}|T\d{3,5})\b",
+        "test_pattern": r"\b(TEST-\d{3,4})\b",
+    }
+    if root is None:
+        return defaults
+    for rel in (
+        ".dreampia-skill/memory/project-rules.json",
+        ".dreampia/memory/project-rules.json",
+        ".dreampia-skill/project.json",
+        ".dreampia/project.json",
+    ):
+        cand = root / rel
+        if cand.is_file() and not cand.is_symlink():
+            try:
+                data = json.loads(cand.read_text(encoding="utf-8"))
+                if isinstance(data, dict) and isinstance(data.get("sdd"), dict):
+                    sdd_cfg = data["sdd"]
+                    for k in ("req_pattern", "task_pattern", "test_pattern"):
+                        val = sdd_cfg.get(k)
+                        if isinstance(val, str) and val.strip():
+                            defaults[k] = val.strip()
+                    return defaults
+            except (OSError, ValueError):
+                pass
+    return defaults
 
 
 def _classify_id(item_id: str) -> str:

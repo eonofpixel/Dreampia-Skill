@@ -8,7 +8,7 @@
 
 <br/>
 
-[![Version](https://img.shields.io/badge/version-0.6.1-0ea5e9?style=for-the-badge)](package.json)
+[![Version](https://img.shields.io/badge/version-0.6.2-0ea5e9?style=for-the-badge)](package.json)
 [![License](https://img.shields.io/badge/License-Apache_2.0-8b5cf6?style=for-the-badge)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-10b981?style=for-the-badge&logo=python&logoColor=white)](pyproject.toml)
 [![MCP Tools](https://img.shields.io/badge/MCP_Tools-23_Ready-f59e0b?style=for-the-badge)](harness/mcp_server.py)
@@ -190,12 +190,35 @@ python -m harness.team_cli next-actions --project . --goal "결제 버튼 만들
 
 ---
 
-## 🔌 23종 네이티브 MCP 서버 도구 (`harness/mcp_server.py`)
+## ⚡ 표준 운영 슬래시 & CLI 명령어 (접두사 없는 1:1 대응)
 
-`setup --apply` 실행 시 IDE 및 에이전트에서 즉시 호출할 수 있는 **23개 표준 MCP 도구**가 등록됩니다:
+별도의 접두사 없이 채팅창 슬래시 명령어(`/명령어`)와 터미널 CLI(`npx dreampia <명령어>` 또는 `python -m harness.team_cli <명령어>`)에서 동일한 이름으로 실행할 수 있습니다:
+
+| 슬래시 명령어 (`commands/*.md`) | CLI 명령어 (`npx dreampia ...`) | MCP 도구 | 핵심 동작 |
+| :--- | :--- | :--- | :--- |
+| `/version` | `version --check-remote` | - | 로컬 버전, Git 커밋/브랜치 및 원격(`origin/main`) 최신 일치 여부 조회 |
+| `/status` | `status --project .` | `dreampia_status` | 상태 폴더(`.dreampia` 또는 `.dreampia-skill`), UI 규칙 강제 여부, SDD 정규식, 학습 규칙 수, 글로벌 5개 호스트 동기화 대시보드 |
+| `/doctor` | `doctor --project . --global --check-remote` | `dreampia_doctor` | Python 런타임, 번들 SHA-256 매니페스트, 비관리 `.dreampia/` 데이터 충돌, 글로벌 5개 호스트 및 MCP 등록 통합 진단 |
+| `/config` | `config --project . --ui-rules off --apply` | `dreampia_config` | 프로젝트별 UI 규칙 강제 여부(`on`/`off`), 상태 폴더, SDD 작업 ID 정규식(`--task-pattern`) 조회 및 변경 |
+| `/update` | `update --global --apply` (`self-update --apply`) | `dreampia_self_update` | 저장소 `git pull --ff-only`, 번들 매니페스트 갱신 및 글로벌 5개 호스트 스킬 재배포 원샷 실행 |
+| `/uninstall` | `uninstall --global --apply` (`uninstall-global --apply`) | - | 글로벌 5개 호스트(백업 `.pre-dreampia.bak` 자동 복원) 또는 프로젝트 설치본 안전 제거 |
+| `/release` | `release --to <X.Y.Z> --apply` (`bump-version`) | `dreampia_release` | 저장소 내 모든 버전 상수·문서·번들 매니페스트(`bundle-manifest.json`)·`CHANGELOG.md` 일괄 버전 릴리즈 |
+| `/clean` | `clean --project . --apply` | `dreampia_clean` | 임시 병렬 스쿼드 워크트리, 중단된 트랜잭션 저널 및 임시 증거 캐시 안전 정리 |
+
+---
+
+## 🔌 29종 네이티브 MCP 서버 도구 (`harness/mcp_server.py`)
+
+`setup --apply` 실행 시 IDE 및 에이전트에서 즉시 호출할 수 있는 **29개 표준 MCP 도구**가 등록됩니다:
 
 | 분류 | MCP 도구 이름 | 설명 |
 | :--- | :--- | :--- |
+| **표준 운영 & 라이프사이클** | `dreampia_status` | 프로젝트 상태 폴더, UI 규칙 강제 여부, SDD 정규식, 학습 규칙, 글로벌 5개 호스트 동기화 대시보드 조회 |
+| | `dreampia_doctor` | Python 런타임, 번들 SHA-256 매니페스트, 비관리 `.dreampia/` 충돌, 글로벌 호스트 및 원격 버전 통합 진단 |
+| | `dreampia_config` | 프로젝트별 UI 규칙 강제 여부(`on`/`off`), 상태 폴더(`.dreampia-skill`), SDD ID 정규식 조회 및 설정 |
+| | `dreampia_self_update` | 저장소 `git pull` 최신화, 번들 매니페스트 갱신 및 5개 글로벌 호스트 스킬 폴더 일괄 재동기화 |
+| | `dreampia_clean` | 병렬 스쿼드 임시 워크트리, 중단된 트랜잭션 저널 및 임시 증거 캐시 안전 정리 |
+| | `dreampia_release` | 저장소 내 모든 버전 상수·문서·번들 매니페스트·`CHANGELOG.md` 일괄 시맨틱 버전 릴리즈 |
 | **프롬프트 고도화 & 라우팅** | `dreampia_expand_prompt` | 짧은 입력을 국문 엔지니어링 프롬프트, 제약조건(자가 학습 규칙 포함), 엣지케이스, 소크라테스식 역질문 3선 및 다음 추천 작업(`echo_markdown_ko`)으로 확장 |
 | | `dreampia_next_actions` | 현재 프로젝트 상태(Git, SDD 명세/원장, 클린룸, 코드 감사, 학습 규칙)와 목표를 분석해 우선순위별 다음 추천 작업(1~3순위), 단축어 프롬프트, CLI 명령어 안내 |
 | | `dreampia_interview_compile` | 목표(`goal`)와 사전 인터뷰 답변(`answers`)을 결합해 `PRD-R*`, `TASK-*`, `TEST-*` 명세서와 SDD 원장을 자동 생성 |

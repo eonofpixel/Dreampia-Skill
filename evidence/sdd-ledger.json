@@ -249,12 +249,15 @@
   ],
   "delta_modified_ids": [],
   "evidence_files": {
-    "evidence/autopilot-verdict.json": "c553e76ab48eb4c4f3d8ded182025dc32e4db14c54b943da8e87a87a88cb632e",
+    "evidence/autopilot-verdict.json": "e1513002e1bf5f2da6cd9f933e947a2b109006741357729001cff71f9752933a",
     "evidence/blast-radius-report.json": "48cea6b91cd8b1df94ffb33d1d96ce3200783df1fb13643d1e8eca4cccdf76b5",
-    "evidence/context-pack.json": "575d0cb79497eaa6267f56456d9bbdc9ceddd80a6bb2417a02a1e85a812a5468",
+    "evidence/code-audit.json": "687093c8283b68d8750724f13dfca63fb3afc1f519a993d095dc00f8859b436e",
+    "evidence/context-pack.json": "0eaa36e65f1d84c531ccf31064bb68b33e20e987a5bcf145200b6c3b43675dee",
+    "evidence/metric-climb-last.log": "161beb8fe3a48f56f307dbb6f21ddcadef798fe143d1b34364d3f2dd758f15b1",
+    "evidence/metric-climb-ledger.json": "671e558ac02d89b2569b72f2c7a384bd42f7052df3564c2610f8315fc726bfc4",
     "evidence/verification.json": "40fe6dc2077dfb19a1439631f1627a9acd6cbcb98bf2504636178fa34ffd9566"
   },
-  "generated_at": "2026-10-16T16:15:25.448270+00:00",
+  "generated_at": "2026-10-16T17:52:15.382111+00:00",
   "requirements": [
     {
       "id": "PRD-R001",
@@ -631,7 +634,7 @@
       "verdict": "PASS"
     }
   ],
-  "schema_version": "0.6.1",
+  "schema_version": "0.6.2",
   "squad_owners": {
     "evidence_verifier": "Tank (verifier)",
     "spec_author": "Oracle (planner) & Architect (architect)",
@@ -640,13 +643,29 @@
   "summary": {
     "contract_count": 7,
     "delta_modified_count": 0,
-    "evidence_file_count": 4,
+    "evidence_file_count": 7,
     "requirement_count": 6,
-    "task_count": 3,
+    "task_count": 4,
     "test_count": 10,
     "test_file_count": 26
   },
   "tasks": [
+    {
+      "id": "T1207",
+      "kind": "task",
+      "linked_ids": [],
+      "linked_tests": [
+        "FILE:harness/tests/test_autopilot_engine.py"
+      ],
+      "source_path": "ai-dev-execution/references/cleanroom-governance.md",
+      "spec_sha256": "58af3da8115b7dc4274fd7787de3b787df948a8cdb10b5a9d3bdb8b2499ddbc5",
+      "statement": "1. **SDD+TDD 계층 추적 (`sdd-ledger` / `sdd-check`)**: `PRD-R* / REQ-* / SPEC-* → API-* / UX-S* → TASK-* / T* → TEST-*` 4단계 계층 BFS 추적(테스트 파일 내 `T1207`/`TASK-*` 직접 인용 포함), 고아 요구사항 차단, 명세 해시(`spec_sha256`) 기반 Spec Drift(`STALE`) 감지.",
+      "status": "approved",
+      "test_files": [
+        "harness/tests/test_autopilot_engine.py"
+      ],
+      "verdict": "NOT_RUN"
+    },
     {
       "id": "TASK-001",
       "kind": "task",
@@ -691,6 +710,10 @@
       "spec_sha256": "72a74d361ddaff043f9ab69d7c69347818856cb85b1159baf50584f5593e0e46",
       "statement": "| Red | TASK-001; TEST-001, TEST-007, TEST-010의 관련 사례 | 구현 전 요구 행동 때문에 실패 | 없음 | NOT_RUN. 테스트·앱 미구현 |",
       "status": "draft",
+      "test_files": [
+        "harness/tests/test_autopilot_engine.py",
+        "harness/tests/test_sdd_engine.py"
+      ],
       "verdict": "PASS"
     },
     {
@@ -739,6 +762,7 @@
       "spec_sha256": "3c9807c6d49f2a7a39dc560cce2781342f6fc2c770c740ac379bc17dec46460e",
       "statement": "| Red | TASK-002; TEST-002~TEST-009 및 TEST-001 관련 사례 | 예약·경쟁·재시도·접근 행동의 미구현 실패 | 없음 | NOT_RUN. 테스트·앱 미구현 |",
       "status": "draft",
+      "test_files": [],
       "verdict": "PASS"
     },
     {
@@ -778,6 +802,7 @@
       "spec_sha256": "4e2f952cf49a4dff75dde1443b7305e1d640217fdea27f630414e66233044318",
       "statement": "| TASK-003 / deferred | PRD-R002~003, API-001 | TASK-002 | 미래 tests/reservation-integration.*, evidence/runtime-* (미생성) | 실제 저장소 재조회·경쟁·재시도 확인 및 자기 리뷰. TEST-008~010 PASS로 완료. backend 접근/도구 없으면 해당 검사 NOT_RUN. |",
       "status": "deferred",
+      "test_files": [],
       "verdict": "NOT_RUN"
     }
   ],

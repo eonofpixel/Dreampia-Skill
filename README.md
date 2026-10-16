@@ -8,7 +8,7 @@
 
 <br/>
 
-[![Version](https://img.shields.io/badge/version-0.6.1-0ea5e9?style=for-the-badge)](package.json)
+[![Version](https://img.shields.io/badge/version-0.6.2-0ea5e9?style=for-the-badge)](package.json)
 [![License](https://img.shields.io/badge/License-Apache_2.0-8b5cf6?style=for-the-badge)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-10b981?style=for-the-badge&logo=python&logoColor=white)](pyproject.toml)
 [![MCP Tools](https://img.shields.io/badge/MCP_Tools-23_Ready-f59e0b?style=for-the-badge)](harness/mcp_server.py)
@@ -150,12 +150,35 @@ python -m harness.team_cli next-actions --project . --goal "Build checkout butto
 
 ---
 
-## 🔌 23 Native MCP Server Tools (`harness/mcp_server.py`)
+## ⚡ Standard Slash & CLI Operational Commands (Prefix-Free 1:1 Mapping)
 
-When installed via `setup --apply`, `harness/mcp_server.py` exposes **23 tools** directly to your MCP-compatible IDE or agent:
+All operational lifecycle commands use clean, prefix-free names in both IDE slash commands (`/command` via `commands/*.md`) and terminal CLI (`npx dreampia <command>` or `python -m harness.team_cli <command>`):
+
+| Slash Command (`commands/*.md`) | CLI Command (`npx dreampia ...`) | MCP Tool | Description |
+| :--- | :--- | :--- | :--- |
+| `/version` | `version --check-remote` | - | Show local version, Git commit/branch, and remote `origin/main` status |
+| `/status` | `status --project .` | `dreampia_status` | Unified status dashboard: skill state dir (`.dreampia` or `.dreampia-skill`), UI rule enforcement, SDD regexes, learned rules, and 5-host global sync |
+| `/doctor` | `doctor --project . --global --check-remote` | `dreampia_doctor` | Diagnose Python runtime, SHA-256 bundle manifest, unmanaged `.dreampia/` data collision, and 5-host global sync |
+| `/config` | `config --project . --ui-rules off --apply` | `dreampia_config` | Inspect or update per-project settings (`--ui-rules on\|off`, `--state-dir`, `--task-pattern`) |
+| `/update` | `update --global --apply` (`self-update --apply`) | `dreampia_self_update` | Pull latest `origin/main`, refresh bundle manifest, and re-sync all 5 global host skill directories |
+| `/uninstall` | `uninstall --global --apply` (`uninstall-global --apply`) | - | Safely remove global 5-host skills (restoring `.pre-dreampia.bak` backups) or project-scoped managed files |
+| `/release` | `release --to <X.Y.Z> --apply` (`bump-version`) | `dreampia_release` | Atomically bump version constants, docs, `bundle-manifest.json`, and `CHANGELOG.md` across the repository |
+| `/clean` | `clean --project . --apply` | `dreampia_clean` | Safely clean up temporary parallel squad worktrees, interrupted transaction journals, and optional evidence caches |
+
+---
+
+## 🔌 29 Native MCP Server Tools (`harness/mcp_server.py`)
+
+When installed via `setup --apply`, `harness/mcp_server.py` exposes **29 tools** directly to your MCP-compatible IDE or agent:
 
 | Category | MCP Tool Name | Description |
 | :--- | :--- | :--- |
+| **Operations & Lifecycle** | `dreampia_status` | Unified project & 5-host global status dashboard (`.dreampia-skill` isolation, UI rules, SDD patterns, learned rules) |
+| | `dreampia_doctor` | End-to-end health, SHA-256 manifest, data-dir collision, and 5-host global synchronization diagnostics |
+| | `dreampia_config` | Inspect or update per-project UI rule enforcement (`on`/`off`), state dir, and custom SDD ID regexes |
+| | `dreampia_self_update` | Pull latest git changes, rebuild bundle manifest, and re-synchronize all 5 global host skill directories |
+| | `dreampia_clean` | Safely clean up parallel squad worktrees, interrupted transaction journals, and optional evidence caches |
+| | `dreampia_release` | Atomically bump version constants, docs, `bundle-manifest.json`, and `CHANGELOG.md` to a target semver |
 | **Prompt Expansion & Routing** | `dreampia_expand_prompt` | Expand short goals into Korean engineering prompts, constraints (including learned rules), edge cases, 3 Socratic interview questions, and recommended next actions (`echo_markdown_ko`) |
 | | `dreampia_next_actions` | Inspect project state (Git, SDD specs/ledger, cleanroom, audit verdict, learned rules) and return 1st–3rd priority next actions with ready-to-copy prompts and CLI commands |
 | | `dreampia_interview_compile` | Compile a goal + interview answers directly into `PRD-R*`, `TASK-*`, `TEST-*` specs and refresh `evidence/sdd-ledger.json` |

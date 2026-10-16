@@ -1,4 +1,4 @@
-# 로컬 개발 하네스 (v0.6.1)
+# 로컬 개발 하네스 (v0.6.2)
 
 Python 3.9 이상 표준 라이브러리만으로 **Windows 10/11 (Win32 Job Objects / `msvcrt`), macOS, Linux** 로컬 프로세스에서 실행한다. 실제 확인 조합은 [SUPPORT.ko.md](../SUPPORT.ko.md)와 검증 보고를 따른다. 별도 설치할 외부 pip 패키지는 없다. 실행 폴더는 사용자가 신뢰하고 수정 권한을 허용한 프로젝트여야 한다. 공급자 연결은 기본 비활성이고 선택 어댑터만 명시적으로 허용할 수 있다.
 
@@ -58,16 +58,16 @@ SIGKILL/전원 중단은 마지막 원자적 체크포인트에서 재개한다.
 ## 외부 코딩 CLI
 `adapter.kind="command"`와 `argv` 배열로 연결한다. shell 문자열은 실행하지 않는다. stdin JSON을 읽어 현재 작업을 수행하는 foreground wrapper를 직접 제공한다. 계약은 [아키텍처](../ARCHITECTURE.ko.md)에 있다. 외부 명령을 넣으면 로컬 호스트 권한으로 실행되며 비용·파일·네트워크 부작용이 생길 수 있다. 사용자가 승인한 CLI·작업·계정·예산만 연결한다. 이 패키지는 어떠한 실제 AI CLI도 호출하거나 인증 우회 옵션을 기본 설정하지 않았다.
 
-## 0.6.1 설치·업데이트와 복구
+## 0.6.2 설치·업데이트와 복구
 
-현재 제품 버전은 `0.6.1`이다. Windows 10/11, macOS, Linux 및 Python 3.9 이상을 지원하며, NFS 등 공유 네트워크 파일 시스템은 잠금 보장 범위 밖이다.
+현재 제품 버전은 `0.6.2`이다. Windows 10/11, macOS, Linux 및 Python 3.9 이상을 지원하며, NFS 등 공유 네트워크 파일 시스템은 잠금 보장 범위 밖이다.
 
 소스는 그대로 `python3 harness/cli.py ...` 또는 `python3 -m harness ...`로 실행한다. 무의존 단일 실행 파일(`.pyz`) 산출물은 다음 명령으로 명시한 새 경로에 만든다.
 
 ```sh
-python3 harness/build.py ./local-install/harness-0.6.1.pyz
-python3 ./local-install/harness-0.6.1.pyz --version
-python3 ./local-install/harness-0.6.1.pyz status /absolute/project
+python3 harness/build.py ./local-install/harness-0.6.2.pyz
+python3 ./local-install/harness-0.6.2.pyz --version
+python3 ./local-install/harness-0.6.2.pyz status /absolute/project
 python3 harness/local_ci.py
 ```
 

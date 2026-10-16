@@ -19,7 +19,7 @@ try:
 except ImportError:
     import autopilot_engine, process as _proc, reconstruct_engine, route_planner, sdd_engine, skill_bundle, universal_router, visual_acceptance, write_boundary
 
-VERSION='0.6.1'
+VERSION='0.6.2'
 PACKAGE=pathlib.Path(__file__).resolve().parents[1]
 META='.dreampia-install'
 SKILL='.agents/skills/ai-dev-execution/'
@@ -784,13 +784,22 @@ def package_client(root,out='client-package.zip') -> dict[str, object]:
     data=buffer.getvalue();write_bytes(root,target,data)
     return {'action':'package-client','output':target,'included':sorted(selected),'excluded_internal':excluded,'sha256':sha(data)}
 
-def doctor(root) -> dict[str, object]:
+def doctor(
+    root: pathlib.Path,
+    *,
+    include_global: bool = False,
+    check_remote: bool = False,
+    home_dir: pathlib.Path | None = None,
+) -> dict[str, object]:
     current=load_manifest(root);pending=journal(root,'transaction.json') is not None
     bad=conflicts(root,current);configs={}
     for name,check in [('.dreampia/team.json',validate_policy),('.dreampia/project.json',validate_project)]:
         raw=read_bytes(root,name)
         if raw is not None:check(loads(raw));configs[name]='VALID'
-    bundle={'status':'LEGACY_UNDECLARED'}
+    bundle: dict[str, object]={'status':'LEGACY_UNDECLARED'}
+    state_dir = route_planner.resolve_skill_state_dir(root)
+    unmanaged_collision = route_planner.has_unmanaged_dreampia_data_dir(root)
+    ui_enforced = route_planner.is_ui_rule_enforced(root)
     if current is None and pathlib.Path(root).resolve()==PACKAGE.resolve():
         for name,origin,check in [('team/policy.json','team/policy.json',validate_policy),('team/project.json','team/project.json',validate_project)]:
             raw=read_bytes(PACKAGE,origin)
@@ -800,10 +809,28 @@ def doctor(root) -> dict[str, object]:
             bundle={k:info[k] for k in ('name','version','source','manifest_sha256','missing_optional')};bundle['status']='SELF_HOSTED_VALID'
         except (ValueError,UnicodeError):
             bundle={'status':'INVALID'};bad.append('ai-dev-execution/'+skill_bundle.NAME)
-        return {'python':'.'.join(map(str,sys.version_info[:3])),'python_supported':sys.version_info>=(3,9),'platform':sys.platform,
-                'installed':True,'self_hosted':True,'package_version':VERSION,
-                'conflicts':bad,'unfinished_transaction':pending,'configs':configs,'provider_calls':0,'skill_bundle':bundle,
-                'healthy':not bad and not pending and sys.version_info>=(3,9)}
+        res: dict[str, object] = {
+            'python':'.'.join(map(str,sys.version_info[:3])),
+            'python_supported':sys.version_info>=(3,9),
+            'platform':sys.platform,
+            'installed':True,
+            'self_hosted':True,
+            'package_version':VERSION,
+            'skill_state_dir':state_dir,
+            'unmanaged_data_collision':unmanaged_collision,
+            'ui_rules_enforced':ui_enforced,
+            'conflicts':bad,
+            'unfinished_transaction':pending,
+            'configs':configs,
+            'provider_calls':0,
+            'skill_bundle':bundle,
+            'healthy':not bad and not pending and sys.version_info>=(3,9),
+        }
+        if include_global:
+            res['global_health'] = check_global_health(home_dir=home_dir)
+        if check_remote:
+            res['version_info'] = get_version_info(check_remote=True)
+        return res
     if current and SKILL+skill_bundle.NAME in current['files']:
         bundle={'status':'UNCHECKED_CONFLICT'}
         if not bad:
@@ -811,10 +838,27 @@ def doctor(root) -> dict[str, object]:
                 info=skill_bundle.validate(skill_bundle.read(pathlib.Path(root)/SKILL),current['package_version'])
                 bundle={k:info[k] for k in ('name','version','source','manifest_sha256','missing_optional')};bundle['status']='VALID'
             except (ValueError,UnicodeError):bundle={'status':'INVALID'};bad.append(SKILL+skill_bundle.NAME)
-    return {'python':'.'.join(map(str,sys.version_info[:3])),'python_supported':sys.version_info>=(3,9),'platform':sys.platform,
-            'installed':bool(current and current['files']),'package_version':current['package_version'] if current else None,
-            'conflicts':bad,'unfinished_transaction':pending,'configs':configs,'provider_calls':0,'skill_bundle':bundle,
-            'healthy':bool(current and current['files']) and not bad and not pending and sys.version_info>=(3,9)}
+    res = {
+        'python':'.'.join(map(str,sys.version_info[:3])),
+        'python_supported':sys.version_info>=(3,9),
+        'platform':sys.platform,
+        'installed':bool(current and current['files']),
+        'package_version':current['package_version'] if current else None,
+        'skill_state_dir':state_dir,
+        'unmanaged_data_collision':unmanaged_collision,
+        'ui_rules_enforced':ui_enforced,
+        'conflicts':bad,
+        'unfinished_transaction':pending,
+        'configs':configs,
+        'provider_calls':0,
+        'skill_bundle':bundle,
+        'healthy':bool(current and current['files']) and not bad and not pending and sys.version_info>=(3,9),
+    }
+    if include_global:
+        res['global_health'] = check_global_health(home_dir=home_dir)
+    if check_remote:
+        res['version_info'] = get_version_info(check_remote=True)
+    return res
 
 
 def route_plan_check(root: pathlib.Path, goal: str) -> dict[str, object]:
@@ -1285,6 +1329,451 @@ def uninstall_global(
     }
 
 
+def get_version_info(check_remote: bool = False) -> dict[str, object]:
+    """로컬 설치 버전, Git 커밋/브랜치 및 선택적 원격(origin/main) 최신 상태를 조회한다."""
+    import subprocess
+    commit_sha: str | None = None
+    branch_name: str | None = None
+    remote_commit: str | None = None
+    up_to_date: bool | None = None
+    try:
+        r_sha = subprocess.run(
+            ['git', 'rev-parse', '--short', 'HEAD'],
+            cwd=str(PACKAGE),
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+        if r_sha.returncode == 0:
+            commit_sha = r_sha.stdout.strip()
+        r_br = subprocess.run(
+            ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+            cwd=str(PACKAGE),
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+        if r_br.returncode == 0:
+            branch_name = r_br.stdout.strip()
+        if check_remote:
+            subprocess.run(
+                ['git', 'fetch', '--quiet', 'origin', 'main'],
+                cwd=str(PACKAGE),
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+            )
+            r_rem = subprocess.run(
+                ['git', 'rev-parse', '--short', 'origin/main'],
+                cwd=str(PACKAGE),
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=False,
+            )
+            if r_rem.returncode == 0:
+                remote_commit = r_rem.stdout.strip()
+                if commit_sha and remote_commit:
+                    up_to_date = (commit_sha == remote_commit)
+    except OSError:
+        pass
+    live_ver = (PACKAGE / 'VERSION').read_text(encoding='utf-8').strip() if (PACKAGE / 'VERSION').is_file() else VERSION
+    return {
+        'action': 'version',
+        'status': 'PASS',
+        'version': live_ver,
+        'commit': commit_sha,
+        'branch': branch_name,
+        'remote_commit': remote_commit,
+        'up_to_date': up_to_date,
+        'python': '.'.join(map(str, sys.version_info[:3])),
+        'platform': sys.platform,
+        'message_ko': (
+            f'Dreampia-Skill v{live_ver} (커밋 {commit_sha or "unknown"}, 브랜치 {branch_name or "unknown"}) 실행 중입니다.'
+        ),
+    }
+
+
+def check_global_health(home_dir: pathlib.Path | None = None) -> dict[str, object]:
+    """5개 글로벌 에이전트 호스트 스킬 폴더 및 MCP 서버 등록 상태를 점검한다."""
+    home = (home_dir or pathlib.Path.home()).resolve()
+    live_ver = (PACKAGE / 'VERSION').read_text(encoding='utf-8').strip() if (PACKAGE / 'VERSION').is_file() else VERSION
+    targets_report: list[dict[str, object]] = []
+    installed_count = 0
+    synced_count = 0
+    for rel in _GLOBAL_SKILL_REL_TARGETS:
+        dst = home / rel
+        skill_md = dst / 'SKILL.md'
+        bak = dst.with_name(dst.name + '.pre-dreampia.bak')
+        exists = skill_md.is_file()
+        version_matched = False
+        if exists:
+            installed_count += 1
+            text = skill_md.read_text(encoding='utf-8', errors='ignore')
+            version_matched = (f'v{live_ver}' in text or live_ver in text)
+            if version_matched:
+                synced_count += 1
+        targets_report.append({
+            'host_path': str(dst),
+            'installed': exists,
+            'version_synced': version_matched,
+            'has_backup': bak.exists(),
+        })
+    mcp_cfg_path = home / '.gemini/antigravity/mcp_config.json'
+    mcp_registered = False
+    if mcp_cfg_path.is_file():
+        try:
+            loaded = json.loads(mcp_cfg_path.read_text(encoding='utf-8'))
+            if isinstance(loaded, dict) and isinstance(loaded.get('mcpServers'), dict):
+                mcp_registered = 'dreampia-skill' in loaded['mcpServers']
+        except ValueError:
+            mcp_registered = False
+    return {
+        'expected_version': live_ver,
+        'installed_count': installed_count,
+        'synced_count': synced_count,
+        'total_targets': len(_GLOBAL_SKILL_REL_TARGETS),
+        'mcp_registered': mcp_registered,
+        'healthy': synced_count == len(_GLOBAL_SKILL_REL_TARGETS) and mcp_registered,
+        'targets': targets_report,
+    }
+
+
+def project_status(root: pathlib.Path, home_dir: pathlib.Path | None = None) -> dict[str, object]:
+    """현재 프로젝트 및 글로벌 스킬의 통합 상태 대시보드를 반환한다."""
+    current = load_manifest(root)
+    state_dir = route_planner.resolve_skill_state_dir(root)
+    unmanaged_collision = route_planner.has_unmanaged_dreampia_data_dir(root)
+    ui_enforced = route_planner.is_ui_rule_enforced(root)
+    sdd_patterns = sdd_engine.resolve_sdd_id_patterns(root)
+    live_ver = (PACKAGE / 'VERSION').read_text(encoding='utf-8').strip() if (PACKAGE / 'VERSION').is_file() else VERSION
+
+    wt_root = root / state_dir / 'worktrees'
+    active_worktrees: list[str] = []
+    if wt_root.is_dir() and not wt_root.is_symlink():
+        active_worktrees = sorted(p.name for p in wt_root.iterdir() if p.is_dir())
+
+    ev_root = root / 'evidence'
+    evidence_files: list[str] = []
+    if ev_root.is_dir() and not ev_root.is_symlink():
+        evidence_files = sorted(
+            p.relative_to(root).as_posix()
+            for p in ev_root.rglob('*')
+            if p.is_file() and p.suffix.lower() in ('.json', '.md')
+        )[:30]
+
+    learned_rules_count = 0
+    for mem_rel in (f'{state_dir}/memory/project-rules.json', '.dreampia-skill/memory/project-rules.json', '.dreampia/memory/project-rules.json'):
+        mem_path = root / mem_rel
+        if mem_path.is_file() and not mem_path.is_symlink():
+            try:
+                data = json.loads(mem_path.read_text(encoding='utf-8'))
+                if isinstance(data, dict) and isinstance(data.get('rules'), list):
+                    learned_rules_count = len(data['rules'])
+                    break
+            except ValueError:
+                pass
+
+    global_info = check_global_health(home_dir=home_dir)
+    return {
+        'action': 'status',
+        'status': 'PASS',
+        'version': live_ver,
+        'project': str(root),
+        'installed': bool(current and current.get('files')) or (root.resolve() == PACKAGE.resolve()),
+        'self_hosted': root.resolve() == PACKAGE.resolve(),
+        'skill_state_dir': state_dir,
+        'unmanaged_data_collision': unmanaged_collision,
+        'ui_rules_enforced': ui_enforced,
+        'sdd_id_patterns': sdd_patterns,
+        'active_worktrees': active_worktrees,
+        'evidence_files': evidence_files,
+        'learned_rules_count': learned_rules_count,
+        'global_health': global_info,
+        'message_ko': (
+            f'Dreampia v{live_ver} 상태 요약 -> 상태 폴더: {state_dir}, '
+            f'UI 규칙 강제: {"ON" if ui_enforced else "OFF"}, '
+            f'학습 규칙: {learned_rules_count}건, '
+            f'글로벌 동기화: {global_info["synced_count"]}/{global_info["total_targets"]}'
+        ),
+    }
+
+
+def manage_project_config(
+    root: pathlib.Path,
+    *,
+    ui_rules: str | None = None,
+    state_dir: str | None = None,
+    req_pattern: str | None = None,
+    task_pattern: str | None = None,
+    test_pattern: str | None = None,
+    apply: bool = False,
+) -> dict[str, object]:
+    """프로젝트별 설정(UI 규칙 강제 여부, SDD ID 정규식, 상태 폴더)을 조회하거나 안전하게 변경한다."""
+    resolved_state_dir = state_dir.strip().strip('/\\') if state_dir else route_planner.resolve_skill_state_dir(root)
+    if resolved_state_dir not in ('.dreampia', '.dreampia-skill'):
+        raise InstallError('state_dir must be .dreampia or .dreampia-skill')
+    if resolved_state_dir == '.dreampia' and route_planner.has_unmanaged_dreampia_data_dir(root):
+        resolved_state_dir = '.dreampia-skill'
+
+    cfg_rel = f'{resolved_state_dir}/memory/project-rules.json'
+    cfg_path = safe(root, cfg_rel)
+    current_cfg: dict[str, object] = {'schema_version': 1, 'rules': []}
+    if cfg_path.is_file():
+        try:
+            loaded = json.loads(cfg_path.read_text(encoding='utf-8'))
+            if isinstance(loaded, dict):
+                current_cfg = loaded
+        except ValueError:
+            current_cfg = {'schema_version': 1, 'rules': []}
+
+    changed = False
+    if ui_rules is not None and ui_rules.strip():
+        norm = ui_rules.strip().lower()
+        if norm not in ('on', 'off', 'true', 'false'):
+            raise InstallError('ui_rules must be on or off')
+        enforce_val = norm in ('on', 'true')
+        ui_sec = current_cfg.get('ui_rules')
+        if not isinstance(ui_sec, dict):
+            ui_sec = {}
+        ui_sec['enforce_default_ui_rules'] = enforce_val
+        current_cfg['ui_rules'] = ui_sec
+        current_cfg['enforce_ui_rules'] = enforce_val
+        changed = True
+
+    if any(p is not None and p.strip() for p in (req_pattern, task_pattern, test_pattern)):
+        sdd_sec = current_cfg.get('sdd')
+        if not isinstance(sdd_sec, dict):
+            sdd_sec = dict(sdd_engine.resolve_sdd_id_patterns(root))
+        if req_pattern and req_pattern.strip():
+            sdd_sec['req_pattern'] = req_pattern.strip()
+        if task_pattern and task_pattern.strip():
+            sdd_sec['task_pattern'] = task_pattern.strip()
+        if test_pattern and test_pattern.strip():
+            sdd_sec['test_pattern'] = test_pattern.strip()
+        current_cfg['sdd'] = sdd_sec
+        changed = True
+
+    if apply and changed:
+        write_bytes(root, cfg_rel, canonical(current_cfg))
+
+    eff_ui = route_planner.is_ui_rule_enforced(root) if not (changed and not apply) else bool(current_cfg.get('enforce_ui_rules', True))
+    eff_sdd = sdd_engine.resolve_sdd_id_patterns(root) if not (changed and not apply) else current_cfg.get('sdd', sdd_engine.resolve_sdd_id_patterns(root))
+    return {
+        'action': 'config',
+        'status': 'PASS',
+        'applied': bool(apply and changed),
+        'changed': changed,
+        'config_path': cfg_rel,
+        'skill_state_dir': resolved_state_dir,
+        'ui_rules_enforced': eff_ui,
+        'sdd_id_patterns': eff_sdd,
+        'config': current_cfg,
+        'message_ko': (
+            f'프로젝트 설정이 {cfg_rel}에 저장되었습니다.'
+            if (apply and changed)
+            else (
+                f'[미리보기] 프로젝트 설정 변경 계획({cfg_rel})입니다. 실제 저장하려면 --apply 옵션을 추가하십시오.'
+                if changed
+                else f'현재 프로젝트 설정({cfg_rel}) 조회 결과입니다.'
+            )
+        ),
+    }
+
+
+def self_update(
+    apply: bool = False,
+    home_dir: pathlib.Path | None = None,
+    project_dir: pathlib.Path | None = None,
+) -> dict[str, object]:
+    """Dreampia-Skill 저장소 최신화(git pull --ff-only), 번들 매니페스트 갱신 및 5대 호스트 글로벌 스킬 재동기화를 일괄 수행한다."""
+    import subprocess
+    before_info = get_version_info(check_remote=not apply)
+    git_pull_output = 'PREVIEW_ONLY'
+    git_pull_ok = True
+    if apply:
+        try:
+            r_pull = subprocess.run(
+                ['git', 'pull', '--ff-only', 'origin', 'main'],
+                cwd=str(PACKAGE),
+                capture_output=True,
+                text=True,
+                timeout=20,
+                check=False,
+            )
+            git_pull_output = (r_pull.stdout or r_pull.stderr or '').strip()
+            git_pull_ok = (r_pull.returncode == 0)
+        except OSError as exc:
+            git_pull_output = str(exc)
+            git_pull_ok = False
+        live_ver = (PACKAGE / 'VERSION').read_text(encoding='utf-8').strip() if (PACKAGE / 'VERSION').is_file() else VERSION
+        skill_bundle.write(PACKAGE / 'ai-dev-execution', live_ver)
+
+    setup_res = setup_global(apply=apply, home_dir=home_dir, project_dir=project_dir)
+    after_info = get_version_info(check_remote=False)
+    return {
+        'action': 'self-update',
+        'status': 'PASS' if git_pull_ok else 'WARN',
+        'applied': apply,
+        'previous_version': before_info.get('version'),
+        'current_version': after_info.get('version'),
+        'commit': after_info.get('commit'),
+        'git_pull_output': git_pull_output,
+        'global_sync': setup_res,
+        'message_ko': (
+            f'Dreampia-Skill v{after_info.get("version")} 최신화 및 글로벌 5개 호스트 스킬 재동기화가 완료되었습니다.'
+            if apply
+            else f'[미리보기] Dreampia-Skill v{before_info.get("version")} 자체 업데이트 및 글로벌 호스트 재동기화 계획입니다. 실제 실행하려면 --apply 옵션을 추가하십시오.'
+        ),
+    }
+
+
+def clean_workspace(
+    root: pathlib.Path,
+    *,
+    clean_worktrees: bool = True,
+    clean_evidence: bool = False,
+    apply: bool = False,
+) -> dict[str, object]:
+    """임시 스쿼드 워크트리, 중단된 트랜잭션 저널 및 선택적 임시 증거 캐시를 안전하게 정리한다."""
+    cleaned_paths: list[str] = []
+    wt_result: dict[str, object] | None = None
+    if clean_worktrees:
+        wt_result = squad_worktree_check(root, mode='cleanup', apply=apply)
+        for p in wt_result.get('cleaned_paths', []):  # type: ignore[union-attr]
+            cleaned_paths.append(str(p))
+
+    for j_rel in ('.dreampia-install/journal/transaction.json', '.dreampia-skill/journal/transaction.json', '.dreampia/journal/transaction.json'):
+        j_path = root / j_rel
+        if j_path.is_file() and not j_path.is_symlink():
+            cleaned_paths.append(j_rel)
+            if apply:
+                j_path.unlink(missing_ok=True)
+
+    if clean_evidence:
+        ev_dir = root / 'evidence'
+        if ev_dir.is_dir() and not ev_dir.is_symlink():
+            for p in sorted(ev_dir.glob('*.json')):
+                if p.is_file() and not p.is_symlink():
+                    rel = p.relative_to(root).as_posix()
+                    cleaned_paths.append(rel)
+                    if apply:
+                        p.unlink(missing_ok=True)
+
+    return {
+        'action': 'clean',
+        'status': 'PASS',
+        'applied': apply,
+        'cleaned_paths': cleaned_paths,
+        'worktree_cleanup': wt_result,
+        'message_ko': (
+            f'임시 작업 공간 및 잔여 파일 {len(cleaned_paths)}건 정리가 완료되었습니다.'
+            if apply
+            else f'[미리보기] 정리 대상 임시 파일/워크트리 {len(cleaned_paths)}건이 확인되었습니다. 실제 삭제하려면 --apply 옵션을 추가하십시오.'
+        ),
+    }
+
+
+_RELEASE_VERSION_FILES: tuple[str, ...] = (
+    'VERSION',
+    'package.json',
+    'pyproject.toml',
+    'plugin.json',
+    'gemini-extension.json',
+    '.claude-plugin/plugin.json',
+    '.claude-plugin/marketplace.json',
+    '.cursor-plugin/plugin.json',
+    'ai-dev-execution/SKILL.md',
+    'ai-dev-execution/references/internal-os.md',
+    'ARCHITECTURE.ko.md',
+    'SUPPORT.ko.md',
+    'README.md',
+    'README.ko.md',
+    'README.ja.md',
+    'README.zh-CN.md',
+    'docs/assets/dreampia-hero-banner.svg',
+    'harness/autopilot_engine.py',
+    'harness/build.py',
+    'harness/cli.py',
+    'harness/local_ci.py',
+    'harness/mcp_server.py',
+    'harness/README.ko.md',
+    'harness/reconstruct_engine.py',
+    'harness/sdd_engine.py',
+    'harness/team_cli.py',
+    'harness/universal_router.py',
+    'harness/tests/test_product.py',
+    'harness/tests/test_universal_router.py',
+)
+
+
+def release_version(
+    target_version: str,
+    *,
+    notes_ko: str = '',
+    apply: bool = False,
+    sync_global: bool = True,
+    home_dir: pathlib.Path | None = None,
+) -> dict[str, object]:
+    """저장소 내 모든 버전 상수·문서·매니페스트(bundle-manifest.json) 및 CHANGELOG를 새 버전으로 일괄 릴리즈한다."""
+    import re
+    target = target_version.strip().lstrip('vV')
+    if not re.fullmatch(r'\d+\.\d+\.\d+', target):
+        raise InstallError('target version must match X.Y.Z semver format')
+
+    current_ver = (PACKAGE / 'VERSION').read_text(encoding='utf-8').strip()
+    updated_files: list[str] = []
+
+    for rel in _RELEASE_VERSION_FILES:
+        fpath = PACKAGE / rel
+        if not fpath.is_file() or fpath.is_symlink():
+            continue
+        text = fpath.read_text(encoding='utf-8')
+        if rel == 'VERSION':
+            new_text = target + '\n'
+        else:
+            new_text = text.replace(current_ver, target)
+        if new_text != text:
+            updated_files.append(rel)
+            if apply:
+                fpath.write_text(new_text, encoding='utf-8')
+
+    changelog_path = PACKAGE / 'CHANGELOG.md'
+    if changelog_path.is_file() and not changelog_path.is_symlink():
+        cl_text = changelog_path.read_text(encoding='utf-8')
+        header = f'# {target}'
+        if not cl_text.startswith(header):
+            summary_line = notes_ko.strip() or f'표준 슬래시/CLI 운영 명령어 체계(version, status, doctor, config, update, uninstall, release, clean) 통합 및 v{target} 정합성 동기화.'
+            new_cl = f'{header}\n\n- {summary_line}\n\n' + cl_text
+            updated_files.append('CHANGELOG.md')
+            if apply:
+                changelog_path.write_text(new_cl, encoding='utf-8')
+
+    updated_files.append('ai-dev-execution/' + skill_bundle.NAME)
+    if apply:
+        skill_bundle.write(PACKAGE / 'ai-dev-execution', target)
+        if sync_global:
+            setup_global(apply=True, home_dir=home_dir)
+
+    return {
+        'action': 'release',
+        'status': 'PASS',
+        'applied': apply,
+        'previous_version': current_ver,
+        'target_version': target,
+        'updated_files': updated_files,
+        'updated_count': len(updated_files),
+        'message_ko': (
+            f'Dreampia-Skill v{current_ver} -> v{target} 일괄 버전 릴리즈({len(updated_files)}개 파일 및 매니페스트 갱신)가 완료되었습니다.'
+            if apply
+            else f'[미리보기] Dreampia-Skill v{current_ver} -> v{target} 릴리즈 시 총 {len(updated_files)}개 파일 및 번들 매니페스트가 갱신됩니다. 실제 반영하려면 --apply 옵션을 추가하십시오.'
+        ),
+    }
+
+
 MUTATING_INSTALL_ACTIONS = (
     'init',
     'update',
@@ -1323,8 +1812,18 @@ def main(argv=None) -> int:
         return mcp_main(args[1:])
     p=argparse.ArgumentParser(description='dreampia: offline project install and internal workflow helper, Python >=3.9 cross-platform')
     p.add_argument('--version',action='version',version=VERSION)
-    p.add_argument('action',choices=('setup','install-global','uninstall-global','init','doctor','update','uninstall','rollback','scaffold','verify','export-client-summary','scaffold-app','plan-slice','package-client','app-check','ui-check','route-plan','expand-prompt','next-actions','interview-compile','learn-rule','visual-check','instruction-check','router-discover','router-materialize','router-export-plugin','router-dispatch','squad-worktree','reconstruct-doctor','reconstruct-inspect','reconstruct-ledger','reconstruct-spec','reconstruct-verify','reconstruct-compare','sdd-ledger','sdd-check','spec-check','audit-code','context-pack','golden-io','autopilot-gate','blast-radius','metric-climb','mcp-serve'))
+    p.add_argument('action',choices=('version','status','config','clean','release','bump-version','self-update','setup','install-global','uninstall-global','init','doctor','update','uninstall','rollback','scaffold','verify','export-client-summary','scaffold-app','plan-slice','package-client','app-check','ui-check','route-plan','expand-prompt','next-actions','interview-compile','learn-rule','visual-check','instruction-check','router-discover','router-materialize','router-export-plugin','router-dispatch','squad-worktree','reconstruct-doctor','reconstruct-inspect','reconstruct-ledger','reconstruct-spec','reconstruct-verify','reconstruct-compare','sdd-ledger','sdd-check','spec-check','audit-code','context-pack','golden-io','autopilot-gate','blast-radius','metric-climb','mcp-serve'))
     p.add_argument('--project',default=None);p.add_argument('--apply',action='store_true',help='explicitly execute previewed project changes')
+    p.add_argument('--global',dest='global_scope',action='store_true',help='operate on global 5-host skill installation and MCP config')
+    p.add_argument('--check-remote',action='store_true',help='check remote origin/main version/commit status')
+    p.add_argument('--to',dest='to_version',default='',help='target semver version (X.Y.Z) for release / bump-version')
+    p.add_argument('--notes',default='',help='release notes entry in Korean for CHANGELOG.md during release')
+    p.add_argument('--ui-rules',choices=('on','off'),default=None,help='enable or disable default UI rules (bg-transparent, lucide-react) in project config')
+    p.add_argument('--state-dir',choices=('.dreampia','.dreampia-skill'),default=None,help='explicit skill state directory in project config')
+    p.add_argument('--req-pattern',default=None,help='custom regex for SDD requirement IDs in project config')
+    p.add_argument('--task-pattern',default=None,help='custom regex for SDD task IDs in project config')
+    p.add_argument('--test-pattern',default=None,help='custom regex for SDD test IDs in project config')
+    p.add_argument('--clean-evidence',action='store_true',help='also remove temporary evidence/*.json files during clean')
     p.add_argument('--type',choices=PROJECT_TYPES,default='assessment-service',help='project preset for scaffold')
     p.add_argument('--gate',choices=VERIFY_GATES,default='before-dev-start',help='verification gate')
     p.add_argument('--out',default='client',help='project-relative output folder or zip filename for export/package')
@@ -1356,12 +1855,28 @@ def main(argv=None) -> int:
     p.add_argument('--install-tool',default=None,help='Tier 2 RE tool id (rizin, jadx, ghidra, wasm2wat, objdump, nm, adb, or all) for reconstruct-doctor')
     a=p.parse_args(args)
     try:
+        if a.action=='version':
+            out=get_version_info(check_remote=a.check_remote)
+            print(json.dumps(out,ensure_ascii=False,indent=2))
+            return 0
+        if a.action in ('release','bump-version'):
+            target_ver = a.to_version or a.target or a.goal
+            if not target_ver:
+                raise InstallError('release requires --to <X.Y.Z>')
+            out=release_version(target_ver,notes_ko=a.notes,apply=a.apply)
+            print(json.dumps(out,ensure_ascii=False,indent=2))
+            return 0
         if a.action in ('setup','install-global'):
             proj_root=project_root(a.project,allow_package=True) if a.project else None
             out=setup_global(apply=a.apply,project_dir=proj_root)
             print(json.dumps(out,ensure_ascii=False,indent=2))
             return 0
-        if a.action=='uninstall-global':
+        if a.action=='self-update' or (a.action=='update' and (a.global_scope or not a.project)):
+            proj_root=project_root(a.project,allow_package=True) if a.project else None
+            out=self_update(apply=a.apply,project_dir=proj_root)
+            print(json.dumps(out,ensure_ascii=False,indent=2))
+            return 0
+        if a.action=='uninstall-global' or (a.action=='uninstall' and a.global_scope):
             out=uninstall_global(apply=a.apply)
             print(json.dumps(out,ensure_ascii=False,indent=2))
             return 0
@@ -1369,16 +1884,25 @@ def main(argv=None) -> int:
             out=reconstruct_doctor_check(install_tool=a.install_tool or a.target,apply=a.apply)
             print(json.dumps(out,ensure_ascii=False,indent=2))
             return 0 if out.get('status')=='PASS' else 1
-        if not a.project:
-            raise InstallError('explicit project directory required')
-        allow_pkg = a.action not in MUTATING_INSTALL_ACTIONS
-        allow_hm = a.action == 'mcp-serve'
-        root=project_root(a.project,allow_package=allow_pkg,allow_home=allow_hm)
+        if not a.project and a.action in ('status','doctor','config','clean'):
+            default_dir = pathlib.Path.cwd()
+            root = project_root(str(default_dir), allow_package=True, allow_home=False)
+            implicit_global = (a.action == 'doctor')
+        else:
+            if not a.project:
+                raise InstallError('explicit project directory required')
+            allow_pkg = a.action not in MUTATING_INSTALL_ACTIONS
+            allow_hm = a.action == 'mcp-serve'
+            root=project_root(a.project,allow_package=allow_pkg,allow_home=allow_hm)
+            implicit_global = False
         if a.action=='mcp-serve':
             try:from . import mcp_server
             except ImportError:import mcp_server  # type: ignore[no-redef]
             return mcp_server.serve_stdio(root)
-        if a.action=='doctor':out=doctor(root)
+        if a.action=='status':out=project_status(root)
+        elif a.action=='doctor':out=doctor(root,include_global=(a.global_scope or implicit_global),check_remote=a.check_remote)
+        elif a.action=='config':out=manage_project_config(root,ui_rules=a.ui_rules,state_dir=a.state_dir,req_pattern=a.req_pattern,task_pattern=a.task_pattern,test_pattern=a.test_pattern,apply=a.apply)
+        elif a.action=='clean':out=clean_workspace(root,clean_evidence=a.clean_evidence,apply=a.apply)
         elif a.action=='rollback':out=rollback(root,a.apply)
         elif a.action=='scaffold':out=project_scaffold(root,a.type,a.apply)
         elif a.action=='verify':out=verify_gate(root,a.gate)

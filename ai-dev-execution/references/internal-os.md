@@ -1,6 +1,6 @@
-# 0.6.1 내부 로컬 개발 OS
+# 0.6.2 내부 로컬 개발 OS
 
-0.6.1은 passed 체크포인트를 완료된 성공 증거·argv·timeout·실행 프로젝트·source fingerprint와 대조하며 모순된 상태를 resume/status에서 거부한다. 로컬 저장소도 유효 JSON의 구조/날짜 손상에 대해 원본 보존·삭제 거부 방식으로 처리한다.
+0.6.2은 passed 체크포인트를 완료된 성공 증거·argv·timeout·실행 프로젝트·source fingerprint와 대조하며 모순된 상태를 resume/status에서 거부한다. 로컬 저장소도 유효 JSON의 구조/날짜 손상에 대해 원본 보존·삭제 거부 방식으로 처리한다.
 
 ## 검증·완료 경계
 

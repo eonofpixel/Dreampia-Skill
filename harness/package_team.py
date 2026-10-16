@@ -6,7 +6,7 @@ import pathlib
 import zipfile
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
-DIRECTORIES=('harness','ai-dev-execution','team','adapters','evals','docs','evidence','.github','.claude-plugin','.cursor-plugin')
+DIRECTORIES=('harness','ai-dev-execution','commands','team','adapters','evals','docs','evidence','.github','.claude-plugin','.cursor-plugin')
 FILES=('.gitignore','AGENTS.md','VERSION','LICENSE','NOTICE','package.json','pyproject.toml','plugin.json','gemini-extension.json','README.md','README.ko.md','README.ja.md','README.zh-CN.md','ARCHITECTURE.ko.md','CHANGELOG.md','NOTICE.private.md','SUPPORT.ko.md','VERIFICATION.ko.md')
 EXCLUDED={'.git','.harness','__pycache__','.env','node_modules','.dreampia-install','.dreampia','.next','test-results','playwright-report','.dreampia-workflow','.workflow','.local-data'}
 def source_files(skill_only=False) -> list[pathlib.Path]:

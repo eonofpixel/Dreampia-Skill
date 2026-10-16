@@ -1,6 +1,6 @@
-# 지원 범위 (v0.6.1)
+# 지원 범위 (v0.6.2)
 
-`0.6.1`은 사용자·사내 개발자용 크로스플랫폼 로컬 통합 버전이다. **Windows 10/11 (Win32 Job Objects / `msvcrt`), macOS (Apple Silicon / Intel), Linux** 및 **Python 3.9 이상**에서 외부 패키지 의존성 없이 순수 표준 라이브러리만으로 동작한다.
+`0.6.2`은 사용자·사내 개발자용 크로스플랫폼 로컬 통합 버전이다. **Windows 10/11 (Win32 Job Objects / `msvcrt`), macOS (Apple Silicon / Intel), Linux** 및 **Python 3.9 이상**에서 외부 패키지 의존성 없이 순수 표준 라이브러리만으로 동작한다.
 
 Node wrapper(`dreampia`)는 Node.js 18 이상과 Python 3.9 이상을 요구한다. 기본 설정에서는 원격 CI, 유료 공급자 추론(`provider_enabled`), 외부 네트워크 호출을 자동 실행하지 않으며, 모든 정적 분석·SDD+TDD 추적·Trinity 코드 감사·클린룸 복원 검증·시각 수용 검증은 로컬 오프라인에서 결정론적으로 수행된다.
 

@@ -3,9 +3,9 @@ name: ai-dev-execution
 description: Develop small projects, services, and substantial features with proportionate specs, TDD, real evidence, and resumable milestones. For user-facing UI tasks, also define product screens, visual direction, connected flows, and visual/interaction verification. Excludes isolated coding questions.
 ---
 
-# AI 개발 실행 — 0.6.1
+# AI 개발 실행 — 0.6.2
 
-0.6.1의 실행·복구·로컬 앱·고객 export는 [내부 OS 실행 기준](references/internal-os.md)을 따른다. 실제 역할 명령 실행과 독립 AI 판단, 로컬 starter 검증과 운영 준비를 구별한다.
+0.6.2의 실행·복구·로컬 앱·고객 export는 [내부 OS 실행 기준](references/internal-os.md)을 따른다. 실제 역할 명령 실행과 독립 AI 판단, 로컬 starter 검증과 운영 준비를 구별한다.
 
 사용자 아이디어를 작은 기능·실제 검증·승인된 릴리스로 연결한다. 사용자의 언어와 기존 저장소 관례를 따른다. SDD는 Spec-Driven Development, Software Design Document는 상세 설계서로 구별한다.
 
@@ -25,6 +25,15 @@ description: Develop small projects, services, and substantial features with pro
    - `sharpen`(`고도화`/`생각`/`구체화`): 짧은 요청을 정밀 국문 엔지니어링 명세·엣지케이스·검증 게이트로 심층 확장(`prompt-sharpen`)
    - `btw`(`quick`/`잠깐`): 파일 변경 없이 현재 문맥을 보존하며 `Oracle`이 사이드 질의에 즉답(`side-query`)
    - `sdd`(`plan`/`명세`), `tdd`(`티디디`), `re`(`cleanroom`/`역설계`), `audit`(`sec`/`감사`), `ui`(`화면`) — [상세 라우팅 기준](references/cleanroom-governance.md) 적용
+7. 표준 운영 슬래시·CLI 명령어(접두사 없는 `/명령어` 및 `npx dreampia <명령어>` 1:1 대응):
+   - `/version` (`version --check-remote`): 로컬 버전·Git 커밋·원격 최신 여부 확인
+   - `/status` (`status` / `dreampia_status`): 상태 디렉터리(`.dreampia` 또는 `.dreampia-skill`), UI 규칙 강제 여부, SDD 정규식, 글로벌 5개 호스트 동기화 대시보드
+   - `/doctor` (`doctor --global --check-remote` / `dreampia_doctor`): 런타임·매니페스트·데이터 폴더 충돌·글로벌 호스트 무결성 통합 진단
+   - `/config` (`config --ui-rules on|off --apply` / `dreampia_config`): 프로젝트별 UI 규칙 강제 여부·SDD ID 정규식·상태 폴더 설정
+   - `/update` (`update --global --apply` / `self-update --apply` / `dreampia_self_update`): Git 최신화 + 번들 매니페스트 갱신 + 글로벌 5개 호스트 일괄 재배포
+   - `/uninstall` (`uninstall --global --apply` / `uninstall --project . --apply`): 글로벌 또는 프로젝트 설치본 안전 제거 및 백업(`.pre-dreampia.bak`) 복원
+   - `/release` (`release --to <X.Y.Z> --apply` / `dreampia_release`): 저장소 전 파일 버전 상수·문서·매니페스트·CHANGELOG 일괄 릴리즈
+   - `/clean` (`clean --project . --apply` / `dreampia_clean`): 임시 스쿼드 워크트리 및 중단된 트랜잭션 저널 안전 정리
 
 ## 실행과 증거
 

@@ -679,6 +679,74 @@ class AutopilotEngineTests(unittest.TestCase):
             self.assertEqual(gio_res["status"], "FAIL")
             self.assertEqual(gio_res["failures"][0]["id"], "UNSAFE_MODULE")  # type: ignore[index]
 
+    def test_standard_prefix_free_operational_commands_and_release_preview(self) -> None:
+        from harness import mcp_server, route_planner, team_cli
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "workspace"
+            fake_home = Path(tmp) / "home"
+            root.mkdir(parents=True, exist_ok=True)
+            fake_home.mkdir(parents=True, exist_ok=True)
+
+            # 1. version command returns version + git commit
+            ver_res = team_cli.get_version_info(check_remote=False)
+            self.assertEqual(ver_res["status"], "PASS")
+            self.assertEqual(ver_res["version"], (team_cli.PACKAGE / "VERSION").read_text(encoding="utf-8").strip())
+
+            # 2. config command toggles ui_rules off -> on and updates custom SDD task_pattern
+            cfg_off = mcp_server.execute_mcp_tool(
+                root,
+                "dreampia_config",
+                {
+                    "ui_rules": "off",
+                    "task_pattern": r"\bT\d{4}\b",
+                    "apply": True,
+                },
+            )
+            self.assertEqual(cfg_off["status"], "PASS")
+            self.assertTrue(cfg_off["applied"])
+            self.assertFalse(route_planner.is_ui_rule_enforced(root))
+
+            # 3. status command reports unified project & global health
+            status_res = team_cli.project_status(root, home_dir=fake_home)
+            self.assertEqual(status_res["status"], "PASS")
+            self.assertFalse(status_res["ui_rules_enforced"])
+            self.assertIn("global_health", status_res)
+
+            # 4. doctor with include_global checks global targets
+            team_cli.setup_global(apply=True, home_dir=fake_home)
+            doc_global = team_cli.doctor(team_cli.PACKAGE, include_global=True, home_dir=fake_home)
+            self.assertTrue(doc_global["healthy"])
+            self.assertTrue(doc_global["global_health"]["healthy"])  # type: ignore[index]
+
+            # 5. clean command cleans up squad worktrees and interrupted journal
+            mcp_server.execute_mcp_tool(
+                root,
+                "dreampia_squad_worktree",
+                {"goal": "병렬 테스트", "mode": "create", "apply": True},
+            )
+            clean_res = mcp_server.execute_mcp_tool(
+                root,
+                "dreampia_clean",
+                {"apply": True},
+            )
+            self.assertEqual(clean_res["status"], "PASS")
+            self.assertTrue(clean_res["applied"])
+
+            # 6. release preview validates semver and lists files to update without mutating
+            rel_preview = team_cli.release_version("9.9.9", apply=False, sync_global=False)
+            self.assertEqual(rel_preview["status"], "PASS")
+            self.assertFalse(rel_preview["applied"])
+            self.assertGreaterEqual(int(rel_preview["updated_count"]), 10)  # type: ignore[arg-type]
+
+            # 7. All 8 prefix-free slash command markdown files exist and have no ** bold markers
+            for cmd_name in ("version", "status", "doctor", "config", "update", "uninstall", "release", "clean"):
+                cmd_file = team_cli.PACKAGE / "commands" / f"{cmd_name}.md"
+                self.assertTrue(cmd_file.is_file(), f"Missing slash command file: {cmd_file}")
+                cmd_text = cmd_file.read_text(encoding="utf-8")
+                self.assertNotIn("**", cmd_text)
+
 
 if __name__ == "__main__":
     unittest.main()
+

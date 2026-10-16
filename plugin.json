@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "dreampia-skill",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "All-in-One 6-Host Agentic Harness (23 MCP Tools): Visible Prompt Expansion, Socratic SDD Compiler, 2-Tier Cleanroom RE, Self-Learning Rule Memory, Parallel Squad Worktrees, Metric-Climb, Blast-Radius, and Next-Action Navigator.",
   "author": {
     "name": "Dreampia"
@@ -10,5 +10,6 @@
   "repository": "https://github.com/eonofpixel/Dreampia-Skill.git",
   "license": "Apache-2.0",
   "skills": "./ai-dev-execution/",
-  "agents": "./ai-dev-execution/assets/internal/agents/"
+  "agents": "./ai-dev-execution/assets/internal/agents/",
+  "commands": "./commands/"
 }

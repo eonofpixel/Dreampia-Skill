@@ -1,8 +1,9 @@
 {
   "name": "dreampia-skill",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Dreampia AI Dev Execution Skill & 23-Tool MCP Harness (Visible Prompt Expansion, Socratic SDD Compiler, 2-Tier Cleanroom RE, Self-Learning Memory, Squad Worktrees, Next-Action Navigator)",
   "skills": [
     "./ai-dev-execution"
-  ]
+  ],
+  "commands": "./commands/"
 }

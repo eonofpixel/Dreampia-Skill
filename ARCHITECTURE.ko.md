@@ -1,4 +1,4 @@
-# v0.6.1 구조와 신뢰 경계
+# v0.6.2 구조와 신뢰 경계
 
 | 계층 | 파일 | 책임 |
 |---|---|---|
@@ -25,6 +25,6 @@ manifest와 실행 상태의 엄격한 구조, JSON 중복 키·NaN/Infinity 거
 
 프로젝트 installer는 전체 사용자 프로젝트를 스캔하지 않고 지정된 관리 경로만 읽는다. 임의 파일이나 `.env`를 백업/배포하지 않는다. symlink를 거부하고 hash 충돌을 보존한다.
 
-## 선택적 제품 디자인 및 매트릭스 스쿼드 거버넌스 (0.6.1)
+## 선택적 제품 디자인 및 매트릭스 스쿼드 거버넌스 (0.6.2)
 
 공통 SKILL은 작업 범위 판단과 실행 원칙의 짧은 진입점이다. `product-design` 및 웹·데스크톱·모바일·시각검증 4개 reference는 사용자용 UI가 범위인 때만 선택 로드한다. 매트릭스 10인 스쿼드(`Morpheus`, `Oracle`, `Architect`, `Niobe`, `Keymaker`, `Neo`, `Trinity`, `Tank`, `Seraph`, `Mouse`)는 역할 분리와 인계 계약(`handoff_contract.py`), SDD 추적(`sdd_engine.py`), 클린룸 역설계(`reconstruct_engine.py`) 전 과정에서 일관된 코드네임과 책임 경계로 작동한다.

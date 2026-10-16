@@ -32,7 +32,7 @@ except ImportError:
 
 MCP_PROTOCOL_VERSION = "2024-11-05"
 SERVER_NAME = "dreampia-skill-mcp"
-SERVER_VERSION = "0.6.1"
+SERVER_VERSION = "0.6.2"
 
 
 @dataclass(frozen=True)
@@ -345,6 +345,79 @@ MCP_TOOLS: tuple[McpToolDefinition, ...] = (
             },
         },
     ),
+    McpToolDefinition(
+        name="dreampia_status",
+        description="통합 상태 대시보드(/status): 현재 프로젝트의 스킬 상태 디렉터리(.dreampia 또는 .dreampia-skill), UI 규칙 강제 여부, SDD ID 정규식, 학습 규칙 수, 글로벌 5개 호스트 동기화 상태를 한눈에 조회합니다.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "project": {"type": "string", "description": "대상 프로젝트 루트 경로"},
+            },
+        },
+    ),
+    McpToolDefinition(
+        name="dreampia_doctor",
+        description="통합 환경·무결성·보안 진단기(/doctor): Python 런타임, 번들 SHA-256 매니페스트, 비관리 .dreampia/ 충돌 여부, 글로벌 5개 호스트 스킬 동기화 상태 및 원격 최신 버전을 점검합니다.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "project": {"type": "string", "description": "대상 프로젝트 루트 경로"},
+                "include_global": {"type": "boolean", "description": "글로벌 5개 호스트 스킬 폴더 및 MCP 등록 상태 포함 점검 (기본값 true)"},
+                "check_remote": {"type": "boolean", "description": "원격 origin/main 최신 커밋 일치 여부 점검 (기본값 false)"},
+            },
+        },
+    ),
+    McpToolDefinition(
+        name="dreampia_config",
+        description="프로젝트별 설정 관리(/config): UI 규칙(bg-transparent, lucide-react) 강제 여부(on/off), 상태 폴더(.dreampia-skill), SDD ID 정규식(req_pattern, task_pattern, test_pattern)을 조회하거나 설정합니다.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "project": {"type": "string", "description": "대상 프로젝트 루트 경로"},
+                "ui_rules": {"type": "string", "enum": ["on", "off"], "description": "기본 UI 규칙 강제 여부 (on 또는 off)"},
+                "state_dir": {"type": "string", "enum": [".dreampia", ".dreampia-skill"], "description": "스킬 상태 저장 폴더"},
+                "req_pattern": {"type": "string", "description": "SDD 요구사항 ID 정규식"},
+                "task_pattern": {"type": "string", "description": "SDD 작업 ID 정규식 (예: \\bT\\d{3,6}\\b)"},
+                "test_pattern": {"type": "string", "description": "SDD 테스트 ID 정규식"},
+                "apply": {"type": "boolean", "description": "true 지정 시 project.json에 실제 저장"},
+            },
+        },
+    ),
+    McpToolDefinition(
+        name="dreampia_self_update",
+        description="스킬 자체 업데이트 및 글로벌 동기화(/update): Dreampia-Skill 저장소 git pull 최신화, 번들 매니페스트 갱신 및 5개 글로벌 호스트 스킬 폴더 재배포를 일괄 수행합니다.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "apply": {"type": "boolean", "description": "true 지정 시 실제 git pull 및 글로벌 스킬 재설치 수행 (기본값 false 미리보기)"},
+            },
+        },
+    ),
+    McpToolDefinition(
+        name="dreampia_clean",
+        description="임시 작업 공간 정리(/clean): 병렬 스쿼드 워크트리, 중단된 트랜잭션 저널 및 선택적 임시 증거 캐시를 안전하게 정리합니다.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "project": {"type": "string", "description": "대상 프로젝트 루트 경로"},
+                "clean_evidence": {"type": "boolean", "description": "evidence/*.json 임시 파일도 함께 정리할지 여부 (기본값 false)"},
+                "apply": {"type": "boolean", "description": "true 지정 시 실제 삭제 수행 (기본값 false 미리보기)"},
+            },
+        },
+    ),
+    McpToolDefinition(
+        name="dreampia_release",
+        description="일괄 버전 릴리즈(/release): 저장소 내 모든 버전 상수·문서·번들 매니페스트(bundle-manifest.json)·CHANGELOG.md를 새 시맨틱 버전(X.Y.Z)으로 일괄 동기화합니다.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "target_version": {"type": "string", "description": "릴리즈할 새 버전 (예: 0.6.2)"},
+                "notes": {"type": "string", "description": "CHANGELOG.md에 기록할 한글 변경 요약"},
+                "apply": {"type": "boolean", "description": "true 지정 시 실제 파일 및 매니페스트 일괄 갱신 (기본값 false 미리보기)"},
+            },
+            "required": ["target_version"],
+        },
+    ),
 )
 
 _FORBIDDEN_MCP_ROOT_NAMES: frozenset[str] = frozenset(
@@ -374,6 +447,46 @@ def _resolve_project_root(default_root: Path, requested: object) -> Path:
 def execute_mcp_tool(default_root: Path, tool_name: str, arguments: dict[str, object]) -> dict[str, object]:
     """요청된 MCP 도구를 실행하고 결정론적 JSON 결과 사전을 반환한다."""
     root = _resolve_project_root(default_root, arguments.get("project"))
+
+    if tool_name == "dreampia_status":
+        return team_cli.project_status(root)
+
+    if tool_name == "dreampia_doctor":
+        inc_global = bool(arguments.get("include_global", True))
+        chk_remote = bool(arguments.get("check_remote", False))
+        return team_cli.doctor(root, include_global=inc_global, check_remote=chk_remote)
+
+    if tool_name == "dreampia_config":
+        ui_rules = str(arguments["ui_rules"]).strip() if arguments.get("ui_rules") else None
+        state_dir = str(arguments["state_dir"]).strip() if arguments.get("state_dir") else None
+        req_pat = str(arguments["req_pattern"]).strip() if arguments.get("req_pattern") else None
+        task_pat = str(arguments["task_pattern"]).strip() if arguments.get("task_pattern") else None
+        test_pat = str(arguments["test_pattern"]).strip() if arguments.get("test_pattern") else None
+        apply_flag = bool(arguments.get("apply", False))
+        return team_cli.manage_project_config(
+            root,
+            ui_rules=ui_rules,
+            state_dir=state_dir,
+            req_pattern=req_pat,
+            task_pattern=task_pat,
+            test_pattern=test_pat,
+            apply=apply_flag,
+        )
+
+    if tool_name == "dreampia_self_update":
+        apply_flag = bool(arguments.get("apply", False))
+        return team_cli.self_update(apply=apply_flag)
+
+    if tool_name == "dreampia_clean":
+        clean_ev = bool(arguments.get("clean_evidence", False))
+        apply_flag = bool(arguments.get("apply", False))
+        return team_cli.clean_workspace(root, clean_evidence=clean_ev, apply=apply_flag)
+
+    if tool_name == "dreampia_release":
+        target_ver = str(arguments.get("target_version") or "").strip()
+        notes = str(arguments.get("notes") or "").strip()
+        apply_flag = bool(arguments.get("apply", False))
+        return team_cli.release_version(target_ver, notes_ko=notes, apply=apply_flag)
 
     if tool_name == "dreampia_route_plan":
         goal = str(arguments.get("goal") or "").strip()

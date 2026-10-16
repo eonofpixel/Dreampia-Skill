@@ -8,7 +8,7 @@ try:
 except ImportError:
     import core
 
-VERSION='0.6.1'
+VERSION='0.6.2'
 def main(argv=None) -> int:
     p=argparse.ArgumentParser(description='Local development harness; provider calls are opt-in')
     p.add_argument('--version',action='version',version=VERSION)
