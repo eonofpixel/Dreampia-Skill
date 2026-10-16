@@ -1,14 +1,24 @@
 {
   "schema_version": "0.6.2",
-  "generated_at": "2026-10-16T17:52:15.921203+00:00",
+  "generated_at": "2026-10-16T18:05:19.985100+00:00",
   "status": "PASS",
   "commander": {
     "callsign": "Morpheus",
     "name_ko": "모피어스",
     "title_ko": "총괄 라우터 및 작전 지휘관"
   },
-  "profile": "team",
-  "risk_level": "medium",
+  "profile": "controlled",
+  "execution_mode": "ultrawork",
+  "continuous_loop": true,
+  "loop_iterations": [
+    {
+      "iteration": 1,
+      "status": "PASS",
+      "failed_stages": [],
+      "self_healing_actions": []
+    }
+  ],
+  "risk_level": "high",
   "agent_squad": [
     {
       "role": "planner",
@@ -33,6 +43,18 @@
       "callsign": "Tank",
       "name_ko": "탱크",
       "title_ko": "실행 증거·시각 픽셀·원장 커버리지 검증 오퍼레이터"
+    },
+    {
+      "role": "privacy-guard",
+      "callsign": "Seraph",
+      "name_ko": "세라프",
+      "title_ko": "개인정보·비밀키·클린룸 무오염 경계 수호자"
+    },
+    {
+      "role": "architect",
+      "callsign": "Architect",
+      "name_ko": "아키텍트",
+      "title_ko": "시스템·데이터·신뢰 경계 설계자"
     }
   ],
   "stage_count": 3,
@@ -61,6 +83,6 @@
       "detail": "Trinity 코드·TDD·규칙 정적 감사를 통과했습니다. (검사 파일 70개, 차단 결함 0건)"
     }
   ],
-  "message_ko": "Morpheus & Tank 오토파일럿 통합 게이트(team) 전 단계(3개) 검증을 통과했습니다.",
-  "verdict_sha256": "9c1e3bcfb696acc570c1081a2e70dd988859f1e769e6e2fad1e61ee84dd1ef3e"
+  "message_ko": "Morpheus & Tank 오토파일럿 통합 게이트(controlled) 전 단계(3개) 검증을 통과했습니다.",
+  "verdict_sha256": "05a85b9ade1ec1066e08bfca4df8dab482df95c2f70a510ad1d0156598b035d5"
 }

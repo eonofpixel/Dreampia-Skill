@@ -12,7 +12,7 @@
 | 시각 수용 검증 | `harness/visual_acceptance.py` | **Niobe(니오베)** & **Tank(탱크)** 8-bit RGBA PNG 디코딩, 뷰포트 예산, 픽셀 차이율 대조 |
 | 자율 완주·감사 엔진 | `harness/autopilot_engine.py` | **Trinity(트리니티)** AST 코드·가짜 TDD 감사, 컨텍스트 압축 패킷, Golden I/O 동치성, **Morpheus & Tank** 통합 오토파일럿 게이트 |
 | 유니버설 라우터 | `harness/universal_router.py` | 11종 에이전트 CLI 어댑터 디스패치, 스킬/플러그인 배포, 루프백 HTTP 게이트웨이 |
-| STDIO MCP 서버 | `harness/mcp_server.py` | Zero-Dependency JSON-RPC 2.0 MCP 도구(`dreampia_expand_prompt`, `dreampia_route_plan`, `dreampia_sdd_check`, `dreampia_audit_code`, `dreampia_autopilot_gate` 등 22종) 제공 |
+| STDIO MCP 서버 | `harness/mcp_server.py` | Zero-Dependency JSON-RPC 2.0 MCP 도구(`dreampia_status`, `dreampia_doctor`, `dreampia_config`, `dreampia_expand_prompt`, `dreampia_route_plan`, `dreampia_sdd_check`, `dreampia_audit_code`, `dreampia_autopilot_gate` 등 29종) 제공 |
 | 실행 하네스 | `harness/core.py`, `process.py`, `schema.py` | 의존성·한정 실행·크로스플랫폼(Windows Job Object / POSIX 프로세스 그룹)·원자 상태·현재 소스 증거 |
 | 팀 설치·CLI | `harness/team_cli.py` | 미리보기·`--apply`·글로벌 백업/제거(`uninstall-global`)·4종 도메인 스캐폴드·게이트 검증·트랜잭션 journal·단계 rollback |
 | thin npm | `bin/dreampia.cjs` | 크로스플랫폼 Python(`python3`/`python`/`py -3`) 자동 탐지 및 CLI 전달 |

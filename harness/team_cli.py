@@ -1189,6 +1189,12 @@ _GLOBAL_SKILL_REL_TARGETS: tuple[str, ...] = (
     '.agents/skills/ai-dev-execution',
 )
 
+_GLOBAL_MCP_CONFIG_REL_TARGETS: tuple[str, ...] = (
+    '.gemini/antigravity/mcp_config.json',
+    '.cursor/mcp.json',
+    '.claude/mcp.json',
+)
+
 
 def setup_global(
     apply: bool = False,
@@ -1221,6 +1227,7 @@ def setup_global(
             shutil.copytree(skill_src, dst, dirs_exist_ok=True)
 
     mcp_cfg_path = home / '.gemini/antigravity/mcp_config.json'
+    mcp_cfg_paths: list[str] = [str(home / m_rel) for m_rel in _GLOBAL_MCP_CONFIG_REL_TARGETS]
     mcp_project = str(project_dir.resolve()) if project_dir is not None else str(PACKAGE.resolve())
     mcp_entry = {
         'command': sys.executable,
@@ -1232,21 +1239,23 @@ def setup_global(
         ],
     }
     if apply:
-        mcp_cfg_path.parent.mkdir(parents=True, exist_ok=True)
-        existing_cfg: dict[str, object] = {}
-        if mcp_cfg_path.is_file():
-            try:
-                loaded = json.loads(mcp_cfg_path.read_text(encoding='utf-8'))
-                if isinstance(loaded, dict):
-                    existing_cfg = loaded
-            except ValueError:
-                existing_cfg = {}
-        servers = existing_cfg.get('mcpServers')
-        if not isinstance(servers, dict):
-            servers = {}
-            existing_cfg['mcpServers'] = servers
-        servers['dreampia-skill'] = mcp_entry
-        mcp_cfg_path.write_text(json.dumps(existing_cfg, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+        for m_rel in _GLOBAL_MCP_CONFIG_REL_TARGETS:
+            m_path = home / m_rel
+            m_path.parent.mkdir(parents=True, exist_ok=True)
+            existing_cfg: dict[str, object] = {}
+            if m_path.is_file():
+                try:
+                    loaded = json.loads(m_path.read_text(encoding='utf-8'))
+                    if isinstance(loaded, dict):
+                        existing_cfg = loaded
+                except ValueError:
+                    existing_cfg = {}
+            servers = existing_cfg.get('mcpServers')
+            if not isinstance(servers, dict):
+                servers = {}
+                existing_cfg['mcpServers'] = servers
+            servers['dreampia-skill'] = mcp_entry
+            m_path.write_text(json.dumps(existing_cfg, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 
     project_result: dict[str, object] | None = None
     if project_dir is not None:
@@ -1268,6 +1277,7 @@ def setup_global(
         'global_skill_targets': installed_targets,
         'backed_up_targets': backed_up_targets,
         'mcp_config_path': str(mcp_cfg_path),
+        'mcp_config_paths': mcp_cfg_paths,
         'project_setup': project_result,
         'message_ko': (
             f'Dreampia v{VERSION} 전역 스킬({len(installed_targets)}개 호스트 경로) 및 MCP 서버 등록이 완료되었습니다.'
@@ -1299,20 +1309,21 @@ def uninstall_global(
                     shutil.move(str(bak), str(dst))
                     restored_backups.append(str(dst))
 
-    mcp_cfg_path = home / '.gemini/antigravity/mcp_config.json'
     mcp_removed = False
-    if mcp_cfg_path.is_file():
-        try:
-            loaded = json.loads(mcp_cfg_path.read_text(encoding='utf-8'))
-            if isinstance(loaded, dict) and isinstance(loaded.get('mcpServers'), dict):
-                servers = loaded['mcpServers']
-                if 'dreampia-skill' in servers:
-                    mcp_removed = True
-                    if apply:
-                        del servers['dreampia-skill']
-                        mcp_cfg_path.write_text(json.dumps(loaded, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-        except ValueError:
-            pass
+    for m_rel in _GLOBAL_MCP_CONFIG_REL_TARGETS:
+        m_path = home / m_rel
+        if m_path.is_file():
+            try:
+                loaded = json.loads(m_path.read_text(encoding='utf-8'))
+                if isinstance(loaded, dict) and isinstance(loaded.get('mcpServers'), dict):
+                    servers = loaded['mcpServers']
+                    if 'dreampia-skill' in servers:
+                        mcp_removed = True
+                        if apply:
+                            del servers['dreampia-skill']
+                            m_path.write_text(json.dumps(loaded, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+            except ValueError:
+                pass
 
     return {
         'action': 'uninstall-global',
@@ -1448,6 +1459,7 @@ def project_status(root: pathlib.Path, home_dir: pathlib.Path | None = None) -> 
     state_dir = route_planner.resolve_skill_state_dir(root)
     unmanaged_collision = route_planner.has_unmanaged_dreampia_data_dir(root)
     ui_enforced = route_planner.is_ui_rule_enforced(root)
+    briefing_on = route_planner.is_briefing_enabled(root)
     sdd_patterns = sdd_engine.resolve_sdd_id_patterns(root)
     live_ver = (PACKAGE / 'VERSION').read_text(encoding='utf-8').strip() if (PACKAGE / 'VERSION').is_file() else VERSION
 
@@ -1488,6 +1500,7 @@ def project_status(root: pathlib.Path, home_dir: pathlib.Path | None = None) -> 
         'skill_state_dir': state_dir,
         'unmanaged_data_collision': unmanaged_collision,
         'ui_rules_enforced': ui_enforced,
+        'briefing_enabled': briefing_on,
         'sdd_id_patterns': sdd_patterns,
         'active_worktrees': active_worktrees,
         'evidence_files': evidence_files,
@@ -1496,6 +1509,7 @@ def project_status(root: pathlib.Path, home_dir: pathlib.Path | None = None) -> 
         'message_ko': (
             f'Dreampia v{live_ver} 상태 요약 -> 상태 폴더: {state_dir}, '
             f'UI 규칙 강제: {"ON" if ui_enforced else "OFF"}, '
+            f'브리핑 출력: {"ON" if briefing_on else "OFF"}, '
             f'학습 규칙: {learned_rules_count}건, '
             f'글로벌 동기화: {global_info["synced_count"]}/{global_info["total_targets"]}'
         ),
@@ -1506,13 +1520,14 @@ def manage_project_config(
     root: pathlib.Path,
     *,
     ui_rules: str | None = None,
+    briefing: str | None = None,
     state_dir: str | None = None,
     req_pattern: str | None = None,
     task_pattern: str | None = None,
     test_pattern: str | None = None,
     apply: bool = False,
 ) -> dict[str, object]:
-    """프로젝트별 설정(UI 규칙 강제 여부, SDD ID 정규식, 상태 폴더)을 조회하거나 안전하게 변경한다."""
+    """프로젝트별 설정(UI 규칙 강제 여부, 브리핑 출력 여부, SDD ID 정규식, 상태 폴더)을 조회하거나 안전하게 변경한다."""
     resolved_state_dir = state_dir.strip().strip('/\\') if state_dir else route_planner.resolve_skill_state_dir(root)
     if resolved_state_dir not in ('.dreampia', '.dreampia-skill'):
         raise InstallError('state_dir must be .dreampia or .dreampia-skill')
@@ -1544,6 +1559,13 @@ def manage_project_config(
         current_cfg['enforce_ui_rules'] = enforce_val
         changed = True
 
+    if briefing is not None and briefing.strip():
+        norm_b = briefing.strip().lower()
+        if norm_b not in ('on', 'off', 'true', 'false'):
+            raise InstallError('briefing must be on or off')
+        current_cfg['enforce_briefing'] = norm_b in ('on', 'true')
+        changed = True
+
     if any(p is not None and p.strip() for p in (req_pattern, task_pattern, test_pattern)):
         sdd_sec = current_cfg.get('sdd')
         if not isinstance(sdd_sec, dict):
@@ -1561,6 +1583,7 @@ def manage_project_config(
         write_bytes(root, cfg_rel, canonical(current_cfg))
 
     eff_ui = route_planner.is_ui_rule_enforced(root) if not (changed and not apply) else bool(current_cfg.get('enforce_ui_rules', True))
+    eff_briefing = route_planner.is_briefing_enabled(root) if not (changed and not apply) else bool(current_cfg.get('enforce_briefing', True))
     eff_sdd = sdd_engine.resolve_sdd_id_patterns(root) if not (changed and not apply) else current_cfg.get('sdd', sdd_engine.resolve_sdd_id_patterns(root))
     return {
         'action': 'config',
@@ -1570,6 +1593,7 @@ def manage_project_config(
         'config_path': cfg_rel,
         'skill_state_dir': resolved_state_dir,
         'ui_rules_enforced': eff_ui,
+        'briefing_enabled': eff_briefing,
         'sdd_id_patterns': eff_sdd,
         'config': current_cfg,
         'message_ko': (
@@ -1819,6 +1843,7 @@ def main(argv=None) -> int:
     p.add_argument('--to',dest='to_version',default='',help='target semver version (X.Y.Z) for release / bump-version')
     p.add_argument('--notes',default='',help='release notes entry in Korean for CHANGELOG.md during release')
     p.add_argument('--ui-rules',choices=('on','off'),default=None,help='enable or disable default UI rules (bg-transparent, lucide-react) in project config')
+    p.add_argument('--briefing',choices=('on','off'),default=None,help='enable or disable top/bottom prompt expansion briefing in project config')
     p.add_argument('--state-dir',choices=('.dreampia','.dreampia-skill'),default=None,help='explicit skill state directory in project config')
     p.add_argument('--req-pattern',default=None,help='custom regex for SDD requirement IDs in project config')
     p.add_argument('--task-pattern',default=None,help='custom regex for SDD task IDs in project config')
@@ -1901,7 +1926,7 @@ def main(argv=None) -> int:
             return mcp_server.serve_stdio(root)
         if a.action=='status':out=project_status(root)
         elif a.action=='doctor':out=doctor(root,include_global=(a.global_scope or implicit_global),check_remote=a.check_remote)
-        elif a.action=='config':out=manage_project_config(root,ui_rules=a.ui_rules,state_dir=a.state_dir,req_pattern=a.req_pattern,task_pattern=a.task_pattern,test_pattern=a.test_pattern,apply=a.apply)
+        elif a.action=='config':out=manage_project_config(root,ui_rules=a.ui_rules,briefing=a.briefing,state_dir=a.state_dir,req_pattern=a.req_pattern,task_pattern=a.task_pattern,test_pattern=a.test_pattern,apply=a.apply)
         elif a.action=='clean':out=clean_workspace(root,clean_evidence=a.clean_evidence,apply=a.apply)
         elif a.action=='rollback':out=rollback(root,a.apply)
         elif a.action=='scaffold':out=project_scaffold(root,a.type,a.apply)

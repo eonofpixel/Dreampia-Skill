@@ -698,118 +698,155 @@ def run_autopilot_gate(
     *,
     allow_doc_only: bool = False,
     apply: bool = False,
+    max_iterations: int | None = None,
 ) -> dict[str, object]:
-    """Morpheus & Tank 단일 오토파일럿 통합 게이트: 프로파일에 맞춰 지침·SDD·코드감사·클린룸·Golden I/O를 원자적으로 연쇄 검증한다."""
+    """Morpheus & Tank 단일 오토파일럿 통합 게이트: 프로파일에 맞춰 지침·SDD·코드감사·클린룸·Golden I/O를 원자적으로 연쇄 검증하며, continuous_loop 활성 시 최대 N회 자가 복구 루프를 수행한다."""
     if root.is_symlink() or not root.is_dir():
         raise ValueError("유효하지 않은 프로젝트 디렉터리입니다.")
     resolved = root.resolve()
     eff_goal = goal.strip() or "프로젝트 기능 구현 및 품질 게이트 통합 검증"
     decision = route_planner.plan_route(eff_goal, root=resolved)
 
+    budget = max(1, min(5, max_iterations if max_iterations is not None else (3 if decision.continuous_loop else 1)))
+    loop_history: list[dict[str, object]] = []
     stages: list[dict[str, object]] = []
+    all_passed = False
 
-    # Stage 1: Instruction Drift Check
-    inst_res = write_boundary.check_instruction_drift(resolved)
-    stages.append(
-        {
-            "stage": "instruction-drift",
-            "owner": "Seraph (privacy-guard)",
-            "status": inst_res["status"],
-            "detail": inst_res["message_ko"],
-        }
-    )
+    for attempt in range(1, budget + 1):
+        stages = []
 
-    # Stage 2: SDD + TDD Traceability Check
-    saved_sdd: dict[str, object] | None = None
-    sdd_ledger_file = resolved / sdd_engine.DEFAULT_SDD_LEDGER_REL
-    if sdd_ledger_file.is_file():
-        try:
-            saved_sdd = json.loads(sdd_ledger_file.read_text(encoding="utf-8"))
-        except ValueError:
-            saved_sdd = None
-    sdd_res = sdd_engine.verify_sdd_compliance(
-        resolved,
-        saved_ledger=saved_sdd,
-        require_tdd_files=not allow_doc_only,
-    )
-    stages.append(
-        {
-            "stage": "sdd-tdd-traceability",
-            "owner": "Oracle (planner) & Tank (verifier)",
-            "status": "PASS" if sdd_res["status"] == "PASS" else "FAIL",
-            "traceability_ratio": sdd_res["traceability_ratio"],
-            "blockers": sdd_res["blockers"],
-            "detail": sdd_res["message_ko"],
-        }
-    )
-
-    # Stage 3: Trinity Code & Hollow-TDD Static Audit
-    if not allow_doc_only:
-        audit_res = audit_project_code(resolved)
+        # Stage 1: Instruction Drift Check
+        inst_res = write_boundary.check_instruction_drift(resolved)
         stages.append(
             {
-                "stage": "trinity-code-audit",
-                "owner": "Trinity (reviewer)",
-                "status": audit_res["status"],
-                "blocking_count": audit_res["blocking_count"],
-                "finding_count": audit_res["finding_count"],
-                "findings": audit_res["findings"],
-                "detail": audit_res["message_ko"],
+                "stage": "instruction-drift",
+                "owner": "Seraph (privacy-guard)",
+                "status": inst_res["status"],
+                "detail": inst_res["message_ko"],
             }
         )
 
-    # Stage 4: Cleanroom Reconstruction & Golden I/O (when cleanroom profile or ledger exists)
-    rec_ledger_file = resolved / "evidence/reconstruction-ledger.json"
-    if decision.cleanroom_isolation or rec_ledger_file.is_file():
-        if (resolved / "contaminated-zone").is_dir():
-            live_rec = reconstruct_engine.build_obligation_ledger(resolved, "contaminated-zone")
-            cov_res = reconstruct_engine.evaluate_reconstruction_coverage(
-                live_rec,
-                root=resolved,
-                require_zero_contamination=True,
-            )
-            stages.append(
-                {
-                    "stage": "cleanroom-reconstruction",
-                    "owner": "Keymaker (analyst) & Tank (verifier)",
-                    "status": cov_res["status"],
-                    "coverage_ratio": cov_res["coverage_ratio"],
-                    "detail": cov_res["message_ko"],
-                }
-            )
-        golden_res = verify_golden_io(resolved)
-        if golden_res["status"] != "NOT_RUN":
-            stages.append(
-                {
-                    "stage": "golden-io-equivalence",
-                    "owner": "Keymaker (analyst) & Tank (verifier)",
-                    "status": golden_res["status"],
-                    "passed_count": golden_res["passed_count"],
-                    "case_count": golden_res["case_count"],
-                    "detail": golden_res["message_ko"],
-                }
-            )
-
-    # Stage 5: Visual Acceptance (when visual-manifest.json exists)
-    vis_manifest = resolved / "visual-manifest.json"
-    if vis_manifest.is_file():
-        vis_res = visual_acceptance.verify_visual_acceptance(vis_manifest, root=resolved)
+        # Stage 2: SDD + TDD Traceability Check
+        saved_sdd: dict[str, object] | None = None
+        sdd_ledger_file = resolved / sdd_engine.DEFAULT_SDD_LEDGER_REL
+        if sdd_ledger_file.is_file():
+            try:
+                saved_sdd = json.loads(sdd_ledger_file.read_text(encoding="utf-8"))
+            except ValueError:
+                saved_sdd = None
+        sdd_res = sdd_engine.verify_sdd_compliance(
+            resolved,
+            saved_ledger=saved_sdd,
+            require_tdd_files=not allow_doc_only,
+        )
         stages.append(
             {
-                "stage": "visual-acceptance",
-                "owner": "Niobe (ux-designer) & Tank (verifier)",
-                "status": vis_res["status"],
-                "detail": vis_res["message_ko"],
+                "stage": "sdd-tdd-traceability",
+                "owner": "Oracle (planner) & Tank (verifier)",
+                "status": "PASS" if sdd_res["status"] == "PASS" else "FAIL",
+                "traceability_ratio": sdd_res["traceability_ratio"],
+                "blockers": sdd_res["blockers"],
+                "detail": sdd_res["message_ko"],
             }
         )
 
-    all_passed = decision.goal_kind != "unsupported" and all(s["status"] == "PASS" for s in stages)
+        # Stage 3: Trinity Code & Hollow-TDD Static Audit
+        if not allow_doc_only:
+            audit_res = audit_project_code(resolved)
+            stages.append(
+                {
+                    "stage": "trinity-code-audit",
+                    "owner": "Trinity (reviewer)",
+                    "status": audit_res["status"],
+                    "blocking_count": audit_res["blocking_count"],
+                    "finding_count": audit_res["finding_count"],
+                    "findings": audit_res["findings"],
+                    "detail": audit_res["message_ko"],
+                }
+            )
+
+        # Stage 4: Cleanroom Reconstruction & Golden I/O (when cleanroom profile or ledger exists)
+        rec_ledger_file = resolved / "evidence/reconstruction-ledger.json"
+        if decision.cleanroom_isolation or rec_ledger_file.is_file():
+            if (resolved / "contaminated-zone").is_dir():
+                live_rec = reconstruct_engine.build_obligation_ledger(resolved, "contaminated-zone")
+                cov_res = reconstruct_engine.evaluate_reconstruction_coverage(
+                    live_rec,
+                    root=resolved,
+                    require_zero_contamination=True,
+                )
+                stages.append(
+                    {
+                        "stage": "cleanroom-reconstruction",
+                        "owner": "Keymaker (analyst) & Tank (verifier)",
+                        "status": cov_res["status"],
+                        "coverage_ratio": cov_res["coverage_ratio"],
+                        "detail": cov_res["message_ko"],
+                    }
+                )
+            golden_res = verify_golden_io(resolved)
+            if golden_res["status"] != "NOT_RUN":
+                stages.append(
+                    {
+                        "stage": "golden-io-equivalence",
+                        "owner": "Keymaker (analyst) & Tank (verifier)",
+                        "status": golden_res["status"],
+                        "passed_count": golden_res["passed_count"],
+                        "case_count": golden_res["case_count"],
+                        "detail": golden_res["message_ko"],
+                    }
+                )
+
+        # Stage 5: Visual Acceptance (when visual-manifest.json exists)
+        vis_manifest = resolved / "visual-manifest.json"
+        if vis_manifest.is_file():
+            vis_res = visual_acceptance.verify_visual_acceptance(vis_manifest, root=resolved)
+            stages.append(
+                {
+                    "stage": "visual-acceptance",
+                    "owner": "Niobe (ux-designer) & Tank (verifier)",
+                    "status": vis_res["status"],
+                    "detail": vis_res["message_ko"],
+                }
+            )
+
+        all_passed = decision.goal_kind != "unsupported" and all(s["status"] == "PASS" for s in stages)
+        failed_stages = [str(s["stage"]) for s in stages if s["status"] != "PASS"]
+        healed_actions: list[str] = []
+
+        if not all_passed and attempt < budget and apply:
+            # Self-healing action: if SDD ledger is stale, rebuild sdd-ledger.json and context-pack.json before next attempt
+            if "sdd-tdd-traceability" in failed_stages:
+                refreshed_ledger = sdd_engine.build_sdd_ledger(resolved)
+                sdd_ledger_file.parent.mkdir(parents=True, exist_ok=True)
+                sdd_ledger_file.write_text(
+                    json.dumps(refreshed_ledger, ensure_ascii=False, indent=2) + "\n",
+                    encoding="utf-8",
+                )
+                healed_actions.append("refresh-sdd-ledger")
+            compile_context_pack(resolved, eff_goal, apply=True)
+            healed_actions.append("refresh-context-pack")
+
+        loop_history.append(
+            {
+                "iteration": attempt,
+                "status": "PASS" if all_passed else "FAIL",
+                "failed_stages": failed_stages,
+                "self_healing_actions": healed_actions,
+            }
+        )
+        if all_passed or not healed_actions:
+            break
+
     verdict_doc: dict[str, object] = {
         "schema_version": AUTOPILOT_VERSION,
         "generated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "status": "PASS" if all_passed else "FAIL",
         "commander": decision.to_dict()["commander"],
         "profile": decision.profile,
+        "execution_mode": decision.execution_mode,
+        "continuous_loop": decision.continuous_loop,
+        "loop_iterations": loop_history,
         "risk_level": decision.risk_level,
         "agent_squad": decision.to_dict()["agent_squad"],
         "stage_count": len(stages),

@@ -249,7 +249,7 @@
   ],
   "delta_modified_ids": [],
   "evidence_files": {
-    "evidence/autopilot-verdict.json": "e1513002e1bf5f2da6cd9f933e947a2b109006741357729001cff71f9752933a",
+    "evidence/autopilot-verdict.json": "1b517795bb724ae5dc2e7044e05a42c4e41fab18e31c736608c7679b44f3acc6",
     "evidence/blast-radius-report.json": "48cea6b91cd8b1df94ffb33d1d96ce3200783df1fb13643d1e8eca4cccdf76b5",
     "evidence/code-audit.json": "687093c8283b68d8750724f13dfca63fb3afc1f519a993d095dc00f8859b436e",
     "evidence/context-pack.json": "0eaa36e65f1d84c531ccf31064bb68b33e20e987a5bcf145200b6c3b43675dee",
@@ -257,7 +257,7 @@
     "evidence/metric-climb-ledger.json": "671e558ac02d89b2569b72f2c7a384bd42f7052df3564c2610f8315fc726bfc4",
     "evidence/verification.json": "40fe6dc2077dfb19a1439631f1627a9acd6cbcb98bf2504636178fa34ffd9566"
   },
-  "generated_at": "2026-10-16T17:52:15.382111+00:00",
+  "generated_at": "2026-10-16T18:05:19.435325+00:00",
   "requirements": [
     {
       "id": "PRD-R001",

@@ -221,6 +221,32 @@ def is_ui_rule_enforced(root: Path | None = None) -> bool:
     return True
 
 
+def is_briefing_enabled(root: Path | None) -> bool:
+    """프로젝트 설정(enforce_briefing)에서 상단 작전 브리핑 출력 활성화 여부를 확인한다. 기본값은 True."""
+    if root is None or root.is_symlink() or not root.is_dir():
+        return True
+    import json as _json
+
+    resolved = root.resolve()
+    state_dir = resolve_skill_state_dir(resolved)
+    candidates = (
+        resolved / state_dir / "memory" / "project-rules.json",
+        resolved / ".dreampia-skill" / "memory" / "project-rules.json",
+        resolved / ".dreampia" / "memory" / "project-rules.json",
+        resolved / state_dir / "project.json",
+        resolved / ".dreampia" / "project.json",
+    )
+    for cfg_path in candidates:
+        if cfg_path.is_file() and not cfg_path.is_symlink():
+            try:
+                data = _json.loads(cfg_path.read_text(encoding="utf-8"))
+                if isinstance(data, dict) and data.get("enforce_briefing") is False:
+                    return False
+            except (OSError, ValueError, TypeError):
+                pass
+    return True
+
+
 def resolve_role_alias(name_or_callsign: str) -> str:
 
     """역할 ID 또는 매트릭스 코드네임(영문/한글)을 표준 역할 ID로 변환한다."""
@@ -1602,7 +1628,7 @@ def expand_prompt_brief(
                 f"  {idx}. {act.get('title_ko', '')} -> 입력 예시: \"{act.get('prompt_example_ko', '')}\""
             )
 
-    echo_md = "\n".join(echo_lines)
+    echo_md = "\n".join(echo_lines) if is_briefing_enabled(root) else ""
 
     return PromptExpansionBrief(
         raw_goal=normalized,

@@ -369,17 +369,18 @@ MCP_TOOLS: tuple[McpToolDefinition, ...] = (
     ),
     McpToolDefinition(
         name="dreampia_config",
-        description="프로젝트별 설정 관리(/config): UI 규칙(bg-transparent, lucide-react) 강제 여부(on/off), 상태 폴더(.dreampia-skill), SDD ID 정규식(req_pattern, task_pattern, test_pattern)을 조회하거나 설정합니다.",
+        description="프로젝트별 설정 관리(/config): UI 규칙(bg-transparent, lucide-react) 강제 여부(on/off), 상하단 브리핑 출력 여부(on/off), 상태 폴더(.dreampia-skill), SDD ID 정규식(req_pattern, task_pattern, test_pattern)을 조회하거나 설정합니다.",
         input_schema={
             "type": "object",
             "properties": {
                 "project": {"type": "string", "description": "대상 프로젝트 루트 경로"},
                 "ui_rules": {"type": "string", "enum": ["on", "off"], "description": "기본 UI 규칙 강제 여부 (on 또는 off)"},
+                "briefing": {"type": "string", "enum": ["on", "off"], "description": "상단 작전 브리핑 출력 여부 (on 또는 off)"},
                 "state_dir": {"type": "string", "enum": [".dreampia", ".dreampia-skill"], "description": "스킬 상태 저장 폴더"},
                 "req_pattern": {"type": "string", "description": "SDD 요구사항 ID 정규식"},
                 "task_pattern": {"type": "string", "description": "SDD 작업 ID 정규식 (예: \\bT\\d{3,6}\\b)"},
                 "test_pattern": {"type": "string", "description": "SDD 테스트 ID 정규식"},
-                "apply": {"type": "boolean", "description": "true 지정 시 project.json에 실제 저장"},
+                "apply": {"type": "boolean", "description": "true 지정 시 project-rules.json에 실제 저장"},
             },
         },
     ),
@@ -458,6 +459,7 @@ def execute_mcp_tool(default_root: Path, tool_name: str, arguments: dict[str, ob
 
     if tool_name == "dreampia_config":
         ui_rules = str(arguments["ui_rules"]).strip() if arguments.get("ui_rules") else None
+        briefing_arg = str(arguments["briefing"]).strip() if arguments.get("briefing") else None
         state_dir = str(arguments["state_dir"]).strip() if arguments.get("state_dir") else None
         req_pat = str(arguments["req_pattern"]).strip() if arguments.get("req_pattern") else None
         task_pat = str(arguments["task_pattern"]).strip() if arguments.get("task_pattern") else None
@@ -466,6 +468,7 @@ def execute_mcp_tool(default_root: Path, tool_name: str, arguments: dict[str, ob
         return team_cli.manage_project_config(
             root,
             ui_rules=ui_rules,
+            briefing=briefing_arg,
             state_dir=state_dir,
             req_pattern=req_pat,
             task_pattern=task_pat,

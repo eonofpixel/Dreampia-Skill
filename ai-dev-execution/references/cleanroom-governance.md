@@ -73,7 +73,7 @@ python -m harness.team_cli reconstruct-compare --project /path/to/project --sour
 
 ## 5. 유니버설 멀티 에이전트 라우터 및 MCP 서버 (`router-*` / `mcp-serve`)
 
-1. 11종 에이전트 호스트(`codex`, `claude`, `gemini`, `opencode`, `dsh`, `qwen`, `aider`, `goose`, `hermes`, `pi`, `local`)에 대한 자동 탐색(`router-discover`), 스킬/플러그인 일괄 배치(`router-materialize`), 실시간 비대화형 CLI 실행 어댑터(`router-dispatch`), 그리고 STDIO JSON-RPC 2.0 MCP 서버(`mcp-serve`, 22종 도구)를 기본 제공한다.
+1. 11종 에이전트 호스트(`codex`, `claude`, `gemini`, `opencode`, `dsh`, `qwen`, `aider`, `goose`, `hermes`, `pi`, `local`)에 대한 자동 탐색(`router-discover`), 스킬/플러그인 일괄 배치(`router-materialize`), 실시간 비대화형 CLI 실행 어댑터(`router-dispatch`), 그리고 STDIO JSON-RPC 2.0 MCP 서버(`mcp-serve`, 29종 도구)를 기본 제공한다.
 
 ```bash
 python -m harness.team_cli router-discover --project /path/to/project
