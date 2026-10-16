@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "model": "gpt-6.1-sol",
+  "reasoning_effort": "medium",
+  "automatic_model_upgrade": false,
+  "executor_count": 1,
+  "max_review_rounds": 2,
+  "parallel_policy": "explicit_independent_owned_tasks_only"
+}

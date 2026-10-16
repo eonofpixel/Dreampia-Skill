@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "requirements": ["R1", "R2"],
+  "tasks": [
+    {
+      "id": "T1", "requirements": ["R1"], "depends_on": [],
+      "adapter": {"kind": "deterministic"}, "max_attempts": 2, "timeout": 10,
+      "checks": [{"id": "C1", "argv": ["python3", "-m", "unittest", "test_slots.SlotsTests.test_reserve", "test_slots.SlotsTests.test_required"]}]
+    },
+    {
+      "id": "T2", "requirements": ["R2"], "depends_on": ["T1"],
+      "adapter": {"kind": "deterministic"}, "max_attempts": 2, "timeout": 10,
+      "checks": [{"id": "C2", "argv": ["python3", "-m", "unittest", "test_slots.SlotsTests.test_duplicate_same_person", "test_slots.SlotsTests.test_conflict"]}]
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "schema_version": "0.6.1",
+  "generated_at": "2026-10-16T17:06:39.795562+00:00",
+  "status": "PASS",
+  "commander": {
+    "callsign": "Morpheus",
+    "name_ko": "모피어스",
+    "title_ko": "총괄 라우터 및 작전 지휘관"
+  },
+  "profile": "team",
+  "risk_level": "medium",
+  "agent_squad": [
+    {
+      "role": "planner",
+      "callsign": "Oracle",
+      "name_ko": "오라클",
+      "title_ko": "제품 기획 및 요구사항·백로그 설계자"
+    },
+    {
+      "role": "executor",
+      "callsign": "Neo",
+      "name_ko": "네오",
+      "title_ko": "TDD 기반 핵심 코드 구현자"
+    },
+    {
+      "role": "reviewer",
+      "callsign": "Trinity",
+      "name_ko": "트리니티",
+      "title_ko": "SOLID 원칙·설계 정합성·결함 수석 리뷰어"
+    },
+    {
+      "role": "verifier",
+      "callsign": "Tank",
+      "name_ko": "탱크",
+      "title_ko": "실행 증거·시각 픽셀·원장 커버리지 검증 오퍼레이터"
+    }
+  ],
+  "stage_count": 2,
+  "stages": [
+    {
+      "stage": "instruction-drift",
+      "owner": "Seraph (privacy-guard)",
+      "status": "PASS",
+      "detail": "지침 문서 무결성 및 드리프트 점검을 통과했습니다."
+    },
+    {
+      "stage": "sdd-tdd-traceability",
+      "owner": "Oracle (planner) & Tank (verifier)",
+      "status": "PASS",
+      "traceability_ratio": 1.0,
+      "blockers": [],
+      "detail": "SDD 명세-작업-TDD 테스트 추적성 검증을 통과했습니다. (추적률 100.0%)"
+    }
+  ],
+  "message_ko": "Morpheus & Tank 오토파일럿 통합 게이트(team) 전 단계(2개) 검증을 통과했습니다.",
+  "verdict_sha256": "e97a4a3f58d37b9fb8d548c6458244c12830aa7b806c9a60907f3ed08dfe0103"
+}

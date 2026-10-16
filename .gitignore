@@ -1,0 +1,35 @@
+# Local runtime/builds/credentials; source and reviewed documentation remain explicit.
+.harness/
+.dreampia-install/
+node_modules/
+__pycache__/
+*.pyc
+.env
+.env.*
+*.pem
+*.key
+*.p12
+id_rsa
+id_ed25519
+.DS_Store
+*.zip
+*.tgz
+*.whl
+*.pyz
+build/
+dist/
+.next/
+playwright-report/
+test-results/
+.dreampia-workflow/
+.workflow/
+.local-data/
+# Historical and temporary raw execution output kept in local delivery archives.
+evidence/**/*.txt
+evidence/**/npm-*.json
+evidence/**/local-ci-*.json
+evidence/**/post-delivery*.json
+evidence/**/integration-first.json
+evidence/**/reextract*.json
+evidence/**/codex-fixture*.json
+evidence/**/cancel-*.json

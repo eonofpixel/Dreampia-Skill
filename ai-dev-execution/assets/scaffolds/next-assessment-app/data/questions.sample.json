@@ -1,0 +1,12 @@
+{
+  "sessionId": "local-growth-v1",
+  "scoringVersion": "weighted-likert-v1",
+  "title": "나의 성장 역량 진단",
+  "domains": {"ai_ethics_security":"AI 윤리·보안 인식", "career":"진로 탐색"},
+  "questions": [
+    {"id":"Q001","domain":"ai_ethics_security","text":"AI 도구 사용 전 개인정보 입력 위험을 확인한다.","scale":5,"reverse":false,"weight":2},
+    {"id":"Q002","domain":"ai_ethics_security","text":"AI가 만든 내용은 확인 없이 그대로 사용해도 된다고 생각한다.","scale":5,"reverse":true,"weight":1},
+    {"id":"Q003","domain":"career","text":"관심 있는 진로에 필요한 역량을 찾아볼 수 있다.","scale":5,"reverse":false,"weight":1},
+    {"id":"Q004","domain":"career","text":"성장을 위해 다음에 실천할 작은 목표를 정할 수 있다.","scale":5,"reverse":false,"weight":1}
+  ]
+}

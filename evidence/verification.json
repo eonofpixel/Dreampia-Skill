@@ -1,0 +1,136 @@
+{
+  "python": "3.9.6 (default, Mar  6 2026, 16:22:43) \n[Clang 21.0.0 (clang-2100.0.123.102)]",
+  "platform": "macOS-26.4-arm64-arm-64bit",
+  "commands": [
+    {
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "harness/tests",
+        "-v"
+      ],
+      "cwd": "/Users/bot-0/dev/dreampia-skill",
+      "at": "2026-10-09T16:53:31.674623+00:00",
+      "exit": 0,
+      "log": "verify-01.txt"
+    },
+    {
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "harness/validate_assets.py",
+        "ai-dev-execution"
+      ],
+      "cwd": "/Users/bot-0/dev/dreampia-skill",
+      "at": "2026-10-09T16:54:17.407609+00:00",
+      "exit": 0,
+      "log": "verify-02.txt"
+    },
+    {
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "harness/cli.py",
+        "validate",
+        "harness/examples/slots"
+      ],
+      "cwd": "/Users/bot-0/dev/dreampia-skill",
+      "at": "2026-10-09T16:54:17.433973+00:00",
+      "exit": 0,
+      "log": "verify-03.txt"
+    },
+    {
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "harness/cli.py",
+        "run",
+        "harness/examples/slots"
+      ],
+      "cwd": "/Users/bot-0/dev/dreampia-skill",
+      "at": "2026-10-09T16:54:17.468369+00:00",
+      "exit": 0,
+      "log": "verify-04.txt"
+    },
+    {
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "harness/cli.py",
+        "trace",
+        "harness/examples/slots"
+      ],
+      "cwd": "/Users/bot-0/dev/dreampia-skill",
+      "at": "2026-10-09T16:54:17.506362+00:00",
+      "exit": 0,
+      "log": "verify-05.txt"
+    },
+    {
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "harness/cli.py",
+        "status",
+        "harness/examples/slots"
+      ],
+      "cwd": "/Users/bot-0/dev/dreampia-skill",
+      "at": "2026-10-09T16:54:17.541429+00:00",
+      "exit": 0,
+      "log": "verify-06.txt"
+    },
+    {
+      "command": [
+        "/Library/Developer/CommandLineTools/usr/bin/python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        ".",
+        "-v"
+      ],
+      "cwd": "/Users/bot-0/dev/dreampia-skill/harness/examples/slots",
+      "at": "2026-10-09T16:54:17.575869+00:00",
+      "exit": 0,
+      "log": "verify-07.txt"
+    }
+  ],
+  "source_files": {
+    "harness/ARCHITECTURE.ko.md": "38798c29d630bc72abc5a05cf55803f055df69b723f8a0d46ed71e8f7f9c123a",
+    "harness/CODEX_ADAPTER.ko.md": "a7d36eb96ac970ea834b00efe17ee4a411b546b894a932b5199d46bc744aafbe",
+    "harness/README.ko.md": "2ec73844cd14665b529354aa652449eeeb66fe1875b4867bdad9c20551e28790",
+    "harness/__init__.py": "b9215ef8850057a92911aa9a34a37b2d0f6ae822499b5277182c8bfa04fbc03a",
+    "harness/__main__.py": "79ee6f134c5c5193377cf9b189cbdcc3e2095e49ba9cec310114441c15a917c4",
+    "harness/build.py": "45d83682552f6ec5485475ef3659b1ff94876f141d33871dc86500655ab14f56",
+    "harness/cli.py": "2beb106996ab63f73917c16fa49281601bc55af6a78c994a84fea81274e62a4f",
+    "harness/codex_adapter.py": "82a9cf8ee38a63d8214c2e5bdd2e1e6d7afc09f8bd70df3328c8cc05a52dd4c1",
+    "harness/core.py": "c88c87c7894ceb9e1735574d8e3e5faca71dd7ce4d60c96d0a7e832e98913fa2",
+    "harness/eval_runner.py": "6e805c93e3eebf4541a94f2d514221d93925c72c3730f67fc3936c91f9a373cf",
+    "harness/examples/slots/harness.json": "2cbd9bdf352d1cb1bf7b6934bf52d80824993b0d353dd43164e60f22f7c2bb24",
+    "harness/examples/slots/slots.py": "a2c3afbdb94616194ae15ab2ed09aa74cdfaef0ab1dee65bdf3b0dfe5189a369",
+    "harness/examples/slots/spec.md": "1172c4857b4adfdeec7ca5ee87cda1300ca721bf0c610d3bbb60a3f5560ead6b",
+    "harness/examples/slots/test_slots.py": "00d9bddada55b273abd552e0ebd69cbbbea95da8739a7bc68e3e2ffb5044d13c",
+    "harness/local_ci.py": "0c249eca3b57fb588df84fc9eaf4c95cd955f620de839e034b5f974241d0f2a4",
+    "harness/npm_smoke.py": "5eae6ba59ffbcef3070b01dcbda655894cba8f54f3e3c193332851d015ee481e",
+    "harness/package_team.py": "d7a55631f31f0a38d8517f52653012276aade4f163c9e79d60f6a1efa9230071",
+    "harness/process.py": "89ad3f5c763829276513fc482bf7966dd118814f1b61e5652a452313d29d90fb",
+    "harness/schema.py": "3fc3e266eb1d12e4436ae0b3ba9a285d315bfa4b9c7f88407c57bc14ff6a0254",
+    "harness/skill_bundle.py": "1c14ac868ac419d74091816d2df1125a09c7d4edef02a7f8267167d7dedc6342",
+    "harness/team_cli.py": "89bb5d5e8b99bdbc266718806ae238c0903d4dfaba6ec9ab0cf05ab7aae4d5c9",
+    "harness/tests/test_codex.py": "97f7937075109b2ea9d97d995bf90d594f342181e792a5bd8e9e64e98a635634",
+    "harness/tests/test_core.py": "cda053cc877aaac9019303464d98c7a0e8b0845dce146fedec53e8ee4ee6b174",
+    "harness/tests/test_design_delivery.py": "bd3d9ced3b8701a01b68ea5390132fb1634ebfccb0fafec2d004db1d39395bd6",
+    "harness/tests/test_hardening.py": "c2c70fd669428d43bde876a956fe58aa89e5ff8b9144570ae4f7d603dd4f4f6f",
+    "harness/tests/test_local_ci.py": "252827364ae6c5a5864ea2f3abf5984c1cf50b3e6ad17082e594bfd8b9f64f45",
+    "harness/tests/test_package_boundaries.py": "601fbb45a983bf58bea39fa8d0fc792788ee420e01cae770c573ae047e4ae48f",
+    "harness/tests/test_process.py": "aea0d6addb762c956f873c1a9c86246060380bb774cd222a5c64e6e84a02a74a",
+    "harness/tests/test_product.py": "fefc2f77db84cb59cc3c185d24e3e05239250f6d4ac06e5476a0b6483cf0c467",
+    "harness/tests/test_scaffold_contract.py": "526b2aaefd14504167e757bea701f60e4736ccf894124f3a80ef153e057223fb",
+    "harness/tests/test_skill_bundle.py": "7192db4a24c68c919c753bdf48bfaef3a5a73400dba0ff4e4c875e64f6c6c889",
+    "harness/tests/test_strict.py": "418953d7bb60c406bbaaa750be3d95e7ef7a2543c4f6509d81c8a89226abd083",
+    "harness/tests/test_team.py": "571b28a9de6de1358de3ecedb14b6154baa85642f2f4aeb50cb0ede086fdaa43",
+    "harness/tests/test_v03_regressions.py": "42f45b482a45f4f1b368c9c3a2c1c7cb47c5d87fd0cba4d66eeba34be9f59d40",
+    "harness/tests/test_workflow_cli.py": "5227315c8c0e29606be5fce2c7d44455381f7b6afec8dfad3db85ca14c426591",
+    "harness/tests/test_workflow_runner.py": "cdc19ffaa7f9da97dd7dcba3d687758228c6469d5a4ee392a61376c7a5118ecf",
+    "harness/validate_assets.py": "74bf84827706ad96642235cc1c27c2526d1e597ab59d80a6c0fed35d38afd3a4",
+    "harness/verify_package.py": "0aaadd11a207ae2c3ffc049cab376a3413528b91e0709f94d3ff9065e94476e0",
+    "harness/workflow_runner.py": "02e11deca08650007cf813cf144788c4bdd1cfd0d13410f7937c851c87ae169c"
+  }
+}

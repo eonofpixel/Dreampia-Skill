@@ -1,0 +1,16 @@
+{
+  "name": "dreampia-skill",
+  "version": "0.6.1",
+  "contextFileName": "ai-dev-execution/SKILL.md",
+  "mcpServers": {
+    "dreampia-skill": {
+      "command": "python3",
+      "args": [
+        "${extensionPath}/harness/team_cli.py",
+        "mcp-serve",
+        "--project",
+        "."
+      ]
+    }
+  }
+}

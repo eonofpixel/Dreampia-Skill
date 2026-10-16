@@ -1,0 +1,13 @@
+{
+  "name": "dreampia-marketplace",
+  "owner": {
+    "name": "Dreampia"
+  },
+  "plugins": [
+    {
+      "name": "dreampia-skill",
+      "source": "./",
+      "description": "Dreampia AI Dev Execution Skill & Autonomous Engineering Harness (v0.6.1)"
+    }
+  ]
+}

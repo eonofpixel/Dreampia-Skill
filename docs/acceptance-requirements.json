@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "scope": "internal-local-development-milestone",
+  "production_certification": false,
+  "requirements": [
+    {"id":"R01","name":"Fail-closed verification and nonzero failure exit","test":"test_team"},
+    {"id":"R02","name":"Source-bound evidence and isolated screenshot runs","test":"test_team"},
+    {"id":"R03","name":"Real unit tests instead of TODO command","test":"test_scaffold_contract + generated test:unit"},
+    {"id":"R04","name":"Student submit-result-persistence-admin-export flow","test":"generated Playwright E2E"},
+    {"id":"R05","name":"Admin access control and server validation","test":"generated unit + E2E negative tests"},
+    {"id":"R06","name":"CSV injection defense and approved exports","test":"generated unit + test_team"},
+    {"id":"R07","name":"Actual local role adapter orchestration","test":"test_workflow_runner + parent independent invocation"},
+    {"id":"R08","name":"Checkpoint/resume/side-effect replay prevention","test":"test_workflow_runner"},
+    {"id":"R09","name":"Pinned dependencies and lockfile","test":"test_scaffold_contract + npm ci"},
+    {"id":"R10","name":"Source-only packaging and byte verified private archive","test":"test_package_boundaries + package_team build"},
+    {"id":"R11","name":"Isolated installed npm CLI smoke","test":"npm_smoke"},
+    {"id":"R12","name":"Direct screenshot review and employee handoff","test":"parent vision + runbook"}
+  ],
+  "approval_dependent_not_run": [
+    "real-student-data-use",
+    "production-domain-and-deployment",
+    "paid-provider-inference",
+    "school-final-question-and-scoring-approval",
+    "institution-privacy-retention-policy",
+    "production-backup-and-load-testing"
+  ]
+}

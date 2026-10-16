@@ -1,0 +1,26 @@
+{
+  "visibility": "internal_only",
+  "client_export_allowed": false,
+  "type": "assessment-service",
+  "level6_stage": "preset-1",
+  "required_gates": [
+    "before-dev-start",
+    "before-claim-complete",
+    "before-client-send"
+  ],
+  "agents": [
+    "planner",
+    "architect",
+    "ux-designer",
+    "privacy-guard",
+    "executor",
+    "reviewer",
+    "verifier"
+  ],
+  "scaffold_outputs": [
+    "docs",
+    "data",
+    "evidence",
+    ".dreampia/generated"
+  ]
+}

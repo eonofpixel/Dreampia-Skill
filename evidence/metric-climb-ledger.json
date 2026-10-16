@@ -1,0 +1,45 @@
+{
+  "immutable_baseline": {
+    "harness/mcp_server.py": "f58a29dd6360b2a0bb7b711fa5b34edf2c6905540928f27d266408ea8f10a20e"
+  },
+  "entries": [
+    {
+      "timestamp": "2026-10-16T16:26:38.177319+00:00",
+      "config_hash": "358725673fd1",
+      "hypothesis": "baseline-route-plan-3x-latency-ms",
+      "direction": "minimize",
+      "samples": [
+        351.0742,
+        365.2675,
+        335.7254
+      ],
+      "metric_mean": 350.689033,
+      "metric_std": 12.063587,
+      "loc_count": 1319,
+      "loc_delta": 0,
+      "win_probability": 1.0,
+      "fast_failed": false,
+      "verdict": "KEEP",
+      "message_ko": "초기 베이스라인 지표(350.689033)가 설정되어 KEEP으로 기록되었습니다."
+    },
+    {
+      "timestamp": "2026-10-16T16:31:07.863032+00:00",
+      "config_hash": "26f1cd5aebb9",
+      "hypothesis": "eliminate-duplicate-git-status-and-rules-io",
+      "direction": "minimize",
+      "samples": [
+        184.0942,
+        165.6968,
+        167.5366
+      ],
+      "metric_mean": 172.442533,
+      "metric_std": 8.273138,
+      "loc_count": 1379,
+      "loc_delta": 60,
+      "win_probability": 1.0,
+      "fast_failed": false,
+      "verdict": "KEEP",
+      "message_ko": "통계적 유의성(승률 1.00 >= 0.90) 또는 코드 단순화(60 LOC)를 달성하여 채택(KEEP)되었습니다."
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "visibility": "internal_only",
+  "schema": "dreampia.assessment.questions.v1",
+  "question": {
+    "id": "Q001",
+    "text": "문항 내용",
+    "domain": "employment",
+    "subSkill": "problem_solving",
+    "careerTracks": [
+      "employment"
+    ],
+    "scale": 5,
+    "reverse": false,
+    "weight": 1,
+    "active": true,
+    "source": "source file/section"
+  },
+  "requiredDomains": [
+    "employment",
+    "college_career",
+    "startup",
+    "ai_literacy",
+    "ai_ethics_security"
+  ]
+}

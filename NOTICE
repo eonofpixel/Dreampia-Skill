@@ -1,0 +1,16 @@
+Dreampia-Skill & Autonomous Engineering Harness
+Copyright 2026 Dreampia (eonofpixel)
+
+This product includes software developed by Dreampia (https://github.com/eonofpixel/Dreampia-Skill).
+
+Trademark Notice (Apache License 2.0, Section 6):
+"Dreampia", "Dreampia-Skill", and associated logos and brand identifiers are trademarks of Dreampia (eonofpixel).
+While the source code is licensed under the Apache License, Version 2.0, the license does not grant permission
+to use the "Dreampia" or "Dreampia-Skill" trade names, trademarks, or service marks for derivative works or
+commercial redistribution without prior written permission.
+
+Cleanroom Originality & Exclusive Ownership Notice:
+All source code, AST static auditors, Golden I/O verifiers, Blast-Radius dependency analyzers, and Metric-Climb
+autonomous optimization engines in this repository are 100% original cleanroom implementations authored by Dreampia
+and are licensed exclusively under the Apache License, Version 2.0.
+

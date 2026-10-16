@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "auditor": "Trinity (reviewer)",
+  "applied": true,
+  "report_path": "evidence/code-audit.json",
+  "ui_rules_enforced": true,
+  "scanned_file_count": 70,
+  "finding_count": 0,
+  "blocking_count": 0,
+  "learned_rule_count": 3,
+  "findings": [],
+  "message_ko": "Trinity 코드·TDD·규칙 정적 감사를 통과했습니다. (검사 파일 70개, 차단 결함 0건)"
+}

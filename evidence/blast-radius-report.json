@@ -1,0 +1,173 @@
+{
+  "schema_version": "0.6.1",
+  "action": "blast-radius",
+  "status": "PASS",
+  "target_files": [
+    "harness/route_planner.py"
+  ],
+  "exported_symbols": {
+    "harness/route_planner.py": [
+      "resolve_role_alias",
+      "describe_agent_squad",
+      "GoalClassification",
+      "RiskClassification",
+      "RouteDecision",
+      "parse_magic_shorthands",
+      "strip_magic_shorthands",
+      "classify_goal",
+      "classify_risk",
+      "inspect_repo_status",
+      "plan_route",
+      "PromptExpansionBrief",
+      "recommend_next_actions",
+      "expand_prompt_brief"
+    ]
+  },
+  "direct_dependents": [
+    {
+      "file": "harness/autopilot_engine.py",
+      "is_test": false,
+      "matched_symbols": [
+        "plan_route"
+      ],
+      "boundaries_crossed": [
+        "api-http",
+        "database-sql",
+        "serialization-wire",
+        "subprocess-cli",
+        "security-auth"
+      ]
+    },
+    {
+      "file": "harness/handoff_contract.py",
+      "is_test": false,
+      "matched_symbols": [
+        "resolve_role_alias"
+      ],
+      "boundaries_crossed": [
+        "serialization-wire",
+        "subprocess-cli",
+        "security-auth"
+      ]
+    },
+    {
+      "file": "harness/sdd_engine.py",
+      "is_test": false,
+      "matched_symbols": [
+        "expand_prompt_brief"
+      ],
+      "boundaries_crossed": [
+        "serialization-wire",
+        "security-auth"
+      ]
+    },
+    {
+      "file": "harness/team_cli.py",
+      "is_test": false,
+      "matched_symbols": [
+        "expand_prompt_brief",
+        "plan_route",
+        "recommend_next_actions"
+      ],
+      "boundaries_crossed": [
+        "serialization-wire",
+        "subprocess-cli",
+        "security-auth"
+      ]
+    },
+    {
+      "file": "harness/universal_router.py",
+      "is_test": false,
+      "matched_symbols": [
+        "plan_route"
+      ],
+      "boundaries_crossed": [
+        "serialization-wire",
+        "subprocess-cli",
+        "security-auth"
+      ]
+    },
+    {
+      "file": "harness/write_boundary.py",
+      "is_test": false,
+      "matched_symbols": [
+        "resolve_role_alias"
+      ],
+      "boundaries_crossed": [
+        "security-auth"
+      ]
+    },
+    {
+      "file": "harness/tests/test_autopilot_engine.py",
+      "is_test": true,
+      "matched_symbols": [
+        "expand_prompt_brief",
+        "plan_route"
+      ],
+      "boundaries_crossed": [
+        "serialization-wire",
+        "security-auth"
+      ]
+    },
+    {
+      "file": "harness/tests/test_cleanroom_governance.py",
+      "is_test": true,
+      "matched_symbols": [
+        "plan_route",
+        "resolve_role_alias"
+      ],
+      "boundaries_crossed": [
+        "serialization-wire",
+        "security-auth"
+      ]
+    }
+  ],
+  "transitive_dependents": [
+    "ai-dev-execution/assets/scaffolds/next-assessment-app/app/admin/page.tsx",
+    "ai-dev-execution/assets/scaffolds/next-assessment-app/app/page.tsx",
+    "ai-dev-execution/assets/scaffolds/next-assessment-app/lib/security.ts",
+    "ai-dev-execution/assets/scaffolds/next-assessment-app/lib/store.ts",
+    "ai-dev-execution/assets/scaffolds/next-assessment-app/tests/ui/smoke.spec.ts",
+    "ai-dev-execution/assets/scaffolds/next-assessment-app/tests/unit/scoring.test.ts",
+    "harness/__main__.py",
+    "harness/build.py",
+    "harness/cli.py",
+    "harness/codex_adapter.py",
+    "harness/core.py",
+    "harness/eval_runner.py",
+    "harness/local_ci.py",
+    "harness/mcp_server.py",
+    "harness/npm_smoke.py",
+    "harness/package_team.py",
+    "harness/process.py",
+    "harness/reconstruct_engine.py",
+    "harness/skill_bundle.py",
+    "harness/tests/test_codex.py",
+    "harness/tests/test_core.py",
+    "harness/tests/test_design_delivery.py",
+    "harness/tests/test_handoff_contract.py",
+    "harness/tests/test_hardening.py",
+    "harness/tests/test_local_ci.py",
+    "harness/tests/test_process.py",
+    "harness/tests/test_product.py",
+    "harness/tests/test_reconstruct_engine.py",
+    "harness/tests/test_scaffold_contract.py",
+    "harness/tests/test_sdd_engine.py",
+    "harness/tests/test_skill_bundle.py",
+    "harness/tests/test_strict.py",
+    "harness/tests/test_team.py",
+    "harness/tests/test_universal_router.py",
+    "harness/tests/test_workflow_runner.py",
+    "harness/validate_assets.py",
+    "harness/verify_package.py",
+    "harness/visual_acceptance.py",
+    "harness/workflow_runner.py"
+  ],
+  "linked_test_files": [
+    "harness/tests/test_autopilot_engine.py",
+    "harness/tests/test_cleanroom_governance.py"
+  ],
+  "safety_proof_level": 3,
+  "safety_proof_label": "LEVEL_3_TEST_COVERAGE_LINKED",
+  "message_ko": "폭발 반경 분석 완료: 1차 영향 파일 8개, 2차 전이 파일 39개, 안전 증명 등급 3단계(LEVEL_3_TEST_COVERAGE_LINKED)."
+}

@@ -1,0 +1,36 @@
+{
+  "name": "dreampia-skill",
+  "displayName": "Dreampia-Skill",
+  "version": "0.6.1",
+  "description": "All-in-One 6-Host Agentic Harness (23 MCP Tools): Visible Prompt Expansion, Socratic SDD Compiler, 2-Tier Cleanroom RE, Self-Learning Rule Memory, Parallel Squad Worktrees, Metric-Climb, Blast-Radius, and Next-Action Navigator.",
+  "author": {
+    "name": "Dreampia"
+  },
+  "homepage": "https://github.com/eonofpixel/Dreampia-Skill",
+  "repository": "https://github.com/eonofpixel/Dreampia-Skill.git",
+  "license": "Apache-2.0",
+  "logo": "docs/assets/dreampia-hero-banner.svg",
+  "keywords": [
+    "dreampia-skill",
+    "prompt-expansion",
+    "sdd",
+    "tdd",
+    "cleanroom",
+    "autopilot-gate",
+    "blast-radius",
+    "metric-climb",
+    "next-actions",
+    "worktree",
+    "mcp"
+  ],
+  "category": "developer-tools",
+  "tags": [
+    "workflow",
+    "verification",
+    "cleanroom",
+    "tdd",
+    "autopilot"
+  ],
+  "skills": "./ai-dev-execution/",
+  "agents": "./ai-dev-execution/assets/internal/agents/"
+}

@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#050811"/>
+      <stop offset="50%" stop-color="#0a1324"/>
+      <stop offset="100%" stop-color="#041b1d"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="50%" stop-color="#06b6d4"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#111c33" stop-opacity="0.88"/>
+      <stop offset="100%" stop-color="#0b1322" stop-opacity="0.92"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.7" stroke-opacity="0.5"/>
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="420" rx="20" fill="url(#bgGrad)"/>
+  <rect width="1200" height="420" rx="20" fill="url(#grid)"/>
+
+  <!-- Decorative Glow Circles -->
+  <circle cx="180" cy="80" r="160" fill="#10b981" opacity="0.08"/>
+  <circle cx="1020" cy="340" r="200" fill="#06b6d4" opacity="0.08"/>
+
+  <!-- Top Border Accent -->
+  <rect x="60" y="0" width="1080" height="4" fill="url(#accentGrad)"/>
+
+  <!-- Top Status Pills -->
+  <g transform="translate(60, 38)" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="600">
+    <rect x="0" y="0" width="150" height="28" rx="14" fill="#064e3b" stroke="#10b981" stroke-width="1"/>
+    <circle cx="18" cy="14" r="4" fill="#34d399"/>
+    <text x="30" y="18" fill="#a7f3d0">v0.6.1 RELEASE</text>
+
+    <rect x="164" y="0" width="195" height="28" rx="14" fill="#0f172a" stroke="#334155" stroke-width="1"/>
+    <text x="182" y="18" fill="#94a3b8">Python 3.9+ Zero-Dep</text>
+
+    <rect x="373" y="0" width="215" height="28" rx="14" fill="#0f172a" stroke="#334155" stroke-width="1"/>
+    <text x="391" y="18" fill="#94a3b8">Windows · macOS · Linux</text>
+
+    <rect x="602" y="0" width="165" height="28" rx="14" fill="#0f172a" stroke="#06b6d4" stroke-width="1"/>
+    <text x="622" y="18" fill="#67e8f9">Apache-2.0 License</text>
+
+    <rect x="781" y="0" width="205" height="28" rx="14" fill="#0f172a" stroke="#10b981" stroke-width="1"/>
+    <text x="799" y="18" fill="#6ee7b7">ulw · loop · btw · sdd · tdd</text>
+  </g>
+
+  <!-- Main Title & Subtitle -->
+  <g transform="translate(60, 118)" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+    <text x="0" y="0" font-size="46" font-weight="800" fill="#f8fafc" letter-spacing="-0.5">
+      DREAMPIA<tspan fill="#10b981">-SKILL</tspan>
+    </text>
+    <text x="390" y="-4" font-size="22" font-weight="600" fill="#38bdf8">
+      Autonomous AI Engineering OS &amp; Harness
+    </text>
+    <text x="0" y="40" font-size="17" fill="#cbd5e1" font-weight="400">
+      Matrix 9-Agent Squad · 4-Hop SDD+TDD Traceability · Cleanroom Binary Reconstruct · Trinity AST Auditor · 14 STDIO MCP Tools
+    </text>
+  </g>
+
+  <!-- 4 Feature Cards -->
+  <g transform="translate(60, 195)" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+    <!-- Card 1 -->
+    <g transform="translate(0, 0)">
+      <rect width="255" height="175" rx="14" fill="url(#cardGrad)" stroke="#10b981" stroke-width="1.2" stroke-opacity="0.6"/>
+      <rect x="18" y="18" width="42" height="26" rx="6" fill="#064e3b"/>
+      <text x="27" y="36" font-size="13" font-weight="700" fill="#34d399">01</text>
+      <text x="18" y="68" font-size="17" font-weight="700" fill="#f1f5f9">Matrix 9-Agent Squad</text>
+      <text x="18" y="94" font-size="13" fill="#94a3b8">Morpheus · Oracle · Architect</text>
+      <text x="18" y="114" font-size="13" fill="#94a3b8">Niobe · Keymaker · Neo</text>
+      <text x="18" y="134" font-size="13" fill="#94a3b8">Trinity · Tank · Seraph</text>
+      <text x="18" y="158" font-size="12" font-weight="600" fill="#10b981">Role &amp; Write-Boundary Isolated</text>
+    </g>
+
+    <!-- Card 2 -->
+    <g transform="translate(275, 0)">
+      <rect width="255" height="175" rx="14" fill="url(#cardGrad)" stroke="#06b6d4" stroke-width="1.2" stroke-opacity="0.6"/>
+      <rect x="18" y="18" width="42" height="26" rx="6" fill="#083344"/>
+      <text x="27" y="36" font-size="13" font-weight="700" fill="#22d3ee">02</text>
+      <text x="18" y="68" font-size="17" font-weight="700" fill="#f1f5f9">SDD + TDD Engine</text>
+      <text x="18" y="94" font-size="13" fill="#94a3b8">PRD-R* → API/UX → TASK → TEST</text>
+      <text x="18" y="114" font-size="13" fill="#94a3b8">4-Hop BFS Transitive Closure</text>
+      <text x="18" y="134" font-size="13" fill="#94a3b8">Orphan &amp; Spec Drift Blocking</text>
+      <text x="18" y="158" font-size="12" font-weight="600" fill="#22d3ee">SHA-256 Spec Ledger Verified</text>
+    </g>
+
+    <!-- Card 3 -->
+    <g transform="translate(550, 0)">
+      <rect width="255" height="175" rx="14" fill="url(#cardGrad)" stroke="#3b82f6" stroke-width="1.2" stroke-opacity="0.6"/>
+      <rect x="18" y="18" width="42" height="26" rx="6" fill="#1e3a8a"/>
+      <text x="27" y="36" font-size="13" font-weight="700" fill="#60a5fa">03</text>
+      <text x="18" y="68" font-size="17" font-weight="700" fill="#f1f5f9">Cleanroom &amp; Golden I/O</text>
+      <text x="18" y="94" font-size="13" fill="#94a3b8">PE · ELF · Mach-O · WASM · ASAR</text>
+      <text x="18" y="114" font-size="13" fill="#94a3b8">3-Zone Contamination Guard</text>
+      <text x="18" y="134" font-size="13" fill="#94a3b8">Black-Box Input/Output Parity</text>
+      <text x="18" y="158" font-size="12" font-weight="600" fill="#60a5fa">100% Obligation Coverage</text>
+    </g>
+
+    <!-- Card 4 -->
+    <g transform="translate(825, 0)">
+      <rect width="255" height="175" rx="14" fill="url(#cardGrad)" stroke="#a855f7" stroke-width="1.2" stroke-opacity="0.6"/>
+      <rect x="18" y="18" width="42" height="26" rx="6" fill="#3b0764"/>
+      <text x="27" y="36" font-size="13" font-weight="700" fill="#c084fc">04</text>
+      <text x="18" y="68" font-size="17" font-weight="700" fill="#f1f5f9">Trinity &amp; Autopilot Gate</text>
+      <text x="18" y="94" font-size="13" fill="#94a3b8">Blocks Hollow TDD (assert True)</text>
+      <text x="18" y="114" font-size="13" fill="#94a3b8">Forbids any &amp; Missing Return</text>
+      <text x="18" y="134" font-size="13" fill="#94a3b8">Anti-Amnesia Context Pack</text>
+      <text x="18" y="158" font-size="12" font-weight="600" fill="#c084fc">5-Stage Atomic Verdict</text>
+    </g>
+  </g>
+</svg>

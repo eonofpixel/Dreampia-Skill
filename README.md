@@ -1,0 +1,189 @@
+<div align="center">
+
+<img src="docs/assets/dreampia-hero-banner.svg" alt="Dreampia-Skill Hero Banner" width="100%" />
+
+<br/>
+
+**[🇺🇸 English](README.md)** | **[🇰🇷 한국어](README.ko.md)** | **[🇯🇵 日本語](README.ja.md)** | **[🇨🇳 简体中文](README.zh-CN.md)**
+
+<br/>
+
+[![Version](https://img.shields.io/badge/version-0.6.1-0ea5e9?style=for-the-badge)](package.json)
+[![License](https://img.shields.io/badge/License-Apache_2.0-8b5cf6?style=for-the-badge)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.9%2B-10b981?style=for-the-badge&logo=python&logoColor=white)](pyproject.toml)
+[![MCP Tools](https://img.shields.io/badge/MCP_Tools-23_Ready-f59e0b?style=for-the-badge)](harness/mcp_server.py)
+[![Zero Warnings](https://img.shields.io/badge/Self_Audit-70_Files_0_Warnings-22c55e?style=for-the-badge)](harness/autopilot_engine.py)
+[![Zero Dependencies](https://img.shields.io/badge/Dependencies-Zero_(Stdlib_Only)-ec4899?style=for-the-badge)](pyproject.toml)
+
+**An All-in-One 6-Host Agentic Harness for Visible Korean Prompt Expansion (`sharpen` + Socratic Interview + Next Actions), SDD + TDD Execution, 2-Tier Cleanroom Reverse Engineering (Built-in + Optional Boosters), Autonomous Metric Climbing, Blast-Radius Verification, and Self-Healing Autopilot.**
+
+</div>
+
+---
+
+## ✨ Why Dreampia-Skill?
+
+Modern AI coding assistants often interpret short prompts shallowly, skip edge cases, hallucinate completion without runtime evidence, or break when heavy external reverse-engineering tools fail to install. **Dreampia-Skill** solves this with a 100% original cleanroom Python 3.9+ harness (owned by Dreampia under **Apache-2.0**, zero third-party pip dependencies) that installs across **Antigravity, Claude Code, Cursor, Codex, OpenCode, and Gemini CLI** in one command:
+
+1. **🧠 Visible Korean Prompt Expansion & Socratic Requirement Interview (`expand-prompt` / `sharpen` / `next-actions`)**: Transforms terse user requests into a structured Korean engineering prompt (automatically injecting SOLID 5 principles, zero-`any` type safety, optional UI rules, and defensive edge cases) plus **3 domain-tailored Oracle Socratic clarifying questions** and **Next Actions** echoed visibly at the top of the chat.
+2. **🔬 2-Tier Cleanroom Reverse Engineering & Booster Planner (`reconstruct-doctor`)**:
+   - **Tier 1 (Zero-Dependency Built-in Engine)**: Instantly parses `PE/ELF/Mach-O/WASM/ASAR/APK/ZIP/Source` headers and public surfaces without any external binaries, enforcing 3-zone cleanroom isolation (`contaminated-zone` / `approved-spec` / `implementation`) and 100% `Obligation Ledger` closure.
+   - **Tier 2 (Optional External Boosters)**: Automatically detects host package managers (`winget`, `scoop`, `choco`, `brew`, `apt-get`), plans opt-in CLI installations (`--install-tool <id|all> [--apply]`, blocking unapproved `sudo` or MCP remote installs) for `rizin`, `jadx`, `ghidra`, `wasm2wat`, `objdump`, `nm`, and `adb`, and merges deep symbols with a 5-second non-destructive timeout.
+3. **🕶️ Matrix Agent Squad & 13 Magic Prompt Shorthands**: Commanded by `Morpheus` with specialized roles (`Oracle`, `Architect`, `Niobe`, `Neo`, `Trinity`, `Tank`, `Seraph`, `Keymaker`, `Mouse`) and triggered via 13 short keywords (`sharpen`/`구체화`, `ulw`, `loop`, `climb`, `blast`, `interrogate`, `unslop`, `btw`, `sdd`, `tdd`, `re`, `audit`, `ui`).
+4. **🛡️ Zero-Collision State Isolation & Reversible Global Setup**: Automatically detects existing unmanaged `.dreampia/` application data folders and isolates skill state into `.dreampia-skill/`. Global setup (`setup --apply`) backs up preexisting non-Dreampia skills (`.pre-dreampia.bak`) and restores/removes cleanly via `uninstall-global --apply`.
+
+---
+
+## ⚡ 10-Second One-Click Installation
+
+Choose any installation method below. **No `pip install` or virtual environment setup is required**—Dreampia-Skill runs purely on the Python 3.9+ standard library (`bin/dreampia.cjs` automatically probes `python3`, `python`, and `py -3` on Windows/macOS/Linux).
+
+### Method 1. `npx` Zero-Clone Global Setup & Uninstall (Recommended)
+Run a single command in your terminal (Windows PowerShell or macOS/Linux) to configure global skill directories (Antigravity, Claude Code, Cursor, Gemini CLI, Agents) and register the Antigravity global `dreampia-skill` MCP server:
+
+```bash
+# Global install (backs up any non-Dreampia skill of the same name)
+npx github:eonofpixel/Dreampia-Skill setup --apply
+
+# Global uninstall & backup restore (preview without --apply, execute with --apply)
+python -m harness.team_cli uninstall-global --apply
+```
+
+### Method 2. Ask Your AI Assistant (Copy & Paste)
+Paste this single sentence into Antigravity, Claude Code, Cursor, Codex, OpenCode, or Gemini CLI:
+
+> ```text
+> Clone https://github.com/eonofpixel/Dreampia-Skill and run python -m harness.team_cli setup --apply to install Dreampia-Skill globally.
+> ```
+
+### Method 3. Native Host Plugin Marketplaces & Manual Clone
+
+| AI Host | Native One-Liner Command |
+| :--- | :--- |
+| **Claude Code** | `/plugin marketplace add eonofpixel/Dreampia-Skill` &#8594; `/plugin install dreampia-skill` |
+| **Cursor** | `/add-plugin https://github.com/eonofpixel/Dreampia-Skill` (via `.cursor-plugin/plugin.json`) |
+| **Gemini CLI** | `gemini extensions install https://github.com/eonofpixel/Dreampia-Skill` |
+| **Git Clone (Windows / macOS)** | `git clone https://github.com/eonofpixel/Dreampia-Skill.git && cd Dreampia-Skill && python -m harness.team_cli setup --apply` |
+
+---
+
+## 🧠 Visible Korean Prompt Expansion & Socratic Interview (`expand-prompt`)
+
+When you type a short prompt like `"구체화 결제 버튼 만들어줘"`, Dreampia-Skill expands your intent into a concise Korean operational briefing and Socratic interview block before writing code:
+
+```bash
+python -m harness.team_cli expand-prompt --project . --goal "구체화 결제 버튼 만들어줘"
+```
+
+- **Auto-Injected Engineering Constraints**: SOLID 5 principles, zero `any`, explicit return types & Props interfaces, optional `bg-transparent` + hover/focus buttons & `lucide-react` icons (can be disabled per project via `"enforce_ui_rules": false`), and Korean user-facing error messages.
+- **Oracle Socratic Clarifying Questions (`clarifying_questions_ko`)**: Generates 3 domain-specific Korean interview questions tailored to UI, Security/Auth, Cleanroom RE (`re`), Metric Climb (`climb`), or General API/Module work whenever `prompt-sharpen` (`sharpen` / `구체화`) is active or ambiguity is high.
+
+---
+
+## 🚀 13 Magic Prompt Shorthands
+
+Trigger specialized workflows immediately by prefixing or including these shorthand tokens in your prompt:
+
+| Shorthand | Korean Alias | Activated Mode & Pipeline | Example Prompt |
+| :---: | :---: | :--- | :--- |
+| **`sharpen`** / `boost` | `고도화`, `구체화`, `생각` | **Visible Korean Prompt Expansion + Socratic Interview**<br/>Expands terse prompts with constraints, edge cases, and 3 clarifying questions | `"구체화 결제 버튼 만들어줘"` |
+| **`ulw`** / `ultrawork` | `풀가동`, `오토파일럿` | **Full Squad + Autopilot Gate**<br/>Forces controlled squad mode and 5-stage verification | `"ulw refactor auth module and add JWT rotation"` |
+| **`loop`** / `until-pass` | `루프`, `완주`, `끝까지` | **Self-Healing Pass/Fail Loop**<br/>Retries test/audit commands until all blockers reach `0` | `"loop fix all failing payment webhook tests"` |
+| **`climb`** / `hillclimb` | `성능등반`, `자율실험` | **Autonomous Metric-Climb Engine**<br/>Immutable eval guard + SHA-256 dedup + Monte Carlo significance + TSV ledger | `"climb minimize parser latency below 5ms"` |
+| **`re`** / `cleanroom` | `역설계`, `클린룸` | **2-Tier Cleanroom Reverse Engineering**<br/>Tier 1/2 static inspection &#8594; 3-zone isolation &#8594; Obligation Ledger & Golden I/O parity | `"re analyze legacy binary and rebuild in Python"` |
+| **`blast`** | `폭발반경`, `영향도` | **Cross-Module Blast-Radius & 5-Level Safety Proof**<br/>Traces 1-hop/2-hop callers, boundary crossings, and runtime proof level | `"blast check impact of changing route_planner.py"` |
+| **`interrogate`** | `심문`, `적대적리뷰` | **Multi-Perspective Adversarial Diff Review**<br/>Simultaneously attacks changes from Architect, Trinity, and Seraph lenses | `"interrogate review this PR diff for edge-case bugs"` |
+| **`unslop`** / `deslop` | `군더더기제거`, `슬롭제거` | **Anti-Slop AST Code & Comment Sanitizer**<br/>Eliminates bare `except: pass`, tautological tests, and dead wrappers | `"unslop clean up the new service layer"` |
+| **`btw`** | `잠깐`, `빠르게` | **Zero-Pollution Side Research**<br/>Routes to `Oracle` (`side-query` mode) without mutating project files | `"btw check where router discovery is configured"` |
+| **`sdd`** | `명세`, `설계` | **Spec-Driven Development (`sdd-ledger` / `sdd-check`)**<br/>Enforces `PRD-R*` / `SPEC-*` &#8594; `TASK-*` / `T*` &#8594; `TEST-*` traceability ledger | `"sdd design multi-tenant billing subscription API"` |
+| **`tdd`** | `티디디` | **Test-Driven Development**<br/>Enforces failing assertion test first &#8594; minimal implementation &#8594; refactor | `"tdd implement rate-limiter middleware"` |
+| **`audit`** | `감사`, `보안점검` | **Trinity Static AST Code Audit (`audit-code`)**<br/>Scans SOLID, zero-`any`, return types, anti-slop, and optional UI button/icon rules | `"audit check repository for SOLID and UI violations"` |
+| **`ui`** | `화면`, `디자인` | **UI/UX Delivery & Visual Check (`visual-check`)**<br/>Enforces `bg-transparent` buttons, `lucide-react` icons, and PNG pixel diff budgets | `"ui build dark-mode analytics dashboard"` |
+
+---
+
+## 🔬 2-Tier Cleanroom Reverse Engineering (`reconstruct-doctor`)
+
+```bash
+# 1. Diagnose Tier 1 built-in engine, host package managers (winget/scoop/brew/apt), and Tier 2 tools
+python -m harness.team_cli reconstruct-doctor
+
+# 2. Preview installation plan for optional Tier 2 boosters (rizin, jadx, ghidra, wasm2wat, objdump, nm, adb, or all)
+python -m harness.team_cli reconstruct-doctor --install-tool rizin,jadx
+
+# 3. Execute opt-in CLI installation (--apply required; sudo and MCP remote installs are blocked)
+python -m harness.team_cli reconstruct-doctor --install-tool rizin,jadx --apply
+```
+
+---
+
+## 🛡️ Verification Pipeline CLI Commands (Self-Dogfooding Ready)
+
+```bash
+# 1. Static AST Code Audit (--apply writes evidence/code-audit.json; --no-ui-rules skips UI token checks)
+python -m harness.team_cli audit-code --project . --apply
+
+# 2. 1-Hop/2-Hop Blast-Radius & 5-Level Safety Proof Analysis
+python -m harness.team_cli blast-radius --project . --target harness/route_planner.py
+
+# 3. Token-Saving Context Pack Compilation
+python -m harness.team_cli context-pack --project . --goal "Upgrade cleanroom engine"
+
+# 4. Unified Autopilot Gate
+python -m harness.team_cli autopilot-gate --project . --allow-doc-only
+
+# 5. Project Self-Learning Rule Memory (auto-enforced by audit-code & expand-prompt)
+python -m harness.team_cli learn-rule --project . --rule "Never use float for currency" --forbidden-regex "\bfloat\s*\(" --apply
+
+# 6. Oracle Interview Answers -> SDD Spec Compiler (PRD-R* / TASK-* / TEST-*)
+python -m harness.team_cli interview-compile --project . --goal "Build checkout button" --answers "1440px,Toast feedback,0.01" --apply
+
+# 7. Cleanroom Korean Spec & Golden I/O Synthesizer
+python -m harness.team_cli reconstruct-spec --project . --source contaminated-zone --apply
+
+# 8. Git Worktree Parallel Squad Orchestrator (Neo / Mouse / Trinity; supports --mode or --action)
+python -m harness.team_cli squad-worktree --project . --mode plan --goal "Parallel payment refactor"
+
+# 9. State-Aware Next Action Navigator (1st~3rd priority recommendations)
+python -m harness.team_cli next-actions --project . --goal "Build checkout button"
+```
+
+---
+
+## 🔌 23 Native MCP Server Tools (`harness/mcp_server.py`)
+
+When installed via `setup --apply`, `harness/mcp_server.py` exposes **23 tools** directly to your MCP-compatible IDE or agent:
+
+| Category | MCP Tool Name | Description |
+| :--- | :--- | :--- |
+| **Prompt Expansion & Routing** | `dreampia_expand_prompt` | Expand short goals into Korean engineering prompts, constraints (including learned rules), edge cases, 3 Socratic interview questions, and recommended next actions (`echo_markdown_ko`) |
+| | `dreampia_next_actions` | Inspect project state (Git, SDD specs/ledger, cleanroom, audit verdict, learned rules) and return 1st–3rd priority next actions with ready-to-copy prompts and CLI commands |
+| | `dreampia_interview_compile` | Compile a goal + interview answers directly into `PRD-R*`, `TASK-*`, `TEST-*` specs and refresh `evidence/sdd-ledger.json` |
+| | `dreampia_route_plan` | Parse 13 Magic Shorthands and compute deterministic execution profile, squad roles, and required gates |
+| | `dreampia_router_discover` | Discover installed multi-agent harness CLIs and skill synchronization status |
+| | `dreampia_squad_worktree` | Plan, create, or clean up isolated Git Worktrees for parallel `Neo`, `Mouse`, and `Trinity` squad tracks |
+| **2-Tier Cleanroom RE** | `dreampia_reconstruct_doctor` | Diagnose Tier 1 & Tier 2 RE tools, detect package managers, and preview tool installation plans |
+| | `dreampia_reconstruct_inspect` | Static binary/archive/source surface inspection (`PE/ELF/Mach-O/WASM/ASAR/APK/ZIP`) with Tier 2 symbol enrichment |
+| | `dreampia_reconstruct_spec` | Synthesize Korean cleanroom specification (`approved-spec/00_CLEANROOM_SPEC.md`) and `golden-io.json` vectors from artifact inspection |
+| | `dreampia_reconstruct_ledger` | Build Cleanroom Reconstruction Obligation Ledger from `contaminated-zone` |
+| | `dreampia_reconstruct_verify` | Verify 100% Obligation Ledger coverage and 3-zone zero-contamination boundaries |
+| | `dreampia_reconstruct_compare` | Compute surface parity ratio (`exports`, `routes`, `ipc_channels`) between source and candidate |
+| | `dreampia_golden_io` | Verify black-box behavioral parity against `approved-spec/golden-io.json` vectors |
+| **Autopilot & Static Audit** | `dreampia_autopilot_gate` | Run full 5-stage Unified Autopilot Verification Pipeline and emit tamper-evident verdict |
+| | `dreampia_audit_code` | Run Trinity static AST audit (fake tests, `any` ban, return types, anti-slop, button `bg-transparent`, `lucide-react`, and learned regex rules) |
+| | `dreampia_learn_rule` | Persist project-specific engineering rules and `forbidden_regex` patterns into `.dreampia/memory/project-rules.json` |
+| | `dreampia_blast_radius` | Compute 1-Hop/2-Hop symbol dependents, boundary crossings, and 5-level safety proof |
+| | `dreampia_metric_climb` | Run autonomous metric climbing with immutable file guard, SHA-256 dedup, and Monte Carlo significance |
+| | `dreampia_context_pack` | Compile ultra-compact SDD/task/invariant context packet (`evidence/context-pack.json`) |
+| **SDD & Visual Gates** | `dreampia_sdd_ledger` | Build bidirectional traceability ledger (`PRD-R*` &#8594; `TASK-*` &#8594; `TEST-*`) |
+| | `dreampia_sdd_check` | Fail-closed check for orphan specs, spec drift (`STALE`), and real TDD test files |
+| | `dreampia_visual_check` | Verify UI visual acceptance manifest, PNG dimensions, viewport budgets, and pixel diff ratios |
+| | `dreampia_verify_gate` | Run stage-specific quality gates (`before-dev-start`, `before-claim-complete`, `before-client-send`, `app-static`, `ui-evidence`) |
+
+---
+
+## 📜 License & Cleanroom Notice
+
+Distributed under the **[Apache License 2.0](LICENSE)**.
+- Includes an explicit patent license grant (Section 3) and redistribution attribution protections (Section 4).
+- Cleanroom Reverse Engineering workflows (`re` / `reconstruct-*` / `golden-io`) enforce strict 3-zone contamination isolation and operate on observable black-box specifications. See [NOTICE](NOTICE) for details.

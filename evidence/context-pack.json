@@ -1,0 +1,193 @@
+{
+  "schema_version": "0.6.1",
+  "generated_at": "2026-10-16T16:15:25.663161+00:00",
+  "goal": "드림피아 스킬 품질 고도화 및 규칙 검증 완주",
+  "commander": {
+    "callsign": "Morpheus",
+    "name_ko": "모피어스",
+    "title_ko": "총괄 라우터 및 작전 지휘관"
+  },
+  "profile": "team",
+  "agent_squad": [
+    {
+      "role": "executor",
+      "callsign": "Neo",
+      "name_ko": "네오",
+      "title_ko": "TDD 기반 핵심 코드 구현자"
+    },
+    {
+      "role": "verifier",
+      "callsign": "Tank",
+      "name_ko": "탱크",
+      "title_ko": "실행 증거·시각 픽셀·원장 커버리지 검증 오퍼레이터"
+    }
+  ],
+  "sdd_traceability": {
+    "status": "PASS",
+    "traceability_ratio": 1.0,
+    "blockers": []
+  },
+  "instruction_health": {
+    "status": "PASS",
+    "drift_detected": false
+  },
+  "invariants_and_risks": [
+    {
+      "id": "ADR-001",
+      "kind": "decision",
+      "statement": "| ADR-001 | 앱 내 잠금 대신 DB 트랜잭션·슬롯 고유 제약·DB 키 잠금으로 동시성과 멱등성을 보장하는 설계안 | draft. 실제 목표 DB에서 검증 후 승인 기록 필요 |"
+    },
+    {
+      "id": "ADR-002",
+      "kind": "decision",
+      "statement": "| ADR-002 | 예제에서는 비소유자 403, 없는 자원 404로 구분 | draft. 실제 제품은 자원 존재 노출 위험을 검토해 통일할지 결정 |"
+    },
+    {
+      "id": "RISK-001",
+      "kind": "risk",
+      "statement": "| RISK-001 | 두 요청을 동시에 시작하는 것만으로 항상 경쟁 상황이 재현되지는 않음 | draft. 테스트 전용 시작 barrier와 별도 연결을 쓰고 실제 DB의 최종 행 수 확인 |"
+    },
+    {
+      "id": "RISK-002",
+      "kind": "risk",
+      "statement": "| RISK-002 | 403과 404 구분이 자원 존재 여부를 드러낼 수 있음 | draft. 실제 서비스의 접근 정책·ID 추측 방어·감사 요구 검토 |"
+    },
+    {
+      "id": "RISK-003",
+      "kind": "risk",
+      "statement": "| RISK-003 | 인증 fixture·고정 시각은 실제 인증 제공자와 운영 clock 검증을 대신하지 못함 | draft. 통합 환경 승인 후 별도 검증 범위 결정 |"
+    }
+  ],
+  "active_requirements": [
+    {
+      "id": "PRD-R003",
+      "status": "approved",
+      "verdict": "NOT_RUN",
+      "statement": "| PRD-R003 | 동일 슬롯에 두 인증 사용자가 서로 다른 키로 동시에 예약하면 정확히 한 요청만 201이고 나머지는 409 SLOT_UNAVAILABLE이다. DB에는 한 건만 남는다. | API-002, UX-S002 |",
+      "linked_ids": [
+        "ADR-001",
+        "API-001",
+        "API-002",
+        "API-003",
+        "RISK-001",
+        "TASK-001",
+        "TASK-002",
+        "TASK-003",
+        "TEST-001",
+        "TEST-002",
+        "TEST-003",
+        "TEST-004",
+        "TEST-005",
+        "TEST-006",
+        "TEST-007",
+        "TEST-008",
+        "TEST-009",
+        "TEST-010",
+        "UX-S001",
+        "UX-S002",
+        "UX-S003",
+        "UX-S004"
+      ]
+    },
+    {
+      "id": "PRD-R004",
+      "status": "approved",
+      "verdict": "NOT_RUN",
+      "statement": "| PRD-R004 | 같은 인증 주체·키·정규화된 payload를 재요청하면 같은 booking ID와 내용을 반환한다. 첫 커밋은 201, 성공한 재시도는 200이다. 이미 성공한 키에 다른 payload면 409 IDEMPOTENCY_KEY_REUSED다. | API-002 |",
+      "linked_ids": [
+        "ADR-001",
+        "API-001",
+        "API-002",
+        "API-003",
+        "PRD-R001",
+        "PRD-R002",
+        "PRD-R005",
+        "PRD-R006",
+        "RISK-001",
+        "TASK-001",
+        "TASK-002",
+        "TASK-003",
+        "TEST-001",
+        "TEST-002",
+        "TEST-003",
+        "TEST-004",
+        "TEST-005",
+        "TEST-006",
+        "TEST-007",
+        "TEST-008",
+        "TEST-009",
+        "TEST-010",
+        "UX-S001",
+        "UX-S002",
+        "UX-S003",
+        "UX-S004"
+      ]
+    },
+    {
+      "id": "PRD-R005",
+      "status": "approved",
+      "verdict": "NOT_RUN",
+      "statement": "| PRD-R005 | 예약 조회는 소유자만 가능하다. 비인증은 401, 다른 인증 사용자는 403, 존재하지 않는 ID는 404다. | API-003, UX-S004 |",
+      "linked_ids": [
+        "ADR-001",
+        "API-001",
+        "API-002",
+        "API-003",
+        "PRD-R001",
+        "PRD-R002",
+        "PRD-R004",
+        "PRD-R006",
+        "RISK-001",
+        "TASK-001",
+        "TASK-002",
+        "TASK-003",
+        "TEST-001",
+        "TEST-002",
+        "TEST-003",
+        "TEST-004",
+        "TEST-005",
+        "TEST-006",
+        "TEST-007",
+        "TEST-008",
+        "TEST-009",
+        "TEST-010",
+        "UX-S001",
+        "UX-S002",
+        "UX-S003",
+        "UX-S004"
+      ]
+    }
+  ],
+  "next_actionable_tasks": [
+    {
+      "id": "TASK-003",
+      "status": "deferred",
+      "verdict": "NOT_RUN",
+      "statement": "| TASK-003 / deferred | PRD-R002~003, API-001 | TASK-002 | 미래 tests/reservation-integration.*, evidence/runtime-* (미생성) | 실제 저장소 재조회·경쟁·재시도 확인 및 자기 리뷰. TEST-008~010 PASS로 완료. backend 접근/도구 없으면 해당 검사 NOT_RUN. |",
+      "linked_ids": [
+        "ADR-001",
+        "API-001",
+        "PRD-R002",
+        "RISK-001",
+        "TASK-001",
+        "TASK-002",
+        "TEST-001",
+        "TEST-002",
+        "TEST-003",
+        "TEST-004",
+        "TEST-005",
+        "TEST-006",
+        "TEST-007",
+        "TEST-008",
+        "TEST-009",
+        "TEST-010"
+      ]
+    }
+  ],
+  "anti_amnesia_rules_ko": [
+    "1. 과거 PASS 증거를 코드 수정 후 재실행 없이 현재 PASS로 재사용하지 마십시오.",
+    "2. 모든 공개 함수에 반환 타입을 명시하고 any 타입을 절대 사용하지 마십시오.",
+    "3. 테스트 함수에 assert True 같은 가짜 단언문을 작성하지 마십시오 (Trinity 감사기가 즉시 차단합니다).",
+    "4. 클린룸 프로파일에서는 contaminated-zone 파일을 구현 코드에 직접 복사하지 마십시오."
+  ]
+}

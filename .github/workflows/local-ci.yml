@@ -1,0 +1,30 @@
+name: offline-local-harness
+on: [workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  offline:
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+        python: ['3.9', '3.11', '3.13']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Local CI (no provider calls)
+        run: python3 harness/local_ci.py
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+      - name: Private npm pack and isolated offline install
+        run: |
+          mkdir -p /tmp/dreampia-ci-pack
+          npm pack --ignore-scripts --pack-destination /tmp/dreampia-ci-pack
+          python3 harness/npm_smoke.py /tmp/dreampia-ci-pack/dreampia-dev-skill-0.5.2.tgz
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'

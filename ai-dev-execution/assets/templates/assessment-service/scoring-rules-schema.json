@@ -1,0 +1,43 @@
+{
+  "visibility": "internal_only",
+  "schema": "dreampia.assessment.scoring.v1",
+  "scale": {
+    "min": 1,
+    "max": 5,
+    "reverseFormula": "6 - value",
+    "normalizeFormula": "(average - 1) / 4 * 100"
+  },
+  "levels": [
+    {
+      "level": 1,
+      "min": 0,
+      "max": 20,
+      "label": "기초 인식 단계"
+    },
+    {
+      "level": 2,
+      "min": 21,
+      "max": 40,
+      "label": "성장 준비 단계"
+    },
+    {
+      "level": 3,
+      "min": 41,
+      "max": 60,
+      "label": "발전 단계"
+    },
+    {
+      "level": 4,
+      "min": 61,
+      "max": 80,
+      "label": "우수 활용 단계"
+    },
+    {
+      "level": 5,
+      "min": 81,
+      "max": 100,
+      "label": "선도 단계"
+    }
+  ],
+  "versioning": "store scoring_version with every result"
+}

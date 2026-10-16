@@ -1,0 +1,548 @@
+{
+  "schema_version": 1,
+  "name": "ai-dev-execution",
+  "version": "0.6.1",
+  "source": "dreampia-private-authored",
+  "files": [
+    {
+      "path": "SKILL.md",
+      "sha256": "6a822d99ce68cf530828b57f932fdf9731b2cd0826753f89eaeada9bf2252141",
+      "required": true
+    },
+    {
+      "path": "agents/openai.yaml",
+      "sha256": "38afee50dfc2d929e8359d115f1961a99a6f8c859240951b208d51a815fa53de",
+      "required": true
+    },
+    {
+      "path": "assets/AGENTS.template.md",
+      "sha256": "772e8e51218a48940746bf082bfc58df7bef225ffc55660e362a46440101e563",
+      "required": true
+    },
+    {
+      "path": "assets/evals/scenarios.json",
+      "sha256": "280d810a8465accb8ef349696ea60957910b446b18cacd769d7dd3708dea368d",
+      "required": true
+    },
+    {
+      "path": "assets/examples/README.md",
+      "sha256": "9543e3ee7c15e95c18ca6349d16cf0193fd211780ff9fc40f42aaa96cd1f40b4",
+      "required": true
+    },
+    {
+      "path": "assets/examples/appointment-evidence.md",
+      "sha256": "03384f9c1285fd6418b2912953b6cad8c5c5f5bc79b3f4803273d8439b798e39",
+      "required": true
+    },
+    {
+      "path": "assets/examples/appointment-spec.md",
+      "sha256": "1840f3d9483428ee0e76f557d238fd0fd7a521a12dd4f869938b722357ce8c22",
+      "required": true
+    },
+    {
+      "path": "assets/examples/appointment-tasks-tests.md",
+      "sha256": "4d6fbe6247257111ea78e096837504a17bdfdcd9d0ff1e40490e59434bafcf17",
+      "required": true
+    },
+    {
+      "path": "assets/internal/QUICKSTART.md",
+      "sha256": "a725de52d9b32dc339945c43a91766677826fbff6900eae8d0abc583736af344",
+      "required": true
+    },
+    {
+      "path": "assets/internal/README.md",
+      "sha256": "91a9f4cba67052b51f38ec2b975a3e9763e2d99a613de0742feb83a6077e2d5d",
+      "required": true
+    },
+    {
+      "path": "assets/internal/agents/analyst.md",
+      "sha256": "9435261059bd32216eedfe05b93f66fae29ca7010baac29f75c0a6ce6a072b05",
+      "required": true
+    },
+    {
+      "path": "assets/internal/agents/architect.md",
+      "sha256": "a2a9b534a83902a9893158fdfd59b4cbb068aadf7a42e737060f8b91a7772bc3",
+      "required": true
+    },
+    {
+      "path": "assets/internal/agents/executor.md",
+      "sha256": "6db99c35bebf86d3c3d1c409fe50368b6230fc4f449f3f8f8296c9382d9a855b",
+      "required": true
+    },
+    {
+      "path": "assets/internal/agents/planner.md",
+      "sha256": "b38bb2e1371f69339e8e30383f94e88aec96a76f55e7363d999a3a767b9dead8",
+      "required": true
+    },
+    {
+      "path": "assets/internal/agents/privacy-guard.md",
+      "sha256": "a7738f1333bd3dbde0d07f22d4d891091e4546a5f477daff0ac596dbc57854ca",
+      "required": true
+    },
+    {
+      "path": "assets/internal/agents/reviewer.md",
+      "sha256": "f298dfa5a2f915e8300ac735af4e325913834f47f785dab5c9cfeef6bfa6b8de",
+      "required": true
+    },
+    {
+      "path": "assets/internal/agents/ux-designer.md",
+      "sha256": "67f0cd713294917cb95e328543a020a118b5f1d46bccb94610a28bef18610631",
+      "required": true
+    },
+    {
+      "path": "assets/internal/agents/verifier.md",
+      "sha256": "1fd38e1b4bf98308e0f1fb4b229b06fd4e0eba9e7493a472e300fe5fa9da323b",
+      "required": true
+    },
+    {
+      "path": "assets/internal/checklists/before-claim-complete.md",
+      "sha256": "a55934770d26ba5de597efd71fc09aa2f81426ce233d4056f9f3de447b58226d",
+      "required": true
+    },
+    {
+      "path": "assets/internal/checklists/before-client-send.md",
+      "sha256": "523468aed46c63185518a5ed8b1abfb415b6f273f9f43b5dfb2438c33fa61f9f",
+      "required": true
+    },
+    {
+      "path": "assets/internal/checklists/before-dev-start.md",
+      "sha256": "2ab113664247cdb00edf67861e38a37851b9a9afc7bb15a0459aeac22eca97d0",
+      "required": true
+    },
+    {
+      "path": "assets/internal/pipeline/agent-router.md",
+      "sha256": "1dae27047a3b9e932f0d291e6d5c0d96a7dd1c53b51465be150ef4a686e06bc4",
+      "required": true
+    },
+    {
+      "path": "assets/internal/pipeline/handoff-contract.example.json",
+      "sha256": "a581b99b42fbcd5a40e44ae15707d7de407e125310c661f1ca2f6999e6db5ba1",
+      "required": true
+    },
+    {
+      "path": "assets/internal/pipeline/level6-pipeline.md",
+      "sha256": "fef06daf924993675d6ee8365183745024720dd75f713d07dbd08bfed8db5aaa",
+      "required": true
+    },
+    {
+      "path": "assets/internal/project-presets/assessment-service.json",
+      "sha256": "a23003a1394a8ae1154226d77167b77b7979efc9d6d907d62d2bc0cf31cbe213",
+      "required": true
+    },
+    {
+      "path": "assets/internal/rubrics/mvp-vs-platform.md",
+      "sha256": "023cf292281aa660efc2454119d8acf1000cb0b9d3268ac7d914cde3db024eeb",
+      "required": true
+    },
+    {
+      "path": "assets/internal/rubrics/no-login-access-options.md",
+      "sha256": "256375c4731a1f3d0e97a7e181cdc1ed14d85622ba1f8b384d5444fac0e896ce",
+      "required": true
+    },
+    {
+      "path": "assets/internal/rubrics/privacy-risk-level.md",
+      "sha256": "893d1784300d318127d3533f8d56296c38d1188287bba99eb92a9ca2c9936905",
+      "required": true
+    },
+    {
+      "path": "assets/prompts/change-request.md",
+      "sha256": "1dfd97861c666b015b5c328cbdb9da4f37cc0b933a1480efd6992ef1e63cee17",
+      "required": true
+    },
+    {
+      "path": "assets/prompts/implement-next-slice.md",
+      "sha256": "5c7310282343fdff39276927e09606dc5763a45b26f76d7e5f7a0cc9b73d4615",
+      "required": true
+    },
+    {
+      "path": "assets/prompts/internal/assessment-service-planning.md",
+      "sha256": "7e0add8e889ed118f980e9c1ae5fbf1ecb044aa49db3145e115db66323582718",
+      "required": true
+    },
+    {
+      "path": "assets/prompts/internal/intake-analysis.md",
+      "sha256": "4f9ccaf1c10a112145f163fb683e1c3c2f8b9d669f347cdbfb18d537ebe93a8e",
+      "required": true
+    },
+    {
+      "path": "assets/prompts/internal/review-and-verify-gate.md",
+      "sha256": "0f5baf73daf5e08f4f17c919bea9cdb3ef82e8c8db8eaa01e8971ddef7f07254",
+      "required": true
+    },
+    {
+      "path": "assets/prompts/resume-project.md",
+      "sha256": "a4b049f18165149042c9b91213d1c40f525fff18b0d4f6895e33ef45c3421fe2",
+      "required": true
+    },
+    {
+      "path": "assets/prompts/review-and-verify.md",
+      "sha256": "cf328c139639071f9ac1165c8dac1a65c6e71f57d7eb822812c5f6a41b6bb3e1",
+      "required": true
+    },
+    {
+      "path": "assets/prompts/start-project.md",
+      "sha256": "6c2ee590031fa6c9d79cd2971c2921814edbd2d023b190bb360825e9e55ddff6",
+      "required": true
+    },
+    {
+      "path": "assets/scaffolds/next-assessment-app/README.md",
+      "sha256": "d4ad7562d5d059dd9cba519f09abe3d17e98820095bf7b28314dd70c7bfaf82d",
+      "required": true
+    },
+    {
+      "path": "assets/scaffolds/next-assessment-app/VERIFICATION.md",
+      "sha256": "48628d8bae05f45936691777c846c249660309c478609ad0389289c99e2d64eb",
+      "required": true
+    },
+    {
+      "path": "assets/scaffolds/next-assessment-app/app/admin/export/route.ts",
+      "sha256": "66b22f81d766c41314357e8558212ddeb6944293ec30f273dd856ff652a413a6",
+      "required": true
+    },
+    {
+      "path": "assets/scaffolds/next-assessment-app/app/admin/page.tsx",
+      "sha256": "3085601f83f287f8477d5eee07cfc9b62925cacf683581d0d77f40d98b5871a3",
+      "required": true
+    },
+    {
+      "path": "assets/scaffolds/next-assessment-app/app/api/access/route.ts",
+      "sha256": "4e9818e467d22656622b832dceff467512bf4116f1aab8cf8565b1af102f64a7",
+      "required": true
+    },
+    {
+      "path": "assets/scaffolds/next-assessment-app/app/api/admin/audit/route.ts",
+      "sha256": "026b2c56dae843c54430487a56ea9adca0becc1751c99d655605ebe051e7d306",
+      "required": true
+    },
+    {
+      "path": "assets/scaffolds/next-assessment-app/app/api/admin/login/route.ts",
+      "sha256": "a8a994f6b219aff78634e667e60dc92593ffc41cf128af879062b6ec00325cdc",
+      "required": true
+    },
+    {
+      "path": "assets/scaffolds/next-assessment-app/app/api/admin/logout/route.ts",
+      "sha256": "327de8a8c7c12d346bb8867b4815fa563957065dd0d5797ca633b8da49f2ddc3",
+      "required": true
+    },
+    {
+      "path": "assets/scaffolds/next-assessment-app/app/api/admin/retention/route.ts",
+      "sha256": "1abd664411fcb5d966d251449f39f42720db86d55abc3f63b0413ec82c17ab3f",
+      "required": true
+    },
+    {
+      "path": "assets/scaffolds/next-assessment-app/app/api/admin/submissions/route.ts",
+      "sha256": "70ca9a6387f67db0b7553dc01a90d96cbffe780ef128f08210922047a309928c",
+      "required": true
+    },
+    {
+      "path": "assets/scaffolds/next-assessment-app/app/api/submit/route.ts",
+      "sha256": "612ce68897eca4522c10f9a5ac3454dcd5f8dd5ec8998fcb2f6f4fd4944c6e87",
+      "required": true
+    },
+    {
+      "path": "assets/scaffolds/next-assessment-app/app/globals.css",
+      "sha256": "d01109d8c6dd44458c788b2868c2c452d0d6d0610cad61c9b308576bd7d0fd6f",
+      "required": true
+    },
+    {
+      "path": "assets/scaffolds/next-assessment-app/app/layout.tsx",
+      "sha256": "115cb74bd235876cc357aa913cdbe698d203d4b7c80cdc5b41ff167f83d90b35",
+      "required": true
+    },
+    {
+      "path": "assets/scaffolds/next-assessment-app/app/page.tsx",
+      "sha256": "295ab9a49a58636eaf2268456d9b5e1f3ff66eb4ed59577f80771d963efda9c9",
+      "required": true
+    },
+    {
+      "path": "assets/scaffolds/next-assessment-app/data/questions.sample.json",
+      "sha256": "543852aba85e74381b2b4bf5a17b74478856ed5985027e1f4ef9df511c19fb19",
+      "required": true
+    },
+    {
+      "path": "assets/scaffolds/next-assessment-app/gitignore.template",
+      "sha256": "cd6ee181ca43e0154e5c71cb4b04cf21fdd89e70506dea6bf51d52bd49c6e1d9",
+      "required": true
+    },
+    {
+      "path": "assets/scaffolds/next-assessment-app/lib/assessment.ts",
+      "sha256": "b703bee685767741776f66eb01d2e56f40065fd087877c94f032f3a999ebd8e4",
+      "required": true
+    },
+    {
+      "path": "assets/scaffolds/next-assessment-app/lib/csv.ts",
+      "sha256": "f7c83e10d90b7602feed81c9a18032123cbb2a687d7a18ba027ad2ce72b1a017",
+      "required": true
+    },
+    {
+      "path": "assets/scaffolds/next-assessment-app/lib/scoring.ts",
+      "sha256": "e293031c1bb12787e360276ee71245a7a99908a26ce4ad91348aa1f3198b1ccb",
+      "required": true
+    },
+    {
+      "path": "assets/scaffolds/next-assessment-app/lib/security.ts",
+      "sha256": "0a87ea580736bb945113992698cf4648801eec69c59f488892b29e8e9751ae88",
+      "required": true
+    },
+    {
+      "path": "assets/scaffolds/next-assessment-app/lib/store.ts",
+      "sha256": "ade73548f0792de24eb2d83940f8dd7c3c1097885b3eaf3a9e2de46ef8716b8e",
+      "required": true
+    },
+    {
+      "path": "assets/scaffolds/next-assessment-app/package-lock.json",
+      "sha256": "720cc4efb5e812a72dd7c9d335ec6547971a08ae458baf0f78698c3c99d04197",
+      "required": true
+    },
+    {
+      "path": "assets/scaffolds/next-assessment-app/package.json",
+      "sha256": "418c03d7b71a089267c53ae7a3423fdd138698eb4fcba459b954debbff3aaf4e",
+      "required": true
+    },
+    {
+      "path": "assets/scaffolds/next-assessment-app/playwright.config.ts",
+      "sha256": "cbdb5e51fe2c4648a90db3c333d70e8fb668bb73d18cf81d2be24ab99a76dc65",
+      "required": true
+    },
+    {
+      "path": "assets/scaffolds/next-assessment-app/tests/ui/smoke.spec.ts",
+      "sha256": "5fe47dc8fdbffaa146cc7e9b582441a49af1f17a0906265737be819909c80b29",
+      "required": true
+    },
+    {
+      "path": "assets/scaffolds/next-assessment-app/tests/unit/README.md",
+      "sha256": "e5538bd38d0af008785c94db9fa6145e138a8ef7f21834133f61f7a4f198074c",
+      "required": true
+    },
+    {
+      "path": "assets/scaffolds/next-assessment-app/tests/unit/assessment.test.ts",
+      "sha256": "c1a1f9264ee296e3af62ce3bee897c6ac233c0b79c4b59652564a37bfa2c3c1d",
+      "required": true
+    },
+    {
+      "path": "assets/scaffolds/next-assessment-app/tests/unit/scoring.test.ts",
+      "sha256": "478fb02244bf689fabca306962ef14503e66d0165d11cce7e0078aa53c92f035",
+      "required": true
+    },
+    {
+      "path": "assets/scaffolds/next-assessment-app/tests/unit/store.test.ts",
+      "sha256": "f01632e2db9a2f6daa5c051d28302ccc8b0f08b3d658ebcf7d1515e6dc269ac2",
+      "required": true
+    },
+    {
+      "path": "assets/scaffolds/next-assessment-app/tsconfig.json",
+      "sha256": "76f87682925cb938e94f9a687e4ad72798b5e648427e2400c68c41f07886e0a4",
+      "required": true
+    },
+    {
+      "path": "assets/templates/00-project-brief.md",
+      "sha256": "59b5ac0ca1d10f92ec8575f1757d9335218e0347b5ab0dfb43fec9b0c254afec",
+      "required": true
+    },
+    {
+      "path": "assets/templates/01-prd.md",
+      "sha256": "2b6d3ba79c0c1dbab33ace56316b870fb11ca9e3681f402b3474388aec26e09a",
+      "required": true
+    },
+    {
+      "path": "assets/templates/02-ia-ux.md",
+      "sha256": "06aa257fa2981c4c18e48e2b9313a2d8947dc42cf089f8c04823b51ad7ec97a3",
+      "required": true
+    },
+    {
+      "path": "assets/templates/03-trd-architecture.md",
+      "sha256": "7392c996c05ba90ce0b2b591353c9dc83c4ae8a19047f8deb46d2300da049662",
+      "required": true
+    },
+    {
+      "path": "assets/templates/04-solution-design.md",
+      "sha256": "4a4c9465f353624b44ce78aaae6e0290db748de0e00bf2b5c8513b8947cc5794",
+      "required": true
+    },
+    {
+      "path": "assets/templates/05-contracts-data.md",
+      "sha256": "f3ad0c0fb3b5b7640d1d434ba5dd7fbc1b7b7d178b147a5335021cb80f4577db",
+      "required": true
+    },
+    {
+      "path": "assets/templates/06-test-plan.md",
+      "sha256": "fa38898646af9abbf77b1f586a8a3971c022ac429f64aaf752d03b00d489fe11",
+      "required": true
+    },
+    {
+      "path": "assets/templates/07-backlog.md",
+      "sha256": "ca97e44943d9f1a7f18653691131a4e8b9a89e077f59465be9ef7865ae0c3109",
+      "required": true
+    },
+    {
+      "path": "assets/templates/08-release-runbook.md",
+      "sha256": "2e8012db1be349f28e246f871e255a983f0a58d45174f8ea104e8240c82e680a",
+      "required": true
+    },
+    {
+      "path": "assets/templates/09-decision-log.md",
+      "sha256": "3328de4b260af60e6ee156e850b4a6000dc4706c04c232c5118cd7716d7ef17a",
+      "required": true
+    },
+    {
+      "path": "assets/templates/10-progress-handoff.md",
+      "sha256": "4f1797c0da7ecab3e225e1e4c0ecbd625e81deaa1dfef2f3b27afb253a3a54e0",
+      "required": true
+    },
+    {
+      "path": "assets/templates/admin-console/audit-log-pattern.md",
+      "sha256": "460dea499b09cff66d68c9fa52aac2df37ba98fedd77487dab15fed50001e679",
+      "required": true
+    },
+    {
+      "path": "assets/templates/admin-console/crud-list-detail-pattern.md",
+      "sha256": "9a5086c7d9906a8c80dd92890e17ab353c8fd9f57173a08e06727de7ea06a1fa",
+      "required": true
+    },
+    {
+      "path": "assets/templates/assessment-service/admin-dashboard-spec.md",
+      "sha256": "1c2bbbfb51d5e4b81501cf90a73a70fc8b4bc681e5879735d8b5bcf17cf582c8",
+      "required": true
+    },
+    {
+      "path": "assets/templates/assessment-service/assessment-prd.md",
+      "sha256": "a16024f91525c105ba8dbd6061cb0af931f20ee37186936b06d15d5d5e79f58b",
+      "required": true
+    },
+    {
+      "path": "assets/templates/assessment-service/no-signup-student-flow.md",
+      "sha256": "db2f6a279ffea5a6e028f43f9ec139a6f33b977ba0f768c390fc28917053baad",
+      "required": true
+    },
+    {
+      "path": "assets/templates/assessment-service/question-bank-schema.json",
+      "sha256": "31ba1837190b62d6e10ac522c584454e7961ddce2ad62d2f45bbe84514f15ebd",
+      "required": true
+    },
+    {
+      "path": "assets/templates/assessment-service/result-text-library.md",
+      "sha256": "4ea42198227784f91c95e2e362cc8ca1f10be3f642946d8baffc5e0e143d3c04",
+      "required": true
+    },
+    {
+      "path": "assets/templates/assessment-service/scoring-rules-schema.json",
+      "sha256": "b4a5e25d8135ce8098bb483eea2586231fdf8c32c6376f6a0ead78e6a5c7158d",
+      "required": true
+    },
+    {
+      "path": "assets/templates/assessment-service/ui-verification-playwright.md",
+      "sha256": "fc71a725405629bf136ab3049a081743bbff704359b5b102838b5607edb41b12",
+      "required": true
+    },
+    {
+      "path": "assets/templates/assessment-service/vertical-slice-student-submit.md",
+      "sha256": "af40ed02bcbc733b9a31b58792c117028b3490c6787fbf7a3995210bf59c2bca",
+      "required": true
+    },
+    {
+      "path": "assets/templates/change-delta.md",
+      "sha256": "cce7f7ec379a8699cc92f28e464f5a610f3ae8b3f5702959a6dab0ab5ef7a062",
+      "required": true
+    },
+    {
+      "path": "assets/templates/compact-project.md",
+      "sha256": "2663e853014e43d5a6793edb58a6273c1f42a3cc778b1ec6b61b01636fb0bba1",
+      "required": true
+    },
+    {
+      "path": "assets/templates/security-privacy/client-safe-redaction.md",
+      "sha256": "88b9126feb5dc0fc4059982a908ba5fba97894290162218535e6e06e621abb89",
+      "required": true
+    },
+    {
+      "path": "assets/templates/security-privacy/minor-privacy-checklist.md",
+      "sha256": "af6aa8c7092cac6ba7f18580bb8652f334e3870269dc144d2558795b9de6b782",
+      "required": true
+    },
+    {
+      "path": "references/checklist.md",
+      "sha256": "07ee39f5a7183ca135898b086f517dbfa9d6cbae2d21915a1ce9ed15826162b6",
+      "required": true
+    },
+    {
+      "path": "references/cleanroom-governance.md",
+      "sha256": "3f01893b7bbbbc7a68cf8d5850c3a4807a4a4de0e064f363ecd94fe680f35d46",
+      "required": true
+    },
+    {
+      "path": "references/design-desktop.md",
+      "sha256": "4ea69d81324b61cc0b47ca0085c115340cd7f7a01f28d02afdeefcd2a4a6198e",
+      "required": true
+    },
+    {
+      "path": "references/design-mobile.md",
+      "sha256": "a580e2b5cdd7be5ae4d1b52b7543ae2bb06d8df52d8c43a7f013ba9da82d692d",
+      "required": true
+    },
+    {
+      "path": "references/design-verification.md",
+      "sha256": "b4fc666fea247b6e4798bb8a0aa217027144a8fda89742cf9fcf43fb5b2da1fd",
+      "required": true
+    },
+    {
+      "path": "references/design-web.md",
+      "sha256": "ee2ab73d904c899e687049678647be536d024a13f43d05f2059a8303ba9efc45",
+      "required": true
+    },
+    {
+      "path": "references/execution-guide.md",
+      "sha256": "59750177b4b40f0955382e360f314a6f652b737c4b91d6ffa9d00532082f4aa4",
+      "required": true
+    },
+    {
+      "path": "references/harness-integration.md",
+      "sha256": "cb897c1b33b3e8a9002b786f1177de171f6bc1f6762ab9acaacb780f293982af",
+      "required": true
+    },
+    {
+      "path": "references/internal-os.md",
+      "sha256": "4ca87c2943ede18b5b4a078dd6f3fd591be653e46577d3d17849b6d7ce13a4f2",
+      "required": true
+    },
+    {
+      "path": "references/local-verification.md",
+      "sha256": "2d67830b966c1ee7841ac684fb15d906807e1f3517d6d13e9583c039fe4195a8",
+      "required": true
+    },
+    {
+      "path": "references/product-design.md",
+      "sha256": "4452ded74f9ad165f8defad38d4a9d86c3c7f707d76e96c4d56697171877f555",
+      "required": true
+    },
+    {
+      "path": "references/quality-gates.md",
+      "sha256": "89974a102f6be110d3c2b48bc16eebf9144d6efbbd7ba18aa2a1970aaa542fb9",
+      "required": true
+    },
+    {
+      "path": "references/resources.md",
+      "sha256": "da31ce383478eeae462814492c368acea44977d81387afde3a17a4add9ab6483",
+      "required": true
+    },
+    {
+      "path": "references/review-and-evaluation.md",
+      "sha256": "e608b0e0a4a8c48b73b195ce7c57223eb74214db4fddffb7c9be39859dcd6fa7",
+      "required": true
+    },
+    {
+      "path": "references/role-handoff.md",
+      "sha256": "ad4c33a19d50e0f3594e9d5443eeb5c4e73615931908f9dee395d6754b59e738",
+      "required": true
+    },
+    {
+      "path": "references/team-contract.md",
+      "sha256": "733d77366a2d8b3db730cdd44991c10b456be69d1df75f71109f955f305f5fe4",
+      "required": true
+    },
+    {
+      "path": "references/workflow.md",
+      "sha256": "36e9111e7083238d6bb1282a4bd2447b1714f56e1468c4a838d9f65a67f1e006",
+      "required": true
+    }
+  ]
+}

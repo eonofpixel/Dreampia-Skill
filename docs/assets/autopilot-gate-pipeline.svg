@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGate" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#070b14"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="stageActive" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="passGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="320" rx="20" fill="url(#bgGate)" stroke="#1e293b" stroke-width="2"/>
+
+  <!-- Header -->
+  <text x="600" y="42" text-anchor="middle" fill="#f8fafc" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="800">5-Stage Unified Autopilot Verification Pipeline (`autopilot-gate`)</text>
+  <text x="600" y="68" text-anchor="middle" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-size="13">Context Pack Compression &#8594; AST Code Audit &#8594; Golden I/O Parity &#8594; Evidence Gate &#8594; Continuous Loop</text>
+
+  <!-- Pipeline Connector Line -->
+  <line x1="140" y1="165" x2="1060" y2="165" stroke="url(#passGrad)" stroke-width="4" stroke-dasharray="8 4"/>
+
+  <!-- Stage 1 -->
+  <g transform="translate(40, 100)">
+    <rect width="200" height="130" rx="14" fill="url(#stageActive)" stroke="#38bdf8" stroke-width="2"/>
+    <circle cx="32" cy="32" r="14" fill="#0c4a6e" stroke="#38bdf8" stroke-width="1.5"/>
+    <text x="32" y="37" text-anchor="middle" fill="#38bdf8" font-family="monospace" font-size="13" font-weight="800">01</text>
+    <text x="58" y="37" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="14" font-weight="700">Context Pack</text>
+    <text x="20" y="66" fill="#cbd5e1" font-family="monospace" font-size="11">context-pack</text>
+    <text x="20" y="88" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="11">AST Signature Indexing</text>
+    <text x="20" y="106" fill="#38bdf8" font-family="monospace" font-size="11" font-weight="700">60~80% Token Saved</text>
+  </g>
+
+  <!-- Stage 2 -->
+  <g transform="translate(270, 100)">
+    <rect width="200" height="130" rx="14" fill="url(#stageActive)" stroke="#818cf8" stroke-width="2"/>
+    <circle cx="32" cy="32" r="14" fill="#1e1b4b" stroke="#818cf8" stroke-width="1.5"/>
+    <text x="32" y="37" text-anchor="middle" fill="#818cf8" font-family="monospace" font-size="13" font-weight="800">02</text>
+    <text x="58" y="37" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="14" font-weight="700">AST Code Audit</text>
+    <text x="20" y="66" fill="#cbd5e1" font-family="monospace" font-size="11">audit-code</text>
+    <text x="20" y="88" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="11">SOLID / Zero-any / UI</text>
+    <text x="20" y="106" fill="#818cf8" font-family="monospace" font-size="11" font-weight="700">0 Blockers Allowed</text>
+  </g>
+
+  <!-- Stage 3 -->
+  <g transform="translate(500, 100)">
+    <rect width="200" height="130" rx="14" fill="url(#stageActive)" stroke="#c084fc" stroke-width="2"/>
+    <circle cx="32" cy="32" r="14" fill="#3b0764" stroke="#c084fc" stroke-width="1.5"/>
+    <text x="32" y="37" text-anchor="middle" fill="#c084fc" font-family="monospace" font-size="13" font-weight="800">03</text>
+    <text x="58" y="37" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="14" font-weight="700">Golden I/O</text>
+    <text x="20" y="66" fill="#cbd5e1" font-family="monospace" font-size="11">golden-io --mode verify</text>
+    <text x="20" y="88" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="11">Cleanroom Parity Check</text>
+    <text x="20" y="106" fill="#c084fc" font-family="monospace" font-size="11" font-weight="700">100% Fixture Match</text>
+  </g>
+
+  <!-- Stage 4 -->
+  <g transform="translate(730, 100)">
+    <rect width="200" height="130" rx="14" fill="url(#stageActive)" stroke="#f59e0b" stroke-width="2"/>
+    <circle cx="32" cy="32" r="14" fill="#451a03" stroke="#f59e0b" stroke-width="1.5"/>
+    <text x="32" y="37" text-anchor="middle" fill="#f59e0b" font-family="monospace" font-size="13" font-weight="800">04</text>
+    <text x="58" y="37" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="14" font-weight="700">Evidence Gate</text>
+    <text x="20" y="66" fill="#cbd5e1" font-family="monospace" font-size="11">verify-evidence</text>
+    <text x="20" y="88" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="11">Spec + TDD + Ledger</text>
+    <text x="20" y="106" fill="#f59e0b" font-family="monospace" font-size="11" font-weight="700">Zero Unverified Claims</text>
+  </g>
+
+  <!-- Stage 5 -->
+  <g transform="translate(960, 100)">
+    <rect width="200" height="130" rx="14" fill="url(#stageActive)" stroke="#10b981" stroke-width="2.5"/>
+    <circle cx="32" cy="32" r="14" fill="#064e3b" stroke="#10b981" stroke-width="1.5"/>
+    <text x="32" y="37" text-anchor="middle" fill="#10b981" font-family="monospace" font-size="13" font-weight="800">05</text>
+    <text x="58" y="37" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="14" font-weight="700">Continuous Loop</text>
+    <text x="20" y="66" fill="#cbd5e1" font-family="monospace" font-size="11">continuous-loop</text>
+    <text x="20" y="88" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="11">Auto-Retry &amp; Self-Heal</text>
+    <text x="20" y="106" fill="#34d399" font-family="monospace" font-size="11" font-weight="700">SHIP READY (GREEN)</text>
+  </g>
+
+  <!-- Footer Banner -->
+  <rect x="40" y="252" width="1120" height="44" rx="10" fill="#0f172a" stroke="#334155" stroke-width="1"/>
+  <text x="600" y="279" text-anchor="middle" fill="#e2e8f0" font-family="monospace" font-size="13">
+    $ dreampia-skill autopilot-gate --workspace . --verify-cmd "pytest -q" --golden-manifest golden.json --write
+  </text>
+</svg>

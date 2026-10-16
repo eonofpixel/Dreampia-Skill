@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "status": "NOT_RUN",
+  "controls": [
+    "model",
+    "host",
+    "time_budget_seconds",
+    "toolset",
+    "initial_source",
+    "scenario_digest"
+  ],
+  "scenarios": [
+    {
+      "id": "E1",
+      "prompt": "작은 메모리 예약 규칙을 구현하라. 같은 요청은 멱등적이고 타 사용자 중복은 거부한다. 배포 없이 완료하라.",
+      "checks": [
+        "필요한 최소 문서",
+        "정상/거부 행동 Red→Green",
+        "요구→작업→테스트→증거",
+        "실제 범위와 미실행 표시"
+      ],
+      "split": "baseline",
+      "files": {
+        "slots.py": "def reserve(bookings,slot,user):\n    return None\n",
+        "test_slots.py": "import unittest\nfrom slots import reserve\nclass TestSlots(unittest.TestCase):\n    def test_new(self):self.assertEqual(reserve({},'S','A'),{'S':'A'})\n    def test_duplicate(self):self.assertEqual(reserve({'S':'A'},'S','A'),{'S':'A'})\n    def test_conflict(self):\n        with self.assertRaises(ValueError):reserve({'S':'A'},'S','B')\n"
+      }
+    },
+    {
+      "id": "E2",
+      "prompt": "기존 예약 규칙에 빈 사용자 거부를 추가하라. 기존 미커밋 파일은 보존하고 현재 명세와 변경 기록을 갱신하라.",
+      "checks": [
+        "원본 보존",
+        "현재 명세와 변경분 분리",
+        "과거 PASS 무효화",
+        "최종 소스로 회귀 검사"
+      ],
+      "split": "baseline",
+      "files": {
+        "slots.py": "def reserve(bookings,slot,user):\n    if slot in bookings and bookings[slot]!=user:raise ValueError('taken')\n    return {**bookings,slot:user}\n",
+        "USER_WORK.txt": "preserve this uncommitted user work\n",
+        "spec.md": "Current: new reservation and duplicate rejection. User field validation not yet defined.\n"
+      }
+    },
+    {
+      "id": "E3",
+      "prompt": "테스트가 실패한 이전 작업을 재개하라. 실행 중 프로세스 여부부터 확인하고 의존 작업까지 검증하라.",
+      "checks": [
+        "중복 실행 방지 확인",
+        "실패를 완료로 변경하지 않음",
+        "재개 근거",
+        "의존성 및 최종 통합 검사"
+      ],
+      "split": "holdout",
+      "files": {
+        "handoff.md": "T1 failed verification. T2 depends on T1. Old evidence is NOT current. Inspect active processes before resuming.\n",
+        "harness.json": "{\n  \"version\": 1,\n  \"requirements\": [\n    \"R1\"\n  ],\n  \"tasks\": [\n    {\n      \"id\": \"T1\",\n      \"requirements\": [\n        \"R1\"\n      ],\n      \"adapter\": {\n        \"kind\": \"deterministic\"\n      },\n      \"checks\": [\n        {\n          \"id\": \"C1\",\n          \"argv\": [\n            \"python3\",\n            \"-c\",\n            \"raise SystemExit(1)\"\n          ]\n        }\n      ]\n    },\n    {\n      \"id\": \"T2\",\n      \"requirements\": [\n        \"R1\"\n      ],\n      \"depends_on\": [\n        \"T1\"\n      ],\n      \"adapter\": {\n        \"kind\": \"deterministic\"\n      },\n      \"checks\": [\n        {\n          \"id\": \"C2\",\n          \"argv\": [\n            \"python3\",\n            \"-c\",\n            \"pass\"\n          ]\n        }\n      ]\n    }\n  ]\n}"
+      }
+    },
+    {
+      "id": "E4",
+      "prompt": "예약 화면의 작은 화면 오버플로와 오류 상태를 수정하라. 실제 화면을 보며 검토하라.",
+      "checks": [
+        "실제 화면 증거",
+        "크기/상태 명시",
+        "키보드와 초점",
+        "구현 리뷰와 시각 리뷰 분리"
+      ],
+      "split": "holdout",
+      "files": {
+        "index.html": "<!doctype html><html lang=\"ko\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><style>main{width:1100px}button{outline:none}</style><main><h1>예약</h1><label>슬롯<input></label><button>예약</button><p role=\"alert\"></p></main></html>\n"
+      }
+    }
+  ]
+}

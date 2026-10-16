@@ -1,0 +1,10 @@
+{
+ "task_id":"replace-task-id",
+ "from_role":"executor",
+ "to_role":"verifier",
+ "scope":"local-prototype; not production",
+ "owned_paths":["web"],
+ "constraints":["synthetic only","no external deployment"],
+ "unresolved":["replace with actual unresolved issues, or empty after verification"],
+ "acceptance":[{"id":"A1","kind":"behavior","status":"NOT_RUN","evidence":[]}]
+}

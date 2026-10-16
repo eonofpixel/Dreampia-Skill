@@ -1,0 +1,2 @@
+# Real local unit tests
+`npm run test:unit` executes Node's test runner against TypeScript on Node >=22.18. It fails on assertion errors (no placeholder console success). Covers integer/range validation, reverse/weighted normalization, exact question contract, expired/missing code config, signed admin token tamper/expiry/fail closed, atomic duplicate locking/durability/deletion/retention/audit and CSV injection quoting. All storage data and credentials are synthetic. UI/API integration is in `tests/ui/smoke.spec.ts`.
