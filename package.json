@@ -27,6 +27,8 @@
     ".claude-plugin/plugin.json",
     ".claude-plugin/marketplace.json",
     ".cursor-plugin/plugin.json",
+    "plugin.json",
+    "gemini-extension.json",
     "README.md",
     "README.ko.md",
     "README.ja.md",
