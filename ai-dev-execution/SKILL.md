@@ -3,9 +3,9 @@ name: ai-dev-execution
 description: Develop small projects, services, and substantial features with proportionate specs, TDD, real evidence, and resumable milestones. For user-facing UI tasks, also define product screens, visual direction, connected flows, and visual/interaction verification. Excludes isolated coding questions.
 ---
 
-# AI 개발 실행 — 0.7.0
+# AI 개발 실행 — 1.0.0
 
-0.7.0의 실행·복구·로컬 앱·고객 export는 [내부 OS 실행 기준](references/internal-os.md)을 따른다. 실제 역할 명령 실행과 독립 AI 판단, 로컬 starter 검증과 운영 준비를 구별한다.
+1.0.0의 실행·복구·로컬 앱·고객 export는 [내부 OS 실행 기준](references/internal-os.md)을 따른다. 실제 역할 명령 실행과 독립 AI 판단, 로컬 starter 검증과 운영 준비를 구별한다.
 
 사용자 아이디어를 작은 기능·실제 검증·승인된 릴리스로 연결한다. 사용자의 언어와 기존 저장소 관례를 따른다. SDD는 Spec-Driven Development, Software Design Document는 상세 설계서로 구별한다.
 

@@ -20,7 +20,7 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 
-SDD_LEDGER_VERSION = "0.7.0"
+SDD_LEDGER_VERSION = "1.0.0"
 DEFAULT_SDD_LEDGER_REL = "evidence/sdd-ledger.json"
 
 _IGNORED_DIRS: frozenset[str] = frozenset(

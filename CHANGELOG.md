@@ -1,3 +1,7 @@
+# 1.0.0
+
+- Phase 1~4 로드맵 완수: 다국어 50종 적대적 슬롭 벤치마크(Recall 100%, FPR 0%), 무의존성 AST/렉서 뮤테이션 테스팅 게이트(mutation-check), 네이티브 생애주기 훅(PreToolUse/PostToolUse/Stop), 시맨틱 심볼 맵/슬라이서(symbol-map/symbol-slice, 토큰 75%+ 절감), Golden Checkpoint 스냅샷 롤백 및 병렬 워크트리 병합 시뮬레이터(squad-merge-check), 라이브 캠프 워커(worker-run), 스마트 메모리 압축(memory-compact), 양방향 SDD 테스트 합성(sdd-synthesize), 단일 파일 HTML 관제 대시보드(status --export-html) 통합 릴리즈.
+
 # 0.7.0
 
 - 브라운필드·폴리글랏·하이브리드 네이티브 프로젝트 자동 탐색(`discover`), `discovered-project.json` 생성 및 SDD 베이스라인 자동 부트스트랩(`--bootstrap-sdd`).

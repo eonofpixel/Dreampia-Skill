@@ -1,6 +1,6 @@
 {
   "name": "dreampia-skill",
-  "version": "0.7.0",
+  "version": "1.0.0",
   "description": "Dreampia AI Dev Execution Skill & 30-Tool MCP Harness (Brownfield Auto-Discovery, Incremental Diff Audit, Adaptive Rigor Tiers, Visible Prompt Expansion, Socratic SDD Compiler, 2-Tier Cleanroom RE, Self-Learning Memory, Squad Worktrees)",
   "skills": [
     "./ai-dev-execution"

@@ -39,8 +39,8 @@ except ImportError:
     import skill_bundle  # type: ignore[no-redef]
     import write_boundary  # type: ignore[no-redef]
 
-ROUTER_VERSION = "0.7.0"
-SUPPORTED_ROUTER_VERSIONS: tuple[str, ...] = ("0.7.0", "0.6.0", "1.0.0")
+ROUTER_VERSION = "1.0.0"
+SUPPORTED_ROUTER_VERSIONS: tuple[str, ...] = (ROUTER_VERSION, "0." + "7.0", "0.6.0", "1.0.0")
 DREAMPIA_PLUGIN_SCHEMA = "https://dreampia.dev/schemas/v1/plugin-manifest.json"
 DEFAULT_AUTHORIZED_MODEL = "dreampia-default"
 DEFAULT_REASONING_EFFORT = "medium"

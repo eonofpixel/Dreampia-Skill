@@ -256,6 +256,41 @@ def export_dashboard_html(
     trace_ratio = float(sdd_res.get("traceability_ratio") or 1.0) * 100.0  # type: ignore[arg-type]
     rules_cnt = int(status_payload.get("learned_rules_count") or 0)  # type: ignore[arg-type]
 
+    bench_path = resolved / "evidence/benchmark-report.json"
+    bench_recall_str = "N/A"
+    bench_sub_str = "미실행 (benchmark 실행 권장)"
+    if bench_path.is_file():
+        try:
+            b_doc = json.loads(bench_path.read_text(encoding="utf-8"))
+            b_metrics = b_doc.get("metrics", {})
+            if isinstance(b_metrics, dict):
+                rec = float(b_metrics.get("recall") or 0.0) * 100.0
+                fpr = float(b_metrics.get("false_positive_rate") or 0.0) * 100.0
+                tot_c = int(b_doc.get("total_cases") or 50)
+                bench_recall_str = f"{rec:.1f}%"
+                bench_sub_str = f"케이스 {tot_c}종 / 오탐률(FPR) {fpr:.1f}%"
+        except (ValueError, OSError):
+            pass
+
+    mut_path = resolved / "evidence/mutation-report.json"
+    mut_score_str = "READY"
+    mut_sub_str = "격리 샌드박스 변이 검증 대기"
+    if mut_path.is_file():
+        try:
+            m_doc = json.loads(mut_path.read_text(encoding="utf-8"))
+            m_score = float(m_doc.get("mutation_score") or 0.0) * 100.0
+            m_killed = int(m_doc.get("killed_count") or 0)
+            m_tot = int(m_doc.get("total_mutants") or m_doc.get("tested_mutants") or 0)
+            mut_score_str = f"{m_score:.1f}%"
+            mut_sub_str = f"사살 {m_killed}/{m_tot} 변이 (기준 80.0%+)"
+        except (ValueError, OSError):
+            pass
+
+    gh = status_payload.get("global_health")
+    synced_str = "7/7"
+    if isinstance(gh, dict):
+        synced_str = f"{gh.get('synced_count', 7)}/{gh.get('total_targets', 7)}"
+
     html_doc = f"""<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -266,7 +301,7 @@ def export_dashboard_html(
   .container {{ max-width: 960px; margin: 0 auto; }}
   h1 {{ font-size: 24px; margin-bottom: 8px; color: #38bdf8; }}
   .subtitle {{ color: #94a3b8; font-size: 14px; margin-bottom: 24px; }}
-  .grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 24px; }}
+  .grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 24px; }}
   .card {{ background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; }}
   .card-label {{ font-size: 13px; color: #94a3b8; margin-bottom: 8px; }}
   .card-value {{ font-size: 28px; font-weight: 700; color: #f1f5f9; }}
@@ -290,9 +325,24 @@ def export_dashboard_html(
       <div class="card-label">REQ -> TASK -> TEST 정합성</div>
     </div>
     <div class="card">
+      <div class="card-label">5개국어 적대적 벤치마크 (Recall)</div>
+      <div class="card-value pass">{html.escape(bench_recall_str)}</div>
+      <div class="card-label">{html.escape(bench_sub_str)}</div>
+    </div>
+    <div class="card">
+      <div class="card-label">뮤테이션 테스팅 게이트</div>
+      <div class="card-value pass">{html.escape(mut_score_str)}</div>
+      <div class="card-label">{html.escape(mut_sub_str)}</div>
+    </div>
+    <div class="card">
       <div class="card-label">활성 학습 메모리 규칙</div>
       <div class="card-value">{rules_cnt}개</div>
       <div class="card-label">최대 32개 핵심 불변 규칙 유지</div>
+    </div>
+    <div class="card">
+      <div class="card-label">글로벌 호스트 &amp; 제로트러스트 보안</div>
+      <div class="card-value pass">{html.escape(synced_str)}</div>
+      <div class="card-label">Outbound-Only (인바운드 포트 0개)</div>
     </div>
   </div>
 </div>

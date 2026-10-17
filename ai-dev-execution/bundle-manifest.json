@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "name": "ai-dev-execution",
-  "version": "0.7.0",
+  "version": "1.0.0",
   "source": "dreampia-private-authored",
   "files": [
     {
       "path": "SKILL.md",
-      "sha256": "329d8036ba2f7be55ac49d701d5099544024d5b0fe59f93b2e62a6ccea227ddc",
+      "sha256": "c39ff63af6e067150ce2b07d5c70090374818d4d71a915b044033c0206222cb2",
       "required": true
     },
     {
@@ -501,7 +501,7 @@
     },
     {
       "path": "references/internal-os.md",
-      "sha256": "e5805d089c418738782aa8b2376d613c40845a06968a0d3620befbb711cdf1d5",
+      "sha256": "f08787cf09cada02392c79f32007514b70bf7dc626b125a9564ec92c7c008777",
       "required": true
     },
     {

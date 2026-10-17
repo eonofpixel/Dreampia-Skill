@@ -1,4 +1,4 @@
-# v0.7.0 구조와 신뢰 경계
+# v1.0.0 구조와 신뢰 경계
 
 | 계층 | 파일 | 책임 |
 |---|---|---|
@@ -25,6 +25,6 @@ manifest와 실행 상태의 엄격한 구조, JSON 중복 키·NaN/Infinity 거
 
 프로젝트 installer는 전체 사용자 프로젝트를 스캔하지 않고 지정된 관리 경로만 읽는다. 임의 파일이나 `.env`를 백업/배포하지 않는다. symlink를 거부하고 hash 충돌을 보존한다.
 
-## 선택적 제품 디자인 및 판타지 RPG 길드 거버넌스 (0.7.0)
+## 선택적 제품 디자인 및 판타지 RPG 길드 거버넌스 (1.0.0)
 
 공통 SKILL은 작업 범위 판단과 실행 원칙의 짧은 진입점이다. `product-design` 및 웹·데스크톱·모바일·시각검증 4개 reference는 사용자용 UI가 범위인 때만 선택 로드한다. 주인공 영웅(`Hero`)을 보좌하는 판타지 RPG 10인 길드 파티(`GuildMaster`, `Sage`, `Archmage`, `Bard`, `Alchemist`, `Paladin`, `Inquisitor`, `Cleric`, `Guardian`, `Archer`)는 역할 분리와 인계 계약(`handoff_contract.py`), SDD 추적(`sdd_engine.py`), 클린룸 역설계(`reconstruct_engine.py`) 전 과정에서 일관된 클래스 콜사인과 책임 경계로 작동한다.

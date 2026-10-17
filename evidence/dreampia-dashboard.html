@@ -2,13 +2,13 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<title>Dreampia-Skill 관제 대시보드 (v0.7.0)</title>
+<title>Dreampia-Skill 관제 대시보드 (v1.0.0)</title>
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 32px; }
   .container { max-width: 960px; margin: 0 auto; }
   h1 { font-size: 24px; margin-bottom: 8px; color: #38bdf8; }
   .subtitle { color: #94a3b8; font-size: 14px; margin-bottom: 24px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 24px; }
   .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; }
   .card-label { font-size: 13px; color: #94a3b8; margin-bottom: 8px; }
   .card-value { font-size: 28px; font-weight: 700; color: #f1f5f9; }
@@ -19,7 +19,7 @@
 <body>
 <div class="container">
   <h1>Dreampia-Skill 통합 엔지니어링 관제 대시보드</h1>
-  <div class="subtitle">버전: v0.7.0 | 무의존성 단일 HTML 리포트 | 생성 시각: 2026-10-17T14:59:42.371247+00:00</div>
+  <div class="subtitle">버전: v1.0.0 | 무의존성 단일 HTML 리포트 | 생성 시각: 2026-10-17T15:20:58.915948+00:00</div>
   <div class="grid">
     <div class="card">
       <div class="card-label">Inquisitor 코드 감사</div>
@@ -32,9 +32,24 @@
       <div class="card-label">REQ -> TASK -> TEST 정합성</div>
     </div>
     <div class="card">
+      <div class="card-label">5개국어 적대적 벤치마크 (Recall)</div>
+      <div class="card-value pass">100.0%</div>
+      <div class="card-label">케이스 50종 / 오탐률(FPR) 0.0%</div>
+    </div>
+    <div class="card">
+      <div class="card-label">뮤테이션 테스팅 게이트</div>
+      <div class="card-value pass">100.0%</div>
+      <div class="card-label">사살 10/10 변이 (기준 80.0%+)</div>
+    </div>
+    <div class="card">
       <div class="card-label">활성 학습 메모리 규칙</div>
       <div class="card-value">3개</div>
       <div class="card-label">최대 32개 핵심 불변 규칙 유지</div>
+    </div>
+    <div class="card">
+      <div class="card-label">글로벌 호스트 &amp; 제로트러스트 보안</div>
+      <div class="card-value pass">7/7</div>
+      <div class="card-label">Outbound-Only (인바운드 포트 0개)</div>
     </div>
   </div>
 </div>

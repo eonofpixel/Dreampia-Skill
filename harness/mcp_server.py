@@ -32,7 +32,7 @@ except ImportError:
 
 MCP_PROTOCOL_VERSION = "2024-11-05"
 SERVER_NAME = "dreampia-skill-mcp"
-SERVER_VERSION = "0.7.0"
+SERVER_VERSION = "1.0.0"
 
 
 @dataclass(frozen=True)
@@ -423,7 +423,7 @@ MCP_TOOLS: tuple[McpToolDefinition, ...] = (
         input_schema={
             "type": "object",
             "properties": {
-                "target_version": {"type": "string", "description": "릴리즈할 새 버전 (예: 0.7.0)"},
+                "target_version": {"type": "string", "description": "릴리즈할 새 버전 (예: 1.0.0)"},
                 "notes": {"type": "string", "description": "CHANGELOG.md에 기록할 한글 변경 요약"},
                 "apply": {"type": "boolean", "description": "true 지정 시 실제 파일 및 매니페스트 일괄 갱신 (기본값 false 미리보기)"},
             },
@@ -893,7 +893,7 @@ def execute_mcp_tool(default_root: Path, tool_name: str, arguments: dict[str, ob
     if tool_name == "dreampia_benchmark":
         lang_arg = str(arguments.get("language") or "all").strip()
         apply_flag = bool(arguments.get("apply", False))
-        return team_cli.benchmark_check(root, language_filter=lang_arg, apply=apply_flag)
+        return team_cli.benchmark_check(root, language=lang_arg, apply=apply_flag)
 
     if tool_name == "dreampia_mutation_check":
         target_arg = str(arguments.get("target") or "").strip()
@@ -904,7 +904,7 @@ def execute_mcp_tool(default_root: Path, tool_name: str, arguments: dict[str, ob
         return team_cli.mutation_check_cmd(
             root,
             target_rel=target_arg,
-            test_cmd_str=cmd_arg,
+            test_cmd=cmd_arg,
             max_mutants=max_mut_arg,
             min_score=min_score_arg,
             apply=apply_flag,
@@ -914,44 +914,43 @@ def execute_mcp_tool(default_root: Path, tool_name: str, arguments: dict[str, ob
         event_arg = str(arguments.get("event") or "PreToolUse").strip()
         raw_payload = arguments.get("payload")
         payload_dict: dict[str, object] = raw_payload if isinstance(raw_payload, dict) else {}
-        return team_cli.hook_dispatch_cmd(root, event_name=event_arg, payload=payload_dict)
+        return team_cli.hook_dispatch_check(root, event_name=event_arg, raw_payload=payload_dict)
 
     if tool_name == "dreampia_symbol_map":
         target_arg = str(arguments.get("target") or "").strip()
-        return team_cli.symbol_map_cmd(root, target_rel=target_arg)
+        return team_cli.symbol_map_check(root, target_rel=target_arg)
 
     if tool_name == "dreampia_symbol_slice":
         target_arg = str(arguments.get("target") or "").strip()
         sym_arg = str(arguments.get("symbol") or "").strip()
-        return team_cli.symbol_slice_cmd(root, target_rel=target_arg, symbol_name=sym_arg)
+        return team_cli.symbol_slice_check(root, target_rel=target_arg, symbol_query=sym_arg)
 
     if tool_name == "dreampia_checkpoint":
         mode_arg = str(arguments.get("mode") or "list").strip()
         target_arg = str(arguments.get("target") or "").strip()
-        label_arg = str(arguments.get("label") or "manual").strip()
+        label_arg = str(arguments.get("label") or "golden").strip()
         apply_flag = bool(arguments.get("apply", False))
-        return team_cli.checkpoint_cmd(
+        return team_cli.checkpoint_check(
             root,
             mode=mode_arg,
             target_rel=target_arg,
-            checkpoint_id=target_arg,
             label=label_arg,
             apply=apply_flag,
         )
 
     if tool_name == "dreampia_squad_merge_check":
         target_arg = str(arguments.get("target") or "").strip()
-        return team_cli.squad_merge_check_cmd(root, worktree_dirs_str=target_arg)
+        return team_cli.squad_merge_check(root, target_rel=target_arg)
 
     if tool_name == "dreampia_memory_compact":
         max_rules_arg = int(arguments.get("max_rules") or 32)  # type: ignore[call-overload]
         apply_flag = bool(arguments.get("apply", False))
-        return team_cli.memory_compact_cmd(root, max_active_rules=max_rules_arg, apply=apply_flag)
+        return team_cli.memory_compact_check(root, max_rules=max_rules_arg, apply=apply_flag)
 
     if tool_name == "dreampia_sdd_synthesize":
         lang_arg = str(arguments.get("language") or "python").strip()
         apply_flag = bool(arguments.get("apply", False))
-        return team_cli.sdd_synthesize_cmd(root, language=lang_arg, apply=apply_flag)
+        return team_cli.sdd_synthesize_check(root, language=lang_arg, apply=apply_flag)
 
     raise KeyError(f"등록되지 않은 MCP 도구입니다: {tool_name}")
 

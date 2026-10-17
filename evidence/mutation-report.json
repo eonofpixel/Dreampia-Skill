@@ -1,0 +1,133 @@
+{
+  "action": "mutation-check",
+  "schema_version": "0.7.5",
+  "generated_at": "2026-10-17T15:13:33.476840+00:00",
+  "status": "PASS",
+  "applied": true,
+  "report_path": "evidence/mutation-report.json",
+  "target_files": [
+    "harness/symbol_indexer.py"
+  ],
+  "test_command": "python -m unittest harness.tests.test_symbol_indexer",
+  "total_mutants": 10,
+  "killed_count": 10,
+  "timeout_count": 0,
+  "survived_count": 0,
+  "mutation_score": 1.0,
+  "min_required_score": 0.8,
+  "survived_mutants": [],
+  "trials": [
+    {
+      "mutant_id": "MUT-001",
+      "file_path": "harness/symbol_indexer.py",
+      "line": 80,
+      "operator": "ROR",
+      "description_ko": "이상 비교(>=)를 미만 비교(<)로 변이",
+      "status": "KILLED",
+      "original_snippet": "if len(calls) >= max_calls:",
+      "mutated_snippet": "if len(calls) < max_calls:",
+      "elapsed_ms": 202.48
+    },
+    {
+      "mutant_id": "MUT-002",
+      "file_path": "harness/symbol_indexer.py",
+      "line": 86,
+      "operator": "AOR",
+      "description_ko": "뺄셈(-) 연산을 덧셈(+)으로 변이",
+      "status": "KILLED",
+      "original_snippet": "idx = max(0, node.lineno - 1)",
+      "mutated_snippet": "idx = max(0, node.lineno + 1)",
+      "elapsed_ms": 190.4
+    },
+    {
+      "mutant_id": "MUT-003",
+      "file_path": "harness/symbol_indexer.py",
+      "line": 112,
+      "operator": "ROR",
+      "description_ko": "이하 비교(<=)를 초과 비교(>)로 변이",
+      "status": "KILLED",
+      "original_snippet": "sig = lines[start_l - 1].strip().rstrip(\":\") if start_l <= len(lines) else f\"class {node.name}\"",
+      "mutated_snippet": "sig = lines[start_l - 1].strip().rstrip(\":\") if start_l > len(lines) else f\"class {node.name}\"",
+      "elapsed_ms": 189.96
+    },
+    {
+      "mutant_id": "MUT-004",
+      "file_path": "harness/symbol_indexer.py",
+      "line": 112,
+      "operator": "AOR",
+      "description_ko": "뺄셈(-) 연산을 덧셈(+)으로 변이",
+      "status": "KILLED",
+      "original_snippet": "sig = lines[start_l - 1].strip().rstrip(\":\") if start_l <= len(lines) else f\"class {node.name}\"",
+      "mutated_snippet": "sig = lines[start_l + 1].strip().rstrip(\":\") if start_l <= len(lines) else f\"class {node.name}\"",
+      "elapsed_ms": 199.13
+    },
+    {
+      "mutant_id": "MUT-005",
+      "file_path": "harness/symbol_indexer.py",
+      "line": 121,
+      "operator": "AOR",
+      "description_ko": "덧셈(+) 연산을 뺄셈(-)으로 변이",
+      "status": "KILLED",
+      "original_snippet": "line_count=max(1, end_l - start_l + 1),",
+      "mutated_snippet": "line_count=max(1, end_l - start_l - 1),",
+      "elapsed_ms": 189.06
+    },
+    {
+      "mutant_id": "MUT-006",
+      "file_path": "harness/symbol_indexer.py",
+      "line": 121,
+      "operator": "AOR",
+      "description_ko": "뺄셈(-) 연산을 덧셈(+)으로 변이",
+      "status": "KILLED",
+      "original_snippet": "line_count=max(1, end_l - start_l + 1),",
+      "mutated_snippet": "line_count=max(1, end_l + start_l + 1),",
+      "elapsed_ms": 195.19
+    },
+    {
+      "mutant_id": "MUT-007",
+      "file_path": "harness/symbol_indexer.py",
+      "line": 140,
+      "operator": "AOR",
+      "description_ko": "덧셈(+) 연산을 뺄셈(-)으로 변이",
+      "status": "KILLED",
+      "original_snippet": "line_count=max(1, m_end - m_start + 1),",
+      "mutated_snippet": "line_count=max(1, m_end - m_start - 1),",
+      "elapsed_ms": 188.68
+    },
+    {
+      "mutant_id": "MUT-008",
+      "file_path": "harness/symbol_indexer.py",
+      "line": 140,
+      "operator": "AOR",
+      "description_ko": "뺄셈(-) 연산을 덧셈(+)으로 변이",
+      "status": "KILLED",
+      "original_snippet": "line_count=max(1, m_end - m_start + 1),",
+      "mutated_snippet": "line_count=max(1, m_end + m_start + 1),",
+      "elapsed_ms": 189.82
+    },
+    {
+      "mutant_id": "MUT-009",
+      "file_path": "harness/symbol_indexer.py",
+      "line": 158,
+      "operator": "AOR",
+      "description_ko": "덧셈(+) 연산을 뺄셈(-)으로 변이",
+      "status": "KILLED",
+      "original_snippet": "line_count=max(1, f_end - f_start + 1),",
+      "mutated_snippet": "line_count=max(1, f_end - f_start - 1),",
+      "elapsed_ms": 194.67
+    },
+    {
+      "mutant_id": "MUT-010",
+      "file_path": "harness/symbol_indexer.py",
+      "line": 158,
+      "operator": "AOR",
+      "description_ko": "뺄셈(-) 연산을 덧셈(+)으로 변이",
+      "status": "KILLED",
+      "original_snippet": "line_count=max(1, f_end - f_start + 1),",
+      "mutated_snippet": "line_count=max(1, f_end + f_start + 1),",
+      "elapsed_ms": 197.46
+    }
+  ],
+  "message_ko": "뮤테이션 테스팅 통과: 변이 방어율(Mutation Score)=100.0% (사살 10/10건, 생존 0건)",
+  "report_sha256": "df931df47f215386a5fb53d5d7b85b0d809a1bb212aa2d1669dcf587d12facaf"
+}

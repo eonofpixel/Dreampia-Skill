@@ -40,8 +40,8 @@ def main() -> int:
         commands += [([sys.executable,str(ROOT/'harness/cli.py'),'run',str(example)],ROOT),
                      ([sys.executable,str(ROOT/'harness/cli.py'),'trace',str(example)],ROOT),
                      ([sys.executable,'-m','unittest','discover','-s','.', '-v'],example),
-                     ([sys.executable,'harness/build.py',str(stage/'harness-0.7.0.pyz')],ROOT),
-                     ([sys.executable,str(stage/'harness-0.7.0.pyz'),'--version'],ROOT),
+                     ([sys.executable,'harness/build.py',str(stage/'harness-1.0.0.pyz')],ROOT),
+                     ([sys.executable,str(stage/'harness-1.0.0.pyz'),'--version'],ROOT),
                      ([sys.executable,'harness/eval_runner.py','prepare','evals/suite.json',str(stage/'evaluation')],ROOT),
                      ([sys.executable,'harness/eval_runner.py','aggregate','evals/suite.json',str(stage/'evaluation/results.json')],ROOT)]
         try:

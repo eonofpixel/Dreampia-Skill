@@ -30,7 +30,7 @@ except ImportError:
     import process as _proc  # type: ignore[no-redef]
     import write_boundary  # type: ignore[no-redef]
 
-ENGINE_VERSION = "0.7.0"
+ENGINE_VERSION = "1.0.0"
 MAX_ARTIFACT_BYTES = 64 * 1024 * 1024
 MAX_STRINGS_COUNT = 200
 

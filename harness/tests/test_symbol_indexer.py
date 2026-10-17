@@ -14,10 +14,10 @@ class TestSymbolIndexer(unittest.TestCase):
     def test_python_symbol_map_and_slice_achieves_high_token_reduction(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            method_body = "\n".join(f"        x_{i} = {i} * 2" for i in range(40))
+            method_body = "\n".join(f"        x_{i} = call_{i % 10}({i})" for i in range(40))
             func_body = "\n".join(f"    y_{i} = {i} * 3" for i in range(40))
             py_code = (
-                "class OrderProcessor:\n"
+                "class OrderProcessor(object):\n"
                 '    """주문 처리 핵심 서비스."""\n'
                 "    def validate_order(self, order_id: str) -> bool:\n"
                 f"{method_body}\n"
@@ -32,6 +32,19 @@ class TestSymbolIndexer(unittest.TestCase):
             self.assertEqual(map_res["status"], "PASS")
             self.assertEqual(map_res["total_symbols"], 3)
             self.assertGreaterEqual(float(map_res["token_reduction_ratio"]), 0.75)  # type: ignore[arg-type]
+
+            files_list = map_res["files"]
+            assert isinstance(files_list, list)
+            syms = files_list[0]["symbols"]
+            assert isinstance(syms, list)
+            self.assertEqual(syms[0]["signature"], "class OrderProcessor(object)")
+            self.assertEqual(syms[0]["line_count"], 44)
+            self.assertEqual(syms[1]["signature"], "def validate_order(self, order_id: str) -> bool")
+            self.assertEqual(syms[1]["line_count"], 42)
+            self.assertEqual(len(syms[1]["calls"]), 8)
+            self.assertEqual(syms[2]["signature"], "def calculate_tax(amount: int) -> int")
+            self.assertEqual(syms[2]["line_count"], 42)
+            self.assertEqual(syms[2]["calls"], ["int"])
 
             slice_res = symbol_indexer.extract_symbol_slice(root, "service.py::OrderProcessor.validate_order", "")
             self.assertEqual(slice_res["status"], "PASS")
