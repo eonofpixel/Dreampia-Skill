@@ -1,6 +1,6 @@
 {
   "schema_version": "0.7.0",
-  "generated_at": "2026-10-17T13:43:09.547574+00:00",
+  "generated_at": "2026-10-17T13:56:45.178963+00:00",
   "status": "PASS",
   "protagonist": {
     "callsign": "Hero",
@@ -88,5 +88,5 @@
     }
   ],
   "message_ko": "GuildMaster & Cleric 오토파일럿 보스 관문(team, 티어=standard) 전 단계(3개) 검증을 통과했습니다.",
-  "verdict_sha256": "6f43e606904a8fec5058763ef5d4b931f13e9db2c19a21517df7cbf88df58824"
+  "verdict_sha256": "00348ab89bbeac2a3bf0712f3080325d28bb6ab010bb22cba34f8fa042bc5571"
 }
