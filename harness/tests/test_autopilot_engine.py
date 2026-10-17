@@ -192,6 +192,10 @@ class AutopilotEngineTests(unittest.TestCase):
             self.assertTrue(applied["applied"])
             self.assertTrue((fake_home / ".gemini/config/skills/ai-dev-execution/SKILL.md").is_file())
             self.assertTrue((fake_home / ".gemini/antigravity/skills/ai-dev-execution/SKILL.md").is_file())
+            self.assertTrue((fake_home / ".gemini/antigravity-ide/skills/ai-dev-execution/SKILL.md").is_file())
+            self.assertTrue((fake_home / ".gemini/config/skills/status/SKILL.md").is_file())
+            self.assertTrue((fake_home / ".gemini/antigravity/skills/status/SKILL.md").is_file())
+            self.assertTrue((fake_home / ".gemini/antigravity-ide/skills/status/SKILL.md").is_file())
             self.assertTrue((fake_home / ".claude/skills/ai-dev-execution/SKILL.md").is_file())
             self.assertTrue((fake_home / ".codex/skills/ai-dev-execution/SKILL.md").is_file())
             self.assertTrue((fake_home / ".codex/skills/ai-dev-execution/agents/openai.yaml").is_file())
@@ -199,6 +203,7 @@ class AutopilotEngineTests(unittest.TestCase):
             self.assertTrue((fake_home / ".agents/skills/ai-dev-execution/SKILL.md").is_file())
             self.assertTrue((fake_home / ".gemini/config/mcp_config.json").is_file())
             self.assertTrue((fake_home / ".gemini/antigravity/mcp_config.json").is_file())
+            self.assertTrue((fake_home / ".gemini/antigravity-ide/mcp_config.json").is_file())
             self.assertTrue((fake_home / ".gemini/settings.json").is_file())
             self.assertTrue((fake_home / ".claude.json").is_file())
             self.assertTrue((fake_home / ".claude/commands/update.md").is_file())
@@ -212,6 +217,7 @@ class AutopilotEngineTests(unittest.TestCase):
             self.assertTrue(health["healthy"])
             native_hosts = health["native_hosts"]  # type: ignore[index]
             self.assertTrue(native_hosts["antigravity"]["mcp_ready"])  # type: ignore[index]
+            self.assertTrue(native_hosts["antigravity"]["slash_ready"])  # type: ignore[index]
             self.assertTrue(native_hosts["claude_code"]["mcp_ready"])  # type: ignore[index]
             self.assertTrue(native_hosts["claude_code"]["slash_ready"])  # type: ignore[index]
             self.assertTrue(native_hosts["codex"]["mcp_ready"])  # type: ignore[index]

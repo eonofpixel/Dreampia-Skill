@@ -1216,6 +1216,7 @@ def squad_worktree_check(
 _GLOBAL_SKILL_REL_TARGETS: tuple[str, ...] = (
     '.gemini/config/skills/ai-dev-execution',
     '.gemini/antigravity/skills/ai-dev-execution',
+    '.gemini/antigravity-ide/skills/ai-dev-execution',
     '.claude/skills/ai-dev-execution',
     '.codex/skills/ai-dev-execution',
     '.cursor/skills/ai-dev-execution',
@@ -1225,6 +1226,7 @@ _GLOBAL_SKILL_REL_TARGETS: tuple[str, ...] = (
 _GLOBAL_MCP_CONFIG_REL_TARGETS: tuple[str, ...] = (
     '.gemini/config/mcp_config.json',
     '.gemini/antigravity/mcp_config.json',
+    '.gemini/antigravity-ide/mcp_config.json',
     '.gemini/settings.json',
     '.claude.json',
     '.claude/mcp.json',
@@ -1237,6 +1239,35 @@ _GLOBAL_COMMAND_REL_DIRS: tuple[str, ...] = (
     '.claude/commands',
     '.codex/prompts',
 )
+
+_GLOBAL_AGY_SLASH_SKILL_ROOTS: tuple[str, ...] = (
+    '.gemini/config/skills',
+    '.gemini/antigravity/skills',
+    '.gemini/antigravity-ide/skills',
+)
+
+
+def _render_agy_slash_skill(cmd_name: str, raw_md: str, abs_cli_invoke: str) -> str:
+    """commands/*.md 내용을 Antigravity 일급 슬래시 명령어(/status, /update 등) 규격의 SKILL.md로 변환한다."""
+    desc = f'Dreampia /{cmd_name} 명령어 실행 스킬'
+    body = raw_md
+    if raw_md.startswith('---'):
+        parts = raw_md.split('---', 2)
+        if len(parts) == 3:
+            for line in parts[1].splitlines():
+                if line.strip().startswith('description:'):
+                    desc = line.split(':', 1)[1].strip().strip('"\'')
+                    break
+            body = parts[2].lstrip('\r\n')
+    rendered_body = body.replace('python -m harness.team_cli', abs_cli_invoke)
+    return (
+        '---\n'
+        f'name: {cmd_name}\n'
+        f'description: {desc}\n'
+        '---\n\n'
+        f'# /{cmd_name} (Dreampia-Skill)\n\n'
+        f'{rendered_body}'
+    )
 
 _CODEX_MCP_SECTION_RE = _re.compile(
     r'^\s*\[mcp_servers\.(?:dreampia_skill|"dreampia-skill"|\'dreampia-skill\')(?:\.[^\]]+)?\]\s*$'
@@ -1352,6 +1383,21 @@ def setup_global(
                     )
                     dst_md.write_text(rendered_cmd, encoding='utf-8')
 
+        for agy_root_rel in _GLOBAL_AGY_SLASH_SKILL_ROOTS:
+            agy_root = home / agy_root_rel
+            for src_md in cmd_files:
+                cmd_stem = src_md.stem
+                dst_skill_md = agy_root / cmd_stem / 'SKILL.md'
+                installed_commands.append(str(dst_skill_md))
+                if apply:
+                    dst_skill_md.parent.mkdir(parents=True, exist_ok=True)
+                    rendered_skill = _render_agy_slash_skill(
+                        cmd_stem,
+                        src_md.read_text(encoding='utf-8'),
+                        abs_cli_invoke,
+                    )
+                    dst_skill_md.write_text(rendered_skill, encoding='utf-8')
+
     mcp_cfg_path = home / '.gemini/config/mcp_config.json'
     codex_cfg_path = home / _CODEX_GLOBAL_CONFIG_REL
     mcp_cfg_paths: list[str] = [str(home / m_rel) for m_rel in _GLOBAL_MCP_CONFIG_REL_TARGETS] + [str(codex_cfg_path)]
@@ -1421,7 +1467,7 @@ def uninstall_global(
     apply: bool = False,
     home_dir: pathlib.Path | None = None,
 ) -> dict[str, object]:
-    """전역 설치된 6개 호스트 스킬 폴더, 네이티브 슬래시 명령어 및 MCP 서버 설정을 안전하게 제거하고 백업본(.pre-dreampia.bak)이 있으면 복원한다."""
+    """전역 설치된 7개 호스트 스킬 폴더, 네이티브 슬래시 명령어 및 MCP 서버 설정을 안전하게 제거하고 백업본(.pre-dreampia.bak)이 있으면 복원한다."""
     import shutil
     home = (home_dir or pathlib.Path.home()).resolve()
     removed_targets: list[str] = []
@@ -1455,6 +1501,16 @@ def uninstall_global(
                     if bak_md.is_file() and not bak_md.is_symlink():
                         shutil.move(str(bak_md), str(dst_md))
                         restored_backups.append(str(dst_md))
+
+    for agy_root_rel in _GLOBAL_AGY_SLASH_SKILL_ROOTS:
+        agy_root = home / agy_root_rel
+        for cname in cmd_names:
+            cmd_stem = pathlib.Path(cname).stem
+            dst_dir = agy_root / cmd_stem
+            if dst_dir.is_dir() and not dst_dir.is_symlink():
+                removed_commands.append(str(dst_dir / 'SKILL.md'))
+                if apply:
+                    shutil.rmtree(dst_dir, ignore_errors=True)
 
     mcp_removed = False
     for m_rel in _GLOBAL_MCP_CONFIG_REL_TARGETS:
@@ -1570,7 +1626,7 @@ def _has_json_mcp(cfg_path: pathlib.Path) -> bool:
 
 
 def check_global_health(home_dir: pathlib.Path | None = None) -> dict[str, object]:
-    """6개 글로벌 에이전트 호스트 스킬 폴더, 3대 네이티브 앱(Antigravity, Claude Code, Codex) MCP 및 슬래시 커맨드 상태를 점검한다."""
+    """7개 글로벌 에이전트 호스트 스킬 폴더, 3대 네이티브 앱(Antigravity, Claude Code, Codex) MCP 및 슬래시 커맨드 상태를 점검한다."""
     home = (home_dir or pathlib.Path.home()).resolve()
     live_ver = (PACKAGE / 'VERSION').read_text(encoding='utf-8').strip() if (PACKAGE / 'VERSION').is_file() else VERSION
     targets_report: list[dict[str, object]] = []
@@ -1595,11 +1651,20 @@ def check_global_health(home_dir: pathlib.Path | None = None) -> dict[str, objec
             'has_backup': bak.exists(),
         })
 
-    agy_mcp = _has_json_mcp(home / '.gemini/config/mcp_config.json') and _has_json_mcp(home / '.gemini/antigravity/mcp_config.json')
+    agy_mcp = (
+        _has_json_mcp(home / '.gemini/config/mcp_config.json')
+        and _has_json_mcp(home / '.gemini/antigravity/mcp_config.json')
+        and _has_json_mcp(home / '.gemini/antigravity-ide/mcp_config.json')
+    )
     claude_mcp = _has_json_mcp(home / '.claude.json') and _has_json_mcp(home / '.claude/mcp.json')
     codex_mcp = _has_codex_mcp_toml(home / _CODEX_GLOBAL_CONFIG_REL)
     mcp_registered = agy_mcp and claude_mcp and codex_mcp
 
+    agy_slash_ready = (
+        (home / '.gemini/config/skills/status/SKILL.md').is_file()
+        and (home / '.gemini/antigravity/skills/status/SKILL.md').is_file()
+        and (home / '.gemini/antigravity-ide/skills/status/SKILL.md').is_file()
+    )
     claude_cmds_ready = (home / '.claude/commands/update.md').is_file() and (home / '.claude/commands/discover.md').is_file()
     codex_prompts_ready = (home / '.codex/prompts/update.md').is_file() and (home / '.codex/prompts/discover.md').is_file()
 
@@ -1607,7 +1672,7 @@ def check_global_health(home_dir: pathlib.Path | None = None) -> dict[str, objec
         'antigravity': {
             'skill_ready': (home / '.gemini/config/skills/ai-dev-execution/SKILL.md').is_file(),
             'mcp_ready': agy_mcp,
-            'slash_ready': (home / '.gemini/config/skills/ai-dev-execution/SKILL.md').is_file(),
+            'slash_ready': agy_slash_ready,
         },
         'claude_code': {
             'skill_ready': (home / '.claude/skills/ai-dev-execution/SKILL.md').is_file(),
@@ -1628,7 +1693,7 @@ def check_global_health(home_dir: pathlib.Path | None = None) -> dict[str, objec
         'total_targets': len(_GLOBAL_SKILL_REL_TARGETS),
         'mcp_registered': mcp_registered,
         'native_hosts': native_hosts,
-        'healthy': synced_count == len(_GLOBAL_SKILL_REL_TARGETS) and mcp_registered and claude_cmds_ready and codex_prompts_ready,
+        'healthy': synced_count == len(_GLOBAL_SKILL_REL_TARGETS) and mcp_registered and agy_slash_ready and claude_cmds_ready and codex_prompts_ready,
         'targets': targets_report,
     }
 
