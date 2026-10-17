@@ -1328,79 +1328,48 @@ def _has_codex_mcp_toml(config_path: pathlib.Path) -> bool:
     return any(_CODEX_MCP_SECTION_RE.match(line) for line in text.splitlines())
 
 
+def _discover_all_home_dirs(base_home: pathlib.Path) -> list[pathlib.Path]:
+    """기본 홈 디렉터리 및 AntigravityClones(Account_B, Account_C 등) 멀티 계정 홈 디렉터리 목록을 반환한다."""
+    resolved = base_home.resolve()
+    homes: list[pathlib.Path] = [resolved]
+
+    def _add_home(cand: pathlib.Path) -> None:
+        if cand.is_dir() and not cand.is_symlink() and cand not in homes:
+            homes.append(cand)
+
+    clones_dir = resolved / 'AntigravityClones'
+    if clones_dir.is_dir() and not clones_dir.is_symlink():
+        for child in sorted(clones_dir.iterdir()):
+            _add_home(child)
+
+    if resolved.parent.name == 'AntigravityClones':
+        root_home = resolved.parent.parent
+        _add_home(root_home)
+        for sibling in sorted(resolved.parent.iterdir()):
+            _add_home(sibling)
+
+    return homes
+
+
 def setup_global(
     apply: bool = False,
     home_dir: pathlib.Path | None = None,
     project_dir: pathlib.Path | None = None,
 ) -> dict[str, object]:
-    """원클릭 전역 스킬(Antigravity, Claude Code, Codex, Gemini, Cursor, Agents), 네이티브 슬래시 커맨드 및 MCP 서버 일괄 설치기."""
+    """원클릭 전역 스킬(Antigravity, Claude Code, Codex, Gemini, Cursor, Agents), 네이티브 슬래시 커맨드 및 MCP 서버 일괄 설치기 (AntigravityClones 멀티 계정 동시 지원)."""
     import shutil
-    home = (home_dir or pathlib.Path.home()).resolve()
+    primary_home = (home_dir or pathlib.Path.home()).resolve()
+    all_homes = _discover_all_home_dirs(primary_home)
     skill_src = PACKAGE / 'ai-dev-execution'
     if not skill_src.is_dir():
         raise InstallError('skill source directory missing')
 
     installed_targets: list[str] = []
     backed_up_targets: list[str] = []
-    for rel in _GLOBAL_SKILL_REL_TARGETS:
-        dst = home / rel
-        installed_targets.append(str(dst))
-        if apply:
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            if dst.is_dir() and not dst.is_symlink():
-                existing_skill = dst / 'SKILL.md'
-                if existing_skill.is_file():
-                    existing_text = existing_skill.read_text(encoding='utf-8', errors='ignore')
-                    if 'Dreampia' not in existing_text:
-                        bak = dst.with_name(dst.name + '.pre-dreampia.bak')
-                        if not bak.exists():
-                            shutil.copytree(dst, bak)
-                            backed_up_targets.append(str(bak))
-            shutil.copytree(skill_src, dst, dirs_exist_ok=True)
-
-    commands_src = PACKAGE / 'commands'
     installed_commands: list[str] = []
+    mcp_cfg_paths: list[str] = []
+    commands_src = PACKAGE / 'commands'
     abs_cli_invoke = f'"{sys.executable}" "{(PACKAGE / "harness/team_cli.py").resolve()}"'
-    if commands_src.is_dir():
-        cmd_files = sorted(commands_src.glob('*.md'))
-        for cmd_dir_rel in _GLOBAL_COMMAND_REL_DIRS:
-            cmd_dir = home / cmd_dir_rel
-            for src_md in cmd_files:
-                dst_md = cmd_dir / src_md.name
-                installed_commands.append(str(dst_md))
-                if apply:
-                    cmd_dir.mkdir(parents=True, exist_ok=True)
-                    if dst_md.is_file() and not dst_md.is_symlink():
-                        existing_cmd_txt = dst_md.read_text(encoding='utf-8', errors='ignore')
-                        if 'dreampia' not in existing_cmd_txt.lower():
-                            cmd_bak = dst_md.with_name(dst_md.name + '.pre-dreampia.bak')
-                            if not cmd_bak.exists():
-                                shutil.copy2(dst_md, cmd_bak)
-                                backed_up_targets.append(str(cmd_bak))
-                    rendered_cmd = src_md.read_text(encoding='utf-8').replace(
-                        'python -m harness.team_cli',
-                        abs_cli_invoke,
-                    )
-                    dst_md.write_text(rendered_cmd, encoding='utf-8')
-
-        for agy_root_rel in _GLOBAL_AGY_SLASH_SKILL_ROOTS:
-            agy_root = home / agy_root_rel
-            for src_md in cmd_files:
-                cmd_stem = src_md.stem
-                dst_skill_md = agy_root / cmd_stem / 'SKILL.md'
-                installed_commands.append(str(dst_skill_md))
-                if apply:
-                    dst_skill_md.parent.mkdir(parents=True, exist_ok=True)
-                    rendered_skill = _render_agy_slash_skill(
-                        cmd_stem,
-                        src_md.read_text(encoding='utf-8'),
-                        abs_cli_invoke,
-                    )
-                    dst_skill_md.write_text(rendered_skill, encoding='utf-8')
-
-    mcp_cfg_path = home / '.gemini/config/mcp_config.json'
-    codex_cfg_path = home / _CODEX_GLOBAL_CONFIG_REL
-    mcp_cfg_paths: list[str] = [str(home / m_rel) for m_rel in _GLOBAL_MCP_CONFIG_REL_TARGETS] + [str(codex_cfg_path)]
     mcp_project = str(PACKAGE.resolve())
     mcp_args = [
         str((PACKAGE / 'harness/team_cli.py').resolve()),
@@ -1412,26 +1381,86 @@ def setup_global(
         'command': sys.executable,
         'args': mcp_args,
     }
-    if apply:
-        for m_rel in _GLOBAL_MCP_CONFIG_REL_TARGETS:
-            m_path = home / m_rel
-            m_path.parent.mkdir(parents=True, exist_ok=True)
-            existing_cfg: dict[str, object] = {}
-            if m_path.is_file():
-                try:
-                    loaded = json.loads(m_path.read_text(encoding='utf-8'))
-                    if isinstance(loaded, dict):
-                        existing_cfg = loaded
-                except ValueError:
-                    existing_cfg = {}
-            servers = existing_cfg.get('mcpServers')
-            if not isinstance(servers, dict):
-                servers = {}
-                existing_cfg['mcpServers'] = servers
-            servers['dreampia-skill'] = mcp_entry
-            m_path.write_text(json.dumps(existing_cfg, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-        _upsert_codex_mcp_toml(codex_cfg_path, sys.executable, mcp_args)
 
+    for home in all_homes:
+        for rel in _GLOBAL_SKILL_REL_TARGETS:
+            dst = home / rel
+            installed_targets.append(str(dst))
+            if apply:
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                if dst.is_dir() and not dst.is_symlink():
+                    existing_skill = dst / 'SKILL.md'
+                    if existing_skill.is_file():
+                        existing_text = existing_skill.read_text(encoding='utf-8', errors='ignore')
+                        if 'Dreampia' not in existing_text:
+                            bak = dst.with_name(dst.name + '.pre-dreampia.bak')
+                            if not bak.exists():
+                                shutil.copytree(dst, bak)
+                                backed_up_targets.append(str(bak))
+                shutil.copytree(skill_src, dst, dirs_exist_ok=True)
+
+        if commands_src.is_dir():
+            cmd_files = sorted(commands_src.glob('*.md'))
+            for cmd_dir_rel in _GLOBAL_COMMAND_REL_DIRS:
+                cmd_dir = home / cmd_dir_rel
+                for src_md in cmd_files:
+                    dst_md = cmd_dir / src_md.name
+                    installed_commands.append(str(dst_md))
+                    if apply:
+                        cmd_dir.mkdir(parents=True, exist_ok=True)
+                        if dst_md.is_file() and not dst_md.is_symlink():
+                            existing_cmd_txt = dst_md.read_text(encoding='utf-8', errors='ignore')
+                            if 'dreampia' not in existing_cmd_txt.lower():
+                                cmd_bak = dst_md.with_name(dst_md.name + '.pre-dreampia.bak')
+                                if not cmd_bak.exists():
+                                    shutil.copy2(dst_md, cmd_bak)
+                                    backed_up_targets.append(str(cmd_bak))
+                        rendered_cmd = src_md.read_text(encoding='utf-8').replace(
+                            'python -m harness.team_cli',
+                            abs_cli_invoke,
+                        )
+                        dst_md.write_text(rendered_cmd, encoding='utf-8')
+
+            for agy_root_rel in _GLOBAL_AGY_SLASH_SKILL_ROOTS:
+                agy_root = home / agy_root_rel
+                for src_md in cmd_files:
+                    cmd_stem = src_md.stem
+                    dst_skill_md = agy_root / cmd_stem / 'SKILL.md'
+                    installed_commands.append(str(dst_skill_md))
+                    if apply:
+                        dst_skill_md.parent.mkdir(parents=True, exist_ok=True)
+                        rendered_skill = _render_agy_slash_skill(
+                            cmd_stem,
+                            src_md.read_text(encoding='utf-8'),
+                            abs_cli_invoke,
+                        )
+                        dst_skill_md.write_text(rendered_skill, encoding='utf-8')
+
+        codex_cfg_path = home / _CODEX_GLOBAL_CONFIG_REL
+        for m_rel in _GLOBAL_MCP_CONFIG_REL_TARGETS:
+            mcp_cfg_paths.append(str(home / m_rel))
+        mcp_cfg_paths.append(str(codex_cfg_path))
+        if apply:
+            for m_rel in _GLOBAL_MCP_CONFIG_REL_TARGETS:
+                m_path = home / m_rel
+                m_path.parent.mkdir(parents=True, exist_ok=True)
+                existing_cfg: dict[str, object] = {}
+                if m_path.is_file():
+                    try:
+                        loaded = json.loads(m_path.read_text(encoding='utf-8'))
+                        if isinstance(loaded, dict):
+                            existing_cfg = loaded
+                    except ValueError:
+                        existing_cfg = {}
+                servers = existing_cfg.get('mcpServers')
+                if not isinstance(servers, dict):
+                    servers = {}
+                    existing_cfg['mcpServers'] = servers
+                servers['dreampia-skill'] = mcp_entry
+                m_path.write_text(json.dumps(existing_cfg, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+            _upsert_codex_mcp_toml(codex_cfg_path, sys.executable, mcp_args)
+
+    mcp_cfg_path = primary_home / '.gemini/config/mcp_config.json'
     project_result: dict[str, object] | None = None
     if project_dir is not None:
         is_self_hosted = project_dir.resolve() == PACKAGE.resolve()
@@ -1449,6 +1478,7 @@ def setup_global(
         'status': 'PASS',
         'applied': apply,
         'version': VERSION,
+        'synced_homes': [str(h) for h in all_homes],
         'global_skill_targets': installed_targets,
         'global_command_targets': installed_commands,
         'backed_up_targets': backed_up_targets,
@@ -1456,7 +1486,7 @@ def setup_global(
         'mcp_config_paths': mcp_cfg_paths,
         'project_setup': project_result,
         'message_ko': (
-            f'Dreampia v{VERSION} 전역 스킬({len(installed_targets)}개 호스트 경로), 네이티브 슬래시 명령어({len(installed_commands)}개) 및 3대 앱(Antigravity, Claude Code, Codex) MCP 서버 등록이 완료되었습니다.'
+            f'Dreampia v{VERSION} 전역 스킬({len(installed_targets)}개 경로, 계정 프로필 {len(all_homes)}개), 네이티브 슬래시 명령어({len(installed_commands)}개) 및 3대 앱(Antigravity, Claude Code, Codex) MCP 서버 등록이 완료되었습니다.'
             if apply
             else f'Dreampia v{VERSION} 전역 설치 미리보기입니다. 실제 설치하려면 --apply 옵션을 추가하십시오.'
         ),
@@ -1469,67 +1499,69 @@ def uninstall_global(
 ) -> dict[str, object]:
     """전역 설치된 7개 호스트 스킬 폴더, 네이티브 슬래시 명령어 및 MCP 서버 설정을 안전하게 제거하고 백업본(.pre-dreampia.bak)이 있으면 복원한다."""
     import shutil
-    home = (home_dir or pathlib.Path.home()).resolve()
+    primary_home = (home_dir or pathlib.Path.home()).resolve()
+    all_homes = _discover_all_home_dirs(primary_home)
     removed_targets: list[str] = []
     removed_commands: list[str] = []
     restored_backups: list[str] = []
-
-    for rel in _GLOBAL_SKILL_REL_TARGETS:
-        dst = home / rel
-        bak = dst.with_name(dst.name + '.pre-dreampia.bak')
-        if dst.exists() or bak.exists():
-            removed_targets.append(str(dst))
-            if apply:
-                if dst.exists() and not dst.is_symlink():
-                    shutil.rmtree(dst, ignore_errors=True)
-                if bak.exists() and not bak.is_symlink():
-                    shutil.move(str(bak), str(dst))
-                    restored_backups.append(str(dst))
-
+    mcp_removed = False
     commands_src = PACKAGE / 'commands'
     cmd_names = [p.name for p in sorted(commands_src.glob('*.md'))] if commands_src.is_dir() else []
-    for cmd_dir_rel in _GLOBAL_COMMAND_REL_DIRS:
-        cmd_dir = home / cmd_dir_rel
-        for cname in cmd_names:
-            dst_md = cmd_dir / cname
-            bak_md = dst_md.with_name(dst_md.name + '.pre-dreampia.bak')
-            if dst_md.is_file() or bak_md.is_file():
-                removed_commands.append(str(dst_md))
+
+    for home in all_homes:
+        for rel in _GLOBAL_SKILL_REL_TARGETS:
+            dst = home / rel
+            bak = dst.with_name(dst.name + '.pre-dreampia.bak')
+            if dst.exists() or bak.exists():
+                removed_targets.append(str(dst))
                 if apply:
-                    if dst_md.is_file() and not dst_md.is_symlink():
-                        dst_md.unlink(missing_ok=True)
-                    if bak_md.is_file() and not bak_md.is_symlink():
-                        shutil.move(str(bak_md), str(dst_md))
-                        restored_backups.append(str(dst_md))
+                    if dst.exists() and not dst.is_symlink():
+                        shutil.rmtree(dst, ignore_errors=True)
+                    if bak.exists() and not bak.is_symlink():
+                        shutil.move(str(bak), str(dst))
+                        restored_backups.append(str(dst))
 
-    for agy_root_rel in _GLOBAL_AGY_SLASH_SKILL_ROOTS:
-        agy_root = home / agy_root_rel
-        for cname in cmd_names:
-            cmd_stem = pathlib.Path(cname).stem
-            dst_dir = agy_root / cmd_stem
-            if dst_dir.is_dir() and not dst_dir.is_symlink():
-                removed_commands.append(str(dst_dir / 'SKILL.md'))
-                if apply:
-                    shutil.rmtree(dst_dir, ignore_errors=True)
+        for cmd_dir_rel in _GLOBAL_COMMAND_REL_DIRS:
+            cmd_dir = home / cmd_dir_rel
+            for cname in cmd_names:
+                dst_md = cmd_dir / cname
+                bak_md = dst_md.with_name(dst_md.name + '.pre-dreampia.bak')
+                if dst_md.is_file() or bak_md.is_file():
+                    removed_commands.append(str(dst_md))
+                    if apply:
+                        if dst_md.is_file() and not dst_md.is_symlink():
+                            dst_md.unlink(missing_ok=True)
+                        if bak_md.is_file() and not bak_md.is_symlink():
+                            shutil.move(str(bak_md), str(dst_md))
+                            restored_backups.append(str(dst_md))
 
-    mcp_removed = False
-    for m_rel in _GLOBAL_MCP_CONFIG_REL_TARGETS:
-        m_path = home / m_rel
-        if m_path.is_file():
-            try:
-                loaded = json.loads(m_path.read_text(encoding='utf-8'))
-                if isinstance(loaded, dict) and isinstance(loaded.get('mcpServers'), dict):
-                    servers = loaded['mcpServers']
-                    if 'dreampia-skill' in servers:
-                        mcp_removed = True
-                        if apply:
-                            del servers['dreampia-skill']
-                            m_path.write_text(json.dumps(loaded, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-            except ValueError:
-                pass
+        for agy_root_rel in _GLOBAL_AGY_SLASH_SKILL_ROOTS:
+            agy_root = home / agy_root_rel
+            for cname in cmd_names:
+                cmd_stem = pathlib.Path(cname).stem
+                dst_dir = agy_root / cmd_stem
+                if dst_dir.is_dir() and not dst_dir.is_symlink():
+                    removed_commands.append(str(dst_dir / 'SKILL.md'))
+                    if apply:
+                        shutil.rmtree(dst_dir, ignore_errors=True)
 
-    if _remove_codex_mcp_toml(home / _CODEX_GLOBAL_CONFIG_REL, apply=apply):
-        mcp_removed = True
+        for m_rel in _GLOBAL_MCP_CONFIG_REL_TARGETS:
+            m_path = home / m_rel
+            if m_path.is_file():
+                try:
+                    loaded = json.loads(m_path.read_text(encoding='utf-8'))
+                    if isinstance(loaded, dict) and isinstance(loaded.get('mcpServers'), dict):
+                        servers = loaded['mcpServers']
+                        if 'dreampia-skill' in servers:
+                            mcp_removed = True
+                            if apply:
+                                del servers['dreampia-skill']
+                                m_path.write_text(json.dumps(loaded, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+                except ValueError:
+                    pass
+
+        if _remove_codex_mcp_toml(home / _CODEX_GLOBAL_CONFIG_REL, apply=apply):
+            mcp_removed = True
 
     return {
         'action': 'uninstall-global',
