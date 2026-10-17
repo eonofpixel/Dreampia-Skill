@@ -55,10 +55,10 @@
       DREAMPIA<tspan fill="#10b981">-SKILL</tspan>
     </text>
     <text x="390" y="-4" font-size="22" font-weight="600" fill="#38bdf8">
-      Autonomous AI Engineering OS &amp; Harness
+      Hero · Quest · RPG Guild Party AI Harness
     </text>
     <text x="0" y="40" font-size="17" fill="#cbd5e1" font-weight="400">
-      Matrix 9-Agent Squad · 4-Hop SDD+TDD Traceability · Cleanroom Binary Reconstruct · Trinity AST Auditor · 14 STDIO MCP Tools
+      Hero &amp; 10-Class Guild Party · C/B/A/S Quest Ranks · 4-Hop SDD+TDD · Cleanroom Reconstruct · Inquisitor AST Auditor · 30 MCP Tools
     </text>
   </g>
 
@@ -69,11 +69,11 @@
       <rect width="255" height="175" rx="14" fill="url(#cardGrad)" stroke="#10b981" stroke-width="1.2" stroke-opacity="0.6"/>
       <rect x="18" y="18" width="42" height="26" rx="6" fill="#064e3b"/>
       <text x="27" y="36" font-size="13" font-weight="700" fill="#34d399">01</text>
-      <text x="18" y="68" font-size="17" font-weight="700" fill="#f1f5f9">Matrix 9-Agent Squad</text>
-      <text x="18" y="94" font-size="13" fill="#94a3b8">Morpheus · Oracle · Architect</text>
-      <text x="18" y="114" font-size="13" fill="#94a3b8">Niobe · Keymaker · Neo</text>
-      <text x="18" y="134" font-size="13" fill="#94a3b8">Trinity · Tank · Seraph</text>
-      <text x="18" y="158" font-size="12" font-weight="600" fill="#10b981">Role &amp; Write-Boundary Isolated</text>
+      <text x="18" y="68" font-size="17" font-weight="700" fill="#f1f5f9">Hero &amp; RPG Guild Party</text>
+      <text x="18" y="94" font-size="13" fill="#94a3b8">Hero · GuildMaster · Sage</text>
+      <text x="18" y="114" font-size="13" fill="#94a3b8">Archmage · Bard · Archer · Paladin</text>
+      <text x="18" y="134" font-size="13" fill="#94a3b8">Alchemist · Inquisitor · Cleric · Guardian</text>
+      <text x="18" y="158" font-size="12" font-weight="600" fill="#10b981">Multi-Agent &amp; Camp 1~10 Ready</text>
     </g>
 
     <!-- Card 2 -->
@@ -81,9 +81,9 @@
       <rect width="255" height="175" rx="14" fill="url(#cardGrad)" stroke="#06b6d4" stroke-width="1.2" stroke-opacity="0.6"/>
       <rect x="18" y="18" width="42" height="26" rx="6" fill="#083344"/>
       <text x="27" y="36" font-size="13" font-weight="700" fill="#22d3ee">02</text>
-      <text x="18" y="68" font-size="17" font-weight="700" fill="#f1f5f9">SDD + TDD Engine</text>
+      <text x="18" y="68" font-size="17" font-weight="700" fill="#f1f5f9">Quest Journal (SDD+TDD)</text>
       <text x="18" y="94" font-size="13" fill="#94a3b8">PRD-R* → API/UX → TASK → TEST</text>
-      <text x="18" y="114" font-size="13" fill="#94a3b8">4-Hop BFS Transitive Closure</text>
+      <text x="18" y="114" font-size="13" fill="#94a3b8">C / B / A / S Rank Classification</text>
       <text x="18" y="134" font-size="13" fill="#94a3b8">Orphan &amp; Spec Drift Blocking</text>
       <text x="18" y="158" font-size="12" font-weight="600" fill="#22d3ee">SHA-256 Spec Ledger Verified</text>
     </g>
@@ -93,7 +93,7 @@
       <rect width="255" height="175" rx="14" fill="url(#cardGrad)" stroke="#3b82f6" stroke-width="1.2" stroke-opacity="0.6"/>
       <rect x="18" y="18" width="42" height="26" rx="6" fill="#1e3a8a"/>
       <text x="27" y="36" font-size="13" font-weight="700" fill="#60a5fa">03</text>
-      <text x="18" y="68" font-size="17" font-weight="700" fill="#f1f5f9">Cleanroom &amp; Golden I/O</text>
+      <text x="18" y="68" font-size="17" font-weight="700" fill="#f1f5f9">Alchemist Cleanroom RE</text>
       <text x="18" y="94" font-size="13" fill="#94a3b8">PE · ELF · Mach-O · WASM · ASAR</text>
       <text x="18" y="114" font-size="13" fill="#94a3b8">3-Zone Contamination Guard</text>
       <text x="18" y="134" font-size="13" fill="#94a3b8">Black-Box Input/Output Parity</text>
@@ -105,11 +105,11 @@
       <rect width="255" height="175" rx="14" fill="url(#cardGrad)" stroke="#a855f7" stroke-width="1.2" stroke-opacity="0.6"/>
       <rect x="18" y="18" width="42" height="26" rx="6" fill="#3b0764"/>
       <text x="27" y="36" font-size="13" font-weight="700" fill="#c084fc">04</text>
-      <text x="18" y="68" font-size="17" font-weight="700" fill="#f1f5f9">Trinity &amp; Autopilot Gate</text>
+      <text x="18" y="68" font-size="17" font-weight="700" fill="#f1f5f9">Inquisitor &amp; Cleric Gate</text>
       <text x="18" y="94" font-size="13" fill="#94a3b8">Blocks Hollow TDD (assert True)</text>
       <text x="18" y="114" font-size="13" fill="#94a3b8">Forbids any &amp; Missing Return</text>
       <text x="18" y="134" font-size="13" fill="#94a3b8">Anti-Amnesia Context Pack</text>
-      <text x="18" y="158" font-size="12" font-weight="600" fill="#c084fc">5-Stage Atomic Verdict</text>
+      <text x="18" y="158" font-size="12" font-weight="600" fill="#c084fc">5-Stage Boss Gate Verdict</text>
     </g>
   </g>
 </svg>

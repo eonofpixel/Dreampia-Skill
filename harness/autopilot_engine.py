@@ -1,10 +1,10 @@
-"""Dreampia Autonomous Engineering OS Engine: Trinity Code Auditor, Context Pack Compiler, Golden I/O Verifier, and Unified Autopilot Gate.
+"""Dreampia Autonomous Engineering OS Engine: Inquisitor Code Auditor, Context Pack Compiler, Golden I/O Verifier, and Unified Autopilot Gate.
 
 Completes the 4 architectural pillars:
-1. TrinityCodeAuditor (audit_project_code): AST & regex static auditor catching hollow TDD tests (assert True / empty tests) and enforcing SOLID/type-safety/UI rules.
+1. InquisitorCodeAuditor (audit_project_code): AST & regex static auditor catching hollow TDD tests (assert True / empty tests) and enforcing SOLID/type-safety/UI rules.
 2. ContextPackCompiler (compile_context_pack): Compiles active SDD requirements, ADR/RISK invariants, and current blockers into a <1,000-token anti-amnesia briefing packet.
 3. GoldenIoVerifier (verify_golden_io): Black-box behavioral equivalence verifier testing cleanroom implementations against pure input/output vectors in approved-spec/golden-io.json.
-4. UnifiedAutopilotGate (run_autopilot_gate): Morpheus + Tank atomic gate pipeline chaining instruction drift, SDD traceability, Trinity code audit, cleanroom coverage, and Golden I/O checks.
+4. UnifiedAutopilotGate (run_autopilot_gate): GuildMaster + Cleric atomic gate pipeline chaining instruction drift, SDD traceability, Inquisitor code audit, cleanroom coverage, and Golden I/O checks.
 """
 from __future__ import annotations
 
@@ -132,7 +132,7 @@ _BUTTON_TAG_RE = re.compile(r"<button\b([^>]*)>", re.IGNORECASE | re.DOTALL)
 
 @dataclass(frozen=True)
 class AuditFinding:
-    """Trinity(트리니티) 정적 코드·규칙·TDD 감사 결과 항목."""
+    """Inquisitor(인퀴지터/심판관) 정적 코드·규칙·TDD 감사 결과 항목."""
 
     severity: str
     rule_id: str
@@ -887,7 +887,7 @@ def audit_project_code(
     base_ref: str = "HEAD",
     apply: bool = False,
 ) -> dict[str, object]:
-    """Trinity(트리니티) 정적 감사기: 가짜 TDD 테스트(assert True/빈 테스트), any 타입, 반환 타입 누락, UI 아이콘/버튼 규칙 및 자가 학습 규칙을 검사한다 (브라운필드 Git 저장소 또는 changed_only 활성 시 변경 파일만 증분 감사)."""
+    """Inquisitor(인퀴지터/심판관) 정적 감사기: 가짜 TDD 테스트(assert True/빈 테스트), any 타입, 반환 타입 누락, UI 아이콘/버튼 규칙 및 자가 학습 규칙을 검사한다 (브라운필드 Git 저장소 또는 changed_only 활성 시 변경 파일만 증분 감사)."""
     if root.is_symlink() or not root.is_dir():
         raise ValueError("유효하지 않은 프로젝트 디렉터리입니다.")
     resolved = root.resolve()
@@ -1114,7 +1114,7 @@ def audit_project_code(
     scope_label = "changed_only" if eff_changed_only else "full"
     payload: dict[str, object] = {
         "status": "PASS" if passed else "FAIL",
-        "auditor": "Trinity (reviewer)",
+        "auditor": "Inquisitor (reviewer)",
         "audit_scope": scope_label,
         "changed_files": sorted(changed_set) if changed_set is not None else None,
         "applied": apply,
@@ -1133,10 +1133,10 @@ def audit_project_code(
             (
                 "Git 워킹트리에 변경·추가된 파일이 없어 증분 감사를 통과했습니다. 전체 저장소 레거시 감사가 필요하면 --all 옵션을 사용하십시오."
                 if (eff_changed_only and len(scanned_files) == 0)
-                else f"Trinity 코드·TDD·규칙 정적 감사({scope_label})를 통과했습니다. (검사 파일 {len(scanned_files)}개, 차단 결함 0건)"
+                else f"Inquisitor 코드·TDD·규칙 정적 감사({scope_label})를 통과했습니다. (검사 파일 {len(scanned_files)}개, 차단 결함 0건)"
             )
             if passed
-            else f"Trinity 감사({scope_label})에서 차단 결함 {len(blocking)}건(전체 {len(findings)}건)이 발견되었습니다."
+            else f"Inquisitor 감사({scope_label})에서 차단 결함 {len(blocking)}건(전체 {len(findings)}건)이 발견되었습니다."
         ),
     }
     if apply:
@@ -1204,7 +1204,7 @@ def verify_golden_io(
     root: Path,
     golden_rel: str = DEFAULT_GOLDEN_IO_REL,
 ) -> dict[str, object]:
-    """Keymaker & Tank 블랙박스 입출력 동등성(Golden I/O) 검증기."""
+    """Alchemist & Cleric 블랙박스 입출력 동등성(Golden I/O) 검증기."""
     if root.is_symlink() or not root.is_dir():
         raise ValueError("유효하지 않은 프로젝트 디렉터리입니다.")
     resolved = root.resolve()
@@ -1373,7 +1373,9 @@ def compile_context_pack(
         "schema_version": AUTOPILOT_VERSION,
         "generated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "goal": eff_goal,
+        "protagonist": route_dec.get("protagonist"),
         "commander": route_dec["commander"],
+        "quest_rank": route_dec.get("quest_rank"),
         "profile": route_dec["profile"],
         "agent_squad": route_dec["agent_squad"],
         "sdd_traceability": {
@@ -1391,7 +1393,7 @@ def compile_context_pack(
         "anti_amnesia_rules_ko": [
             "1. 과거 PASS 증거를 코드 수정 후 재실행 없이 현재 PASS로 재사용하지 마십시오.",
             "2. 모든 공개 함수에 반환 타입을 명시하고 any 타입을 절대 사용하지 마십시오.",
-            "3. 테스트 함수에 assert True 같은 가짜 단언문을 작성하지 마십시오 (Trinity 감사기가 즉시 차단합니다).",
+            "3. 테스트 함수에 assert True 같은 가짜 단언문을 작성하지 마십시오 (Inquisitor 감사기가 즉시 차단합니다).",
             "4. 클린룸 프로파일에서는 contaminated-zone 파일을 구현 코드에 직접 복사하지 마십시오.",
         ],
     }
@@ -1527,7 +1529,7 @@ def run_verify_commands(
     *,
     timeout_sec: int = 120,
 ) -> dict[str, object]:
-    """Tank 다중 검증 명령 실행기: 전달된 검증 명령 배열을 순차 실행하고 개별 종료 코드·소요 시간·표준 출력을 기록한다."""
+    """Cleric 다중 검증 명령 실행기: 전달된 검증 명령 배열을 순차 실행하고 개별 종료 코드·소요 시간·표준 출력을 기록한다."""
     import shlex
     import shutil
     import subprocess
@@ -1622,7 +1624,7 @@ def run_autopilot_gate(
     apply: bool = False,
     max_iterations: int | None = None,
 ) -> dict[str, object]:
-    """Morpheus & Tank 단일 오토파일럿 통합 게이트: 프로파일 및 작업 티어(rigor_tier)에 맞춰 지침·SDD·코드감사·다중검증명령·클린룸·Golden I/O를 원자적으로 연쇄 검증하며, 브라운필드 Git 저장소에서는 변경 파일 증분 감사를 기본 수행한다."""
+    """GuildMaster & Cleric 단일 오토파일럿 통합 게이트: 프로파일 및 작업 티어(rigor_tier)에 맞춰 지침·SDD·코드감사·다중검증명령·클린룸·Golden I/O를 원자적으로 연쇄 검증하며, 브라운필드 Git 저장소에서는 변경 파일 증분 감사를 기본 수행한다."""
     if root.is_symlink() or not root.is_dir():
         raise ValueError("유효하지 않은 프로젝트 디렉터리입니다.")
     resolved = root.resolve()
@@ -1644,7 +1646,7 @@ def run_autopilot_gate(
         stages.append(
             {
                 "stage": "instruction-drift",
-                "owner": "Seraph (privacy-guard)",
+                "owner": "Guardian (privacy-guard)",
                 "status": inst_res["status"],
                 "detail": inst_res["message_ko"],
             }
@@ -1677,7 +1679,7 @@ def run_autopilot_gate(
         stages.append(
             {
                 "stage": "sdd-tdd-traceability",
-                "owner": "Oracle (planner) & Tank (verifier)",
+                "owner": "Sage (planner) & Cleric (verifier)",
                 "status": "PASS" if (sdd_res["status"] == "PASS" or adaptive_nano_bypass) else "FAIL",
                 "traceability_ratio": sdd_res["traceability_ratio"],
                 "adaptive_nano_bypass": adaptive_nano_bypass,
@@ -1690,7 +1692,7 @@ def run_autopilot_gate(
             }
         )
 
-        # Stage 3: Trinity Code & Hollow-TDD Static Audit
+        # Stage 3: Inquisitor Code & Hollow-TDD Static Audit
         if not allow_doc_only:
             audit_res = audit_project_code(
                 resolved,
@@ -1700,8 +1702,8 @@ def run_autopilot_gate(
             )
             stages.append(
                 {
-                    "stage": "trinity-code-audit",
-                    "owner": "Trinity (reviewer)",
+                    "stage": "inquisitor-code-audit",
+                    "owner": "Inquisitor (reviewer)",
                     "status": audit_res["status"],
                     "audit_scope": audit_res["audit_scope"],
                     "scanned_file_count": audit_res["scanned_file_count"],
@@ -1718,7 +1720,7 @@ def run_autopilot_gate(
             stages.append(
                 {
                     "stage": "verify-gate",
-                    "owner": "Tank (verifier)",
+                    "owner": "Cleric (verifier)",
                     "status": verify_res["status"],
                     "command_count": verify_res["command_count"],
                     "passed_count": verify_res["passed_count"],
@@ -1741,7 +1743,7 @@ def run_autopilot_gate(
                 stages.append(
                     {
                         "stage": "cleanroom-reconstruction",
-                        "owner": "Keymaker (analyst) & Tank (verifier)",
+                        "owner": "Alchemist (analyst) & Cleric (verifier)",
                         "status": cov_res["status"],
                         "coverage_ratio": cov_res["coverage_ratio"],
                         "detail": cov_res["message_ko"],
@@ -1752,7 +1754,7 @@ def run_autopilot_gate(
                 stages.append(
                     {
                         "stage": "golden-io-equivalence",
-                        "owner": "Keymaker (analyst) & Tank (verifier)",
+                        "owner": "Alchemist (analyst) & Cleric (verifier)",
                         "status": golden_res["status"],
                         "passed_count": golden_res["passed_count"],
                         "case_count": golden_res["case_count"],
@@ -1767,7 +1769,7 @@ def run_autopilot_gate(
             stages.append(
                 {
                     "stage": "visual-acceptance",
-                    "owner": "Niobe (ux-designer) & Tank (verifier)",
+                    "owner": "Bard (ux-designer) & Cleric (verifier)",
                     "status": vis_res["status"],
                     "detail": vis_res["message_ko"],
                 }
@@ -1801,11 +1803,14 @@ def run_autopilot_gate(
         if all_passed or not healed_actions:
             break
 
+    dec_dict = decision.to_dict()
     verdict_doc: dict[str, object] = {
         "schema_version": AUTOPILOT_VERSION,
         "generated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "status": "PASS" if all_passed else "FAIL",
-        "commander": decision.to_dict()["commander"],
+        "protagonist": dec_dict.get("protagonist"),
+        "commander": dec_dict["commander"],
+        "quest_rank": dec_dict.get("quest_rank"),
         "profile": decision.profile,
         "rigor_tier": decision.rigor_tier,
         "audit_scope": "changed_only" if eff_changed_only else "full",
@@ -1814,13 +1819,13 @@ def run_autopilot_gate(
         "continuous_loop": decision.continuous_loop,
         "loop_iterations": loop_history,
         "risk_level": decision.risk_level,
-        "agent_squad": decision.to_dict()["agent_squad"],
+        "agent_squad": dec_dict["agent_squad"],
         "stage_count": len(stages),
         "stages": stages,
         "message_ko": (
-            f"Morpheus & Tank 오토파일럿 통합 게이트({decision.profile}, 티어={decision.rigor_tier}) 전 단계({len(stages)}개) 검증을 통과했습니다."
+            f"GuildMaster & Cleric 오토파일럿 보스 관문({decision.profile}, 티어={decision.rigor_tier}) 전 단계({len(stages)}개) 검증을 통과했습니다."
             if all_passed
-            else f"오토파일럿 통합 게이트 차단: 실패 단계 {[s['stage'] for s in stages if s['status'] != 'PASS']}"
+            else f"오토파일럿 보스 관문 차단: 실패 단계 {[s['stage'] for s in stages if s['status'] != 'PASS']}"
         ),
     }
 
@@ -1887,7 +1892,7 @@ def analyze_blast_radius(
     test_command: list[str] | tuple[str, ...] = (),
     apply: bool = False,
 ) -> dict[str, object]:
-    """Architect & Tank 폭발 반경(Blast Radius) 분석기: 대상 파일의 심볼 참조(1-Hop/2-Hop), 시스템 경계 교차, 5단계 안전 증명 등급을 산출한다."""
+    """Archmage & Cleric 폭발 반경(Blast Radius) 분석기: 대상 파일의 심볼 참조(1-Hop/2-Hop), 시스템 경계 교차, 5단계 안전 증명 등급을 산출한다."""
     if root.is_symlink() or not root.is_dir():
         raise ValueError("유효하지 않은 프로젝트 디렉터리입니다.")
     resolved = root.resolve()

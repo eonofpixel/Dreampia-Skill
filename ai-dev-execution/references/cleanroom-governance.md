@@ -22,14 +22,14 @@
    - `loop` (`until-pass` / `루프` / `완주`): 모든 SDD+TDD·코드감사·게이트가 `PASS`될 때까지 자가 수정 반복(`continuous_loop=True`)
    - `climb` (`hillclimb` / `성능등반` / `자율실험`): 불변 채점 파일 가드 + 중복 실험 해시 차단 + 몬테카를로 유의성 기반 자율 지표 등반(`metric-climb`)
    - `blast` (`폭발반경` / `영향도`): 변경 파일의 1-Hop/2-Hop 호출자 추적, 시스템 경계 교차 및 5단계 안전 증명 등급 산출(`blast-radius`)
-   - `interrogate` (`심문` / `적대적리뷰`): `Architect`·`Trinity`·`Seraph` 다중 관점 적대적 코드 리뷰
+   - `interrogate` (`심문` / `적대적리뷰`): `Archmage`·`Inquisitor`·`Guardian` 다중 관점 적대적 코드 리뷰
    - `unslop` (`deslop` / `군더더기제거` / `슬롭제거`): 빈 예외 처리(`bare except: pass`), 가짜 단언문, 불필요한 슬롭 코드 정화
-   - `btw` (`quick` / `eco` / `잠깐`): 파일 변경 없이 현재 문맥을 보존하며 `Oracle`이 즉답하는 `side-query` 모드
-   - `sdd` (`plan` / `spec` / `명세`): `Oracle`+`Architect` 명세 설계 및 `sdd-check` 강제
-   - `tdd` (`red-green` / `티디디`): `Neo`+`Trinity`+`Tank` 선행 테스트 및 가짜 단언문(`audit-code`) 차단
-   - `re` (`cleanroom` / `역설계`): `Keymaker` 클린룸 3-Zone 격리 + `reconstruct-verify` + `golden-io`
-   - `audit` (`trinity` / `sec` / `감사`): 파일 수정 없이 `Trinity`+`Seraph` 정밀 코드·보안 감사
-   - `ui` (`niobe` / `화면`): `Niobe`+`Mouse`+`Neo`+`Tank` 시각 수용 검증(`visual-check` + `ui-evidence`)
+   - `btw` (`quick` / `eco` / `잠깐`): 파일 변경 없이 현재 문맥을 보존하며 `Sage`가 즉답하는 `side-query` 모드
+   - `sdd` (`plan` / `spec` / `명세`): `Sage`+`Archmage` 퀘스트 저널 설계 및 `sdd-check` 강제
+   - `tdd` (`red-green` / `티디디`): `Paladin`+`Inquisitor`+`Cleric` 선행 테스트 및 가짜 단언문(`audit-code`) 차단
+   - `re` (`cleanroom` / `역설계`): `Alchemist` 클린룸 3-Zone 격리 + `reconstruct-verify` + `golden-io`
+   - `audit` (`inquisitor` / `sec` / `감사`): 파일 수정 없이 `Inquisitor`+`Guardian` 정밀 코드·보안 감사
+   - `ui` (`bard` / `archer` / `화면`): `Bard`+`Archer`+`Paladin`+`Cleric` 시각 수용 검증(`visual-check` + `ui-evidence`)
 
 ```bash
 python -m harness.team_cli route-plan --project /path/to/project --goal "ulw loop 학생 제출 API 인증 검증 로직 수정"
@@ -85,10 +85,10 @@ python -m harness.team_cli mcp-serve --project /path/to/project
 ## 6. SDD+TDD 추적, 코드 감사, Golden I/O 및 오토파일럿 통합 게이트
 
 1. **SDD+TDD 계층 추적 (`sdd-ledger` / `sdd-check`)**: `PRD-R* / REQ-* / SPEC-* → API-* / UX-S* → TASK-* / T* → TEST-*` 4단계 계층 BFS 추적(테스트 파일 내 `T1207`/`TASK-*` 직접 인용 및 브라운필드 `brownfield-baseline.md` 포함), 고아 요구사항 차단, 명세 해시(`spec_sha256`) 기반 Spec Drift(`STALE`) 감지.
-2. **Trinity AST 코드·가짜 TDD 감사 (`audit-code`)**: 가짜 단언문(`assert True`, `expect(true).toBe(true)`, `assert!(true)`, 무단언 테스트), `any` 타입 사용, 반환 타입 누락, 선택적 UI 규칙(`--no-ui-rules` 또는 `enforce_ui_rules: false`로 해제 가능), Git 변경분 증분 감사(`--changed-only`)를 정적 차단하고 `--apply` 시 `evidence/code-audit.json`을 저장.
+2. **Inquisitor AST 코드·가짜 TDD 감사 (`audit-code`)**: 가짜 단언문(`assert True`, `expect(true).toBe(true)`, `assert!(true)`, 무단언 테스트), `any` 타입 사용, 반환 타입 누락, 선택적 UI 규칙(`--no-ui-rules` 또는 `enforce_ui_rules: false`로 해제 가능), Git 변경분 증분 감사(`--changed-only`)를 정적 차단하고 `--apply` 시 `evidence/code-audit.json`을 저장.
 3. **장기 실행 문맥 압축 (`context-pack`)**: 활성 요구사항, 미완료 작업, `ADR-*`/`RISK-*` 불변 조건을 `evidence/context-pack.json`으로 컴파일하여 세션 문맥 망각(Context Rot) 방지.
 4. **클린룸 블랙박스 동치성 (`golden-io`)**: `approved-spec/golden-io.json` 입출력 벡터와 `implementation/` 모듈의 실행 결과를 AST 정적 안전 검증 후 대조 검증.
-5. **단일 자율 완주 게이트 (`autopilot-gate`)**: 작업 규모별 3단 탄력 티어(`nano` / `standard` / `full`) 및 증분 감사(`--changed-only`)를 지원하며, 지침 드리프트, SDD+TDD 추적성, Trinity 코드 감사, 클린룸 커버리지, Golden I/O, 시각 수용 검증을 원자적으로 실행하고 `evidence/autopilot-verdict.json`을 발급.
+5. **단일 자율 완주 보스 관문 (`autopilot-gate`)**: 작업 규모별 3단 탄력 티어(`nano` / `standard` / `full`) 및 증분 감사(`--changed-only`)를 지원하며, 지침 드리프트, SDD+TDD 추적성, Inquisitor 코드 감사, 클린룸 커버리지, Golden I/O, 시각 수용 검증을 원자적으로 실행하고 `evidence/autopilot-verdict.json`을 발급.
 
 ```bash
 python -m harness.team_cli sdd-ledger --project /path/to/project --apply

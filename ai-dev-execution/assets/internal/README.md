@@ -16,8 +16,8 @@ redaction_required: true
 ## 1차 포함 및 자산 지도
 
 - 빠른 시작: [QUICKSTART.md](QUICKSTART.md), [assessment-service 프리셋](project-presets/assessment-service.json), [OpenAI 호스트 메타데이터](../../agents/openai.yaml)
-- `agents/` (매트릭스 스쿼드): [Oracle (planner)](agents/planner.md), [Architect (architect)](agents/architect.md), [Niobe (ux-designer)](agents/ux-designer.md), [Keymaker (analyst)](agents/analyst.md), [Neo (executor)](agents/executor.md), [Trinity (reviewer)](agents/reviewer.md), [Tank (verifier)](agents/verifier.md), [Seraph (privacy-guard)](agents/privacy-guard.md)
-- `pipeline/`: [Morpheus 라우터](pipeline/agent-router.md), [레벨6 파이프라인](pipeline/level6-pipeline.md), [인계 계약 예시](pipeline/handoff-contract.example.json)
+- `agents/` (RPG 길드 파티): [Sage (planner)](agents/planner.md), [Archmage (architect)](agents/architect.md), [Bard (ux-designer)](agents/ux-designer.md), [Alchemist (analyst)](agents/analyst.md), [Paladin (executor)](agents/executor.md), [Inquisitor (reviewer)](agents/reviewer.md), [Cleric (verifier)](agents/verifier.md), [Guardian (privacy-guard)](agents/privacy-guard.md)
+- `pipeline/`: [GuildMaster 라우터](pipeline/agent-router.md), [레벨6 파이프라인](pipeline/level6-pipeline.md), [인계 계약 예시](pipeline/handoff-contract.example.json)
 - `templates/assessment-service/`: [진단 PRD](../templates/assessment-service/assessment-prd.md), [비회원 학생 흐름](../templates/assessment-service/no-signup-student-flow.md), [관리자 대시보드](../templates/assessment-service/admin-dashboard-spec.md), [결과 문구 라이브러리](../templates/assessment-service/result-text-library.md), [Playwright UI 검증](../templates/assessment-service/ui-verification-playwright.md), [학생 제출 수직 슬라이스](../templates/assessment-service/vertical-slice-student-submit.md)
 - `templates/admin-console/`: [감사 로그 패턴](../templates/admin-console/audit-log-pattern.md), [CRUD 목록·상세 패턴](../templates/admin-console/crud-list-detail-pattern.md)
 - `templates/security-privacy/`: [미성년자 개인정보 체크리스트](../templates/security-privacy/minor-privacy-checklist.md), [고객 전달 마스킹·정제](../templates/security-privacy/client-safe-redaction.md)

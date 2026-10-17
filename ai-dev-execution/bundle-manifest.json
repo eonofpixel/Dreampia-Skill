@@ -6,7 +6,7 @@
   "files": [
     {
       "path": "SKILL.md",
-      "sha256": "5bc186de5e9d0f14b66c4d8a9c0bb2c6b159f61ae2f306ff77185f82ed81cc26",
+      "sha256": "329d8036ba2f7be55ac49d701d5099544024d5b0fe59f93b2e62a6ccea227ddc",
       "required": true
     },
     {
@@ -51,47 +51,47 @@
     },
     {
       "path": "assets/internal/README.md",
-      "sha256": "91a9f4cba67052b51f38ec2b975a3e9763e2d99a613de0742feb83a6077e2d5d",
+      "sha256": "8a0353f1e918cea772967878a5f9006c995e466e95371fd66597cba2e0759858",
       "required": true
     },
     {
       "path": "assets/internal/agents/analyst.md",
-      "sha256": "9435261059bd32216eedfe05b93f66fae29ca7010baac29f75c0a6ce6a072b05",
+      "sha256": "99dcfec42f6f0e031b81843e1420593e4dc645ce628dc38e944e9ba17ddf9016",
       "required": true
     },
     {
       "path": "assets/internal/agents/architect.md",
-      "sha256": "a2a9b534a83902a9893158fdfd59b4cbb068aadf7a42e737060f8b91a7772bc3",
+      "sha256": "7e9ce12a09d762ffee59343b2c80b04e2d53e2dac71ffe1ee37d8bf23a408dda",
       "required": true
     },
     {
       "path": "assets/internal/agents/executor.md",
-      "sha256": "6db99c35bebf86d3c3d1c409fe50368b6230fc4f449f3f8f8296c9382d9a855b",
+      "sha256": "1e2ef4f9f7bf70072cfc9504cdbfe4ee7edaabf85d0c448abb636479e8a14724",
       "required": true
     },
     {
       "path": "assets/internal/agents/planner.md",
-      "sha256": "b38bb2e1371f69339e8e30383f94e88aec96a76f55e7363d999a3a767b9dead8",
+      "sha256": "dfd736a0b84d8606a51bb8a3f87d856047e964f6537326229f90e084d4024171",
       "required": true
     },
     {
       "path": "assets/internal/agents/privacy-guard.md",
-      "sha256": "a7738f1333bd3dbde0d07f22d4d891091e4546a5f477daff0ac596dbc57854ca",
+      "sha256": "e72c18b6361f01603dc36a73fd1c1ae4517944a55e63d4c0b233b394c0f4aada",
       "required": true
     },
     {
       "path": "assets/internal/agents/reviewer.md",
-      "sha256": "f298dfa5a2f915e8300ac735af4e325913834f47f785dab5c9cfeef6bfa6b8de",
+      "sha256": "fa45f04d63cd7182e075a9291e2e1460ff7071ae3c1a71d4e6743c8803784162",
       "required": true
     },
     {
       "path": "assets/internal/agents/ux-designer.md",
-      "sha256": "67f0cd713294917cb95e328543a020a118b5f1d46bccb94610a28bef18610631",
+      "sha256": "08d8e89c7710720bb1cbd909999f32508808ed161a15152acf8123b0369bae1b",
       "required": true
     },
     {
       "path": "assets/internal/agents/verifier.md",
-      "sha256": "1fd38e1b4bf98308e0f1fb4b229b06fd4e0eba9e7493a472e300fe5fa9da323b",
+      "sha256": "15a1b72ddd8e6d9814c738437f047ec5200e21a12adba63259c219d215c7f3da",
       "required": true
     },
     {
@@ -111,7 +111,7 @@
     },
     {
       "path": "assets/internal/pipeline/agent-router.md",
-      "sha256": "1dae27047a3b9e932f0d291e6d5c0d96a7dd1c53b51465be150ef4a686e06bc4",
+      "sha256": "4cfa8cd9b71f0a5bc807163f1e2c918e37fed4f1b2a829d5a51939013dc1ee89",
       "required": true
     },
     {
@@ -466,7 +466,7 @@
     },
     {
       "path": "references/cleanroom-governance.md",
-      "sha256": "6c1df543cf6f44b40a9c5db1300a7242cdf0e625745c61ffa5347c36518db893",
+      "sha256": "c1befc2453826a0368cea46c2477eb2cb917bfd0514699be358159aaf7c016ab",
       "required": true
     },
     {
@@ -531,7 +531,7 @@
     },
     {
       "path": "references/role-handoff.md",
-      "sha256": "ad4c33a19d50e0f3594e9d5443eeb5c4e73615931908f9dee395d6754b59e738",
+      "sha256": "68dd6af16c462558bc832e0f5f041b876db4486c25a9428dbe6fd93ac7a6b98b",
       "required": true
     },
     {

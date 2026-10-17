@@ -1285,7 +1285,7 @@ def plan_or_manage_squad_worktrees(
     mode: str = "plan",
     apply: bool = False,
 ) -> dict[str, object]:
-    """Morpheus & Neo/Mouse/Trinity 병렬 스쿼드 Git Worktree 오케스트레이터: 에이전트별 물리적 격리 작업 트리(.dreampia/worktrees/*)를 계획·생성·정리한다."""
+    """GuildMaster & Paladin/Archer/Inquisitor 병렬 길드 파티 Git Worktree 오케스트레이터: 길드원별 물리적 격리 던전 인스턴스(.dreampia/worktrees/*)를 계획·생성·정리한다."""
     import subprocess
 
     if root.is_symlink() or not root.is_dir():
@@ -1302,30 +1302,30 @@ def plan_or_manage_squad_worktrees(
 
     track_specs = (
         {
-            "track_id": "neo-executor",
-            "callsign": "Neo",
+            "track_id": "paladin-executor",
+            "callsign": "Paladin",
             "role": "executor",
-            "title_ko": "핵심 비즈니스 로직·API·백엔드 TDD 구현 트랙",
-            "branch": "dreampia/squad-neo",
-            "worktree_rel": f"{worktree_base_rel}/neo-executor",
+            "title_ko": "성기사 · 핵심 비즈니스 로직·API·백엔드 TDD 구현 트랙",
+            "branch": "dreampia/squad-paladin",
+            "worktree_rel": f"{worktree_base_rel}/paladin-executor",
             "owned_paths": ["src/", "implementation/", "harness/"],
         },
         {
-            "track_id": "mouse-ui",
-            "callsign": "Mouse",
+            "track_id": "archer-ui",
+            "callsign": "Archer",
             "role": "design-critic",
-            "title_ko": "UI/UX 화면·반응형 레이아웃·버튼/아이콘 규격 구현 트랙",
-            "branch": "dreampia/squad-mouse",
-            "worktree_rel": f"{worktree_base_rel}/mouse-ui",
+            "title_ko": "궁수 · UI/UX 화면·반응형 레이아웃·버튼/아이콘 규격 구현 트랙",
+            "branch": "dreampia/squad-archer",
+            "worktree_rel": f"{worktree_base_rel}/archer-ui",
             "owned_paths": ["app/", "components/", "docs/02_IA_UX.md"],
         },
         {
-            "track_id": "trinity-test",
-            "callsign": "Trinity",
+            "track_id": "inquisitor-test",
+            "callsign": "Inquisitor",
             "role": "reviewer",
-            "title_ko": "적대적 엣지케이스·통합 TDD 테스트 및 정적 감사 트랙",
-            "branch": "dreampia/squad-trinity",
-            "worktree_rel": f"{worktree_base_rel}/trinity-test",
+            "title_ko": "심판관 · 적대적 엣지케이스·통합 TDD 테스트 및 정적 감사 트랙",
+            "branch": "dreampia/squad-inquisitor",
+            "worktree_rel": f"{worktree_base_rel}/inquisitor-test",
             "owned_paths": ["tests/", "harness/tests/", "docs/06_TEST_PLAN.md"],
         },
     )
@@ -1370,9 +1370,9 @@ def plan_or_manage_squad_worktrees(
             "applied": apply,
             "removed_tracks": removed_tracks,
             "message_ko": (
-                f"병렬 스쿼드 Worktree({len(removed_tracks)}개 트랙)가 안전하게 정리(cleanup)되었습니다."
+                f"병렬 길드 파티 Worktree({len(removed_tracks)}개 트랙)가 안전하게 정리(cleanup)되었습니다."
                 if apply
-                else "[미리보기] 병렬 스쿼드 Worktree 정리 계획입니다. 실제 삭제하려면 --apply를 추가하십시오."
+                else "[미리보기] 병렬 길드 파티 Worktree 정리 계획입니다. 실제 삭제하려면 --apply를 추가하십시오."
             ),
         }
 
@@ -1461,11 +1461,11 @@ def plan_or_manage_squad_worktrees(
         "manifest_path": manifest_rel if apply else None,
         "tracks_count": len(tracks_out),
         "tracks": tracks_out,
-        "merge_gate_ko": "전 트랙이 독립 Worktree에서 구현 완료 후 Tank의 autopilot-gate PASS 시 메인 브랜치로 병합(Merge)합니다.",
+        "merge_gate_ko": "전 트랙이 독립 Worktree에서 구현 완료 후 Cleric의 autopilot-gate PASS 시 메인 브랜치로 병합(Merge)합니다.",
         "message_ko": (
-            f"병렬 스쿼드 격리 Worktree {len(tracks_out)}개 트랙(Neo·Mouse·Trinity)이 생성되었습니다."
+            f"병렬 길드 파티 격리 Worktree {len(tracks_out)}개 트랙(Paladin·Archer·Inquisitor)이 생성되었습니다."
             if apply
-            else f"[미리보기] 병렬 스쿼드 격리 Worktree {len(tracks_out)}개 트랙(Neo·Mouse·Trinity) 구성 계획입니다. 실제 생성하려면 --apply를 추가하십시오."
+            else f"[미리보기] 병렬 길드 파티 격리 Worktree {len(tracks_out)}개 트랙(Paladin·Archer·Inquisitor) 구성 계획입니다. 실제 생성하려면 --apply를 추가하십시오."
         ),
     }
 

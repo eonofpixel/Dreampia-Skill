@@ -2159,7 +2159,7 @@ def main(argv=None) -> int:
     p.add_argument('--app',choices=APP_TYPES,default='next-assessment-app',help='app scaffold preset')
     p.add_argument('--slice',choices=('student-submit-flow',),default='student-submit-flow',help='vertical slice task preset')
     p.add_argument('--goal',default='',help='natural-language goal (Korean/English) for route-plan, expand-prompt, next-actions, interview-compile, learn-rule, squad-worktree, or router-dispatch')
-    p.add_argument('--answers',default='',help='semicolon-separated answers to Oracle clarifying questions for interview-compile')
+    p.add_argument('--answers',default='',help='semicolon-separated answers to Sage clarifying questions for interview-compile')
     p.add_argument('--rule',default='',help='Korean project rule text for learn-rule')
     p.add_argument('--forbidden-regex',default='',help='optional regex pattern to block in audit-code for learn-rule')
     p.add_argument('--severity',default='HIGH',help='severity level (CRITICAL, HIGH, MEDIUM, LOW) for learn-rule')

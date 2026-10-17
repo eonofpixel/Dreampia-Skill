@@ -11,19 +11,19 @@ description: Develop small projects, services, and substantial features with pro
 
 ## 시작과 범위
 
-1. 초보자 친화적 3줄 작전 브리핑(Compact Prompt Expansion Echo): 작업을 시작할 때 사용자가 방금 한 말을 그대로 복창(원본 입력 반복 또는 ~만들어줘/~해줘 앵무새 인용)하지 않으며, 불필요한 이모지나 별표 강조 기호(**)를 쓰지 않는다. 답변 최상단에 [Dreampia 국문 프롬프트 고도화 & 작전 브리핑] 블록을 3줄 이내(한 번 더 생각한 고도화 프롬프트, 자동 챙김 항목, 담당 스쿼드)로 심플하고 알기 쉽게 먼저 출력한 뒤 실행한다(dreampia_expand_prompt 또는 dreampia_route_plan 연동).
+1. 초보자 친화적 3줄 작전 브리핑(Compact Prompt Expansion Echo): 작업을 시작할 때 사용자가 방금 한 말을 그대로 복창(원본 입력 반복 또는 ~만들어줘/~해줘 앵무새 인용)하지 않으며, 불필요한 이모지나 별표 강조 기호(**)를 쓰지 않는다. 답변 최상단에 [Dreampia 국문 프롬프트 고도화 & 퀘스트 작전 브리핑] 블록(퀘스트 등급 및 발주자 `Hero(주인공 영웅)`, 한 번 더 생각한 고도화 프롬프트, 자동 챙김 항목, 출정 길드 파티)을 심플하고 알기 쉽게 먼저 출력한 뒤 실행한다(dreampia_expand_prompt 또는 dreampia_route_plan 연동).
 2. 지정된 프로젝트의 목표·지침·문서·현재 변경·도구를 먼저 읽고 보존한다. 이미 승인한 구현을 양식이나 관례 때문에 다시 승인받지 않는다.
 3. 문서만 / 구현까지 / 승인된 배포까지와 한 기능 또는 승인된 마일스톤의 종료 조건을 정한다. 불명확한 제품 결정만 질문하고 독립적인 준비는 진행한다. 범위를 릴리스 전체로 확대하지 않는다.
 4. 사용자용 UI가 포함되면 사용자가 열 화면·핵심 조작·보이는 성공 결과·대상 창/기기를 구현 초기에 명시하고 [선택적 디자인 절차](references/product-design.md)를 읽는다. 내부 런타임 화면이나 목업으로 제품 UI를 대체하지 않는다. backend/CLI만 요청된 작업에는 UI·디자인 문서를 만들지 않는다.
 5. 기존 브랜드·참조·허용된 자료를 재사용한다. 필요한 문서만 읽고 기존 명세의 절에 합친다. 낮은 위험의 한 흐름은 [간편 원본](assets/templates/compact-project.md)의 명세·작업/테스트·증거면 충분하다. 문서 수가 목표가 아니다.
 6. 프롬프트 단축어(Magic Shorthands)가 입력되면 해당 실행 모드를 즉시 활성화한다:
-   - `ulw`(`ultrawork`/`풀가동`): 전 스쿼드(`Morpheus` 지휘) + SDD·TDD·코드감사·통합 게이트(`autopilot-gate`) 원스톱 완주
-   - `loop`(`until-pass`/`루프`/`완주`): 모든 SDD+TDD·코드감사·게이트가 `PASS`될 때까지 자가 수정 반복(`continuous-loop`)
+   - `ulw`(`ultrawork`/`풀가동`): 주인공 영웅(`Hero`)의 퀘스트를 받아 길드 파티(`GuildMaster` 지휘) + SDD·TDD·코드감사·통합 보스 관문(`autopilot-gate`) 원스톱 완주
+   - `loop`(`until-pass`/`루프`/`완주`): 모든 SDD+TDD·코드감사·보스 관문이 `PASS`될 때까지 자가 수정 반복(`continuous-loop`)
    - `climb`(`hillclimb`/`성능등반`): 불변 평가 파일 가드·중복 실험 해시 차단·몬테카를로 유의성 기반 자율 지표 등반(`metric-climb`)
    - `blast`(`폭발반경`): 1-Hop/2-Hop 호출 의존성·시스템 경계 교차·5단계 안전 증명 등급 분석(`blast-radius`)
    - `interrogate`(`심문`): 다중 관점 적대적 코드 리뷰, `unslop`(`군더더기제거`): AI 슬롭 코드 및 빈 예외 처리 정화
    - `sharpen`(`고도화`/`생각`/`구체화`): 짧은 요청을 정밀 국문 엔지니어링 명세·엣지케이스·검증 게이트로 심층 확장(`prompt-sharpen`)
-   - `btw`(`quick`/`잠깐`): 파일 변경 없이 현재 문맥을 보존하며 `Oracle`이 사이드 질의에 즉답(`side-query`)
+   - `btw`(`quick`/`잠깐`): 파일 변경 없이 현재 문맥을 보존하며 `Sage`가 사이드 질의에 즉답(`side-query`)
    - `sdd`(`plan`/`명세`), `tdd`(`티디디`), `re`(`cleanroom`/`역설계`), `audit`(`sec`/`감사`), `ui`(`화면`) — [상세 라우팅 기준](references/cleanroom-governance.md) 적용
 7. 표준 운영 슬래시·CLI 명령어(접두사 없는 `/명령어` 및 `npx dreampia <명령어>` 1:1 대응):
    - `/version` (`version --check-remote`): 로컬 버전·Git 커밋·원격 최신 여부 확인

@@ -1309,7 +1309,7 @@ def generate_cleanroom_spec(
     target_rel: str = "implementation",
     apply: bool = False,
 ) -> dict[str, object]:
-    """Keymaker 클린룸 명세 자동 추출기: 참조 아티팩트(Tier 1 + Tier 2 심층 심볼)를 분석하여 오염 없는 한글 기능 명세서(approved-spec/00_CLEANROOM_SPEC.md)와 Golden I/O 템플릿을 자동 생성한다."""
+    """Alchemist 클린룸 명세 자동 추출기: 참조 아티팩트(Tier 1 + Tier 2 심층 심볼)를 분석하여 오염 없는 한글 기능 명세서(approved-spec/00_CLEANROOM_SPEC.md)와 Golden I/O 템플릿을 자동 생성한다."""
     if root.is_symlink() or not root.is_dir():
         raise ReconstructError("유효하지 않은 프로젝트 루트 디렉터리입니다.")
     resolved = root.resolve()

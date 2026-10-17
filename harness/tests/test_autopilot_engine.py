@@ -398,7 +398,8 @@ class AutopilotEngineTests(unittest.TestCase):
             self.assertIn("bg-transparent", brief.expanded_prompt_ko)
             self.assertIn("lucide-react", brief.expanded_prompt_ko)
             self.assertIn("SOLID 5원칙", brief.expanded_prompt_ko)
-            self.assertIn("[Dreampia 국문 프롬프트 고도화 & 작전 브리핑]", brief.echo_markdown_ko)
+            self.assertIn("[Dreampia 국문 프롬프트 고도화 & 퀘스트 작전 브리핑]", brief.echo_markdown_ko)
+            self.assertIn("발주자: Hero(주인공 영웅)", brief.echo_markdown_ko)
             self.assertTrue(any("중복 클릭" in e for e in brief.edge_cases_to_check_ko))
 
             # 2. Shorthand prefix ("고도화" / "구체화" / "sharpen") strips prefix cleanly and activates prompt-sharpen
@@ -422,7 +423,8 @@ class AutopilotEngineTests(unittest.TestCase):
             self.assertIn("prompt_expansion", route_res)
             exp = route_res["prompt_expansion"]  # type: ignore[index]
             self.assertEqual(exp["core_subject"], "로그인 토큰 만료 버그 고쳐줘")  # type: ignore[index]
-            self.assertIn("Morpheus(라우터)", exp["squad_pipeline_ko"])  # type: ignore[index]
+            self.assertIn("Hero(주인공 영웅)", exp["squad_pipeline_ko"])  # type: ignore[index]
+            self.assertIn("GuildMaster(길드장)", exp["squad_pipeline_ko"])  # type: ignore[index]
 
             # 4. Korean and English native shorthand routing verification
             compat_cases = (
@@ -483,12 +485,12 @@ class AutopilotEngineTests(unittest.TestCase):
     def test_socratic_interview_questions_in_prompt_expansion(self) -> None:
         from harness import route_planner
 
-        # 1. sharpen / 구체화 mode surfaces Oracle clarifying questions in echo_markdown_ko
+        # 1. sharpen / 구체화 mode surfaces Sage clarifying questions in echo_markdown_ko
         brief_sharpen = route_planner.expand_prompt_brief("구체화 결제 버튼 만들어줘")
         self.assertEqual(brief_sharpen.execution_mode, "prompt-sharpen")
         self.assertEqual(brief_sharpen.ambiguity_level, "high")
         self.assertEqual(len(brief_sharpen.clarifying_questions_ko), 3)
-        self.assertIn("Oracle(오라클) 사전 인터뷰 핵심 질문", brief_sharpen.echo_markdown_ko)
+        self.assertIn("Sage(세이지) 사전 인터뷰 핵심 질문", brief_sharpen.echo_markdown_ko)
         self.assertTrue(any("뷰포트" in q or "버튼" in q for q in brief_sharpen.clarifying_questions_ko))
 
         # 2. Cleanroom RE domain questions

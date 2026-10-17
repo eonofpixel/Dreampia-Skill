@@ -249,7 +249,7 @@
   ],
   "delta_modified_ids": [],
   "evidence_files": {
-    "evidence/autopilot-verdict.json": "587c7a7b5c0a604731cfb7a5b0677785683341f1fe9cb3048dbfb9cf0da8de39",
+    "evidence/autopilot-verdict.json": "c2770ebc50af7de82fa1a4bfd4617f104e8e14463ed01a5ec62d2b63a30c72a4",
     "evidence/blast-radius-report.json": "48cea6b91cd8b1df94ffb33d1d96ce3200783df1fb13643d1e8eca4cccdf76b5",
     "evidence/code-audit.json": "687093c8283b68d8750724f13dfca63fb3afc1f519a993d095dc00f8859b436e",
     "evidence/context-pack.json": "0eaa36e65f1d84c531ccf31064bb68b33e20e987a5bcf145200b6c3b43675dee",
@@ -257,7 +257,7 @@
     "evidence/metric-climb-ledger.json": "671e558ac02d89b2569b72f2c7a384bd42f7052df3564c2610f8315fc726bfc4",
     "evidence/verification.json": "40fe6dc2077dfb19a1439631f1627a9acd6cbcb98bf2504636178fa34ffd9566"
   },
-  "generated_at": "2026-10-17T08:28:30.535142+00:00",
+  "generated_at": "2026-10-17T10:44:53.945407+00:00",
   "requirements": [
     {
       "id": "PRD-R001",
@@ -636,9 +636,10 @@
   ],
   "schema_version": "0.7.0",
   "squad_owners": {
-    "evidence_verifier": "Tank (verifier)",
-    "spec_author": "Oracle (planner) & Architect (architect)",
-    "tdd_executor": "Neo (executor)"
+    "evidence_verifier": "Cleric (verifier)",
+    "protagonist": "Hero (주인공 영웅)",
+    "spec_author": "Sage (planner) & Archmage (architect)",
+    "tdd_executor": "Paladin (executor)"
   },
   "summary": {
     "contract_count": 7,

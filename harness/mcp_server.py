@@ -179,7 +179,7 @@ MCP_TOOLS: tuple[McpToolDefinition, ...] = (
     ),
     McpToolDefinition(
         name="dreampia_audit_code",
-        description="Trinity(QA/감사) 정적 AST 및 코드 규칙 감사기: 가짜 TDD 테스트(assert True 등), any 타입 사용, 반환 타입 누락, 비표준 아이콘 import, 버튼 bg-transparent 누락을 Fail-Closed로 감사하고 선택적으로 evidence/code-audit.json에 저장합니다 (changed_only 지정 시 Git 변경 파일만 증분 감사).",
+        description="Inquisitor(심판관/QA 감사) 정적 AST 및 코드 규칙 감사기: 가짜 TDD 테스트(assert True 등), any 타입 사용, 반환 타입 누락, 비표준 아이콘 import, 버튼 bg-transparent 누락을 Fail-Closed로 감사하고 선택적으로 evidence/code-audit.json에 저장합니다 (changed_only 지정 시 Git 변경 파일만 증분 감사).",
         input_schema={
             "type": "object",
             "properties": {
@@ -216,7 +216,7 @@ MCP_TOOLS: tuple[McpToolDefinition, ...] = (
     ),
     McpToolDefinition(
         name="dreampia_autopilot_gate",
-        description="Morpheus & Tank 통합 자율 완주 게이트: 지침 동기화, SDD+TDD 추적성(Adaptive Nano 티어 지원), Trinity 코드 감사(증분 감사 지원), 다중 검증 명령(verify_cmd/verify_commands), 클린룸/Golden I/O/시각 수용 검증을 단일 파이프라인으로 실행하고 변조 방지 판정서(evidence/autopilot-verdict.json)를 발급합니다.",
+        description="GuildMaster & Cleric 통합 자율 완주 보스 관문: 지침 동기화, SDD+TDD 추적성(Adaptive Nano 티어 지원), Inquisitor 코드 감사(증분 감사 지원), 다중 검증 명령(verify_cmd/verify_commands), 클린룸/Golden I/O/시각 수용 검증을 단일 파이프라인으로 실행하고 변조 방지 판정서(evidence/autopilot-verdict.json)를 발급합니다.",
         input_schema={
             "type": "object",
             "properties": {
@@ -237,7 +237,7 @@ MCP_TOOLS: tuple[McpToolDefinition, ...] = (
     ),
     McpToolDefinition(
         name="dreampia_blast_radius",
-        description="Architect & Tank 폭발 반경(Blast Radius) 분석기: 변경 대상 파일의 심볼 의존성(1-Hop/2-Hop), 시스템 경계(API/DB/직렬화/CLI/보안) 교차 여부, 5단계 안전 증명 등급을 산출합니다.",
+        description="Archmage & Cleric 폭발 반경(Blast Radius) 분석기: 변경 대상 파일의 심볼 의존성(1-Hop/2-Hop), 시스템 경계(API/DB/직렬화/CLI/보안) 교차 여부, 5단계 안전 증명 등급을 산출합니다.",
         input_schema={
             "type": "object",
             "properties": {
@@ -269,7 +269,7 @@ MCP_TOOLS: tuple[McpToolDefinition, ...] = (
     ),
     McpToolDefinition(
         name="dreampia_expand_prompt",
-        description="Dreampia 국문 프롬프트 고도화(Prompt Expansion) 엔진: 사용자의 짧은 한 줄 채팅 입력을 분석하여 한 번 더 생각한 국문 엔지니어링 프롬프트, 자동 주입 제약조건(SOLID/타입/UI/보안), 방어할 엣지케이스, 완료 기준(DoD), 그리고 채팅창 상단에 즉시 출력할 가시적 국문 작전 브리핑 마크다운(echo_markdown_ko)을 생성합니다.",
+        description="Dreampia 국문 프롬프트 고도화(Prompt Expansion) 엔진: 주인공 영웅(사용자)의 짧은 한 줄 채팅 입력을 분석하여 한 번 더 생각한 국문 엔지니어링 프롬프트, 자동 주입 제약조건(SOLID/타입/UI/보안), 방어할 엣지케이스, 완료 기준(DoD), 그리고 채팅창 상단에 즉시 출력할 가시적 국문 퀘스트 작전 브리핑 마크다운(echo_markdown_ko)을 생성합니다.",
         input_schema={
             "type": "object",
             "properties": {
@@ -308,7 +308,7 @@ MCP_TOOLS: tuple[McpToolDefinition, ...] = (
     ),
     McpToolDefinition(
         name="dreampia_interview_compile",
-        description="Oracle 소크라테스식 인터뷰 컴파일러(interview-compile): 작업 목표(goal)와 역질문 답변(answers)을 결합해 PRD 요구사항(PRD-R*), 작업(TASK-*), 테스트 계획(TEST-*) 마크다운 문서 및 SDD 원장(evidence/sdd-ledger.json)을 자동 생성합니다.",
+        description="Sage 소크라테스식 인터뷰 컴파일러(interview-compile): 퀘스트 목표(goal)와 역질문 답변(answers)을 결합해 PRD 요구사항(PRD-R*), 작업(TASK-*), 테스트 계획(TEST-*) 마크다운 문서 및 SDD 원장(evidence/sdd-ledger.json)을 자동 생성합니다.",
         input_schema={
             "type": "object",
             "properties": {
@@ -322,7 +322,7 @@ MCP_TOOLS: tuple[McpToolDefinition, ...] = (
     ),
     McpToolDefinition(
         name="dreampia_reconstruct_spec",
-        description="Keymaker 클린룸 한글 명세 자동 추출기(reconstruct-spec): 참조 아티팩트(Tier 1 + Tier 2 심층 심볼)를 분석하여 오염 없는 한글 기능 명세서(approved-spec/00_CLEANROOM_SPEC.md), Golden I/O 템플릿, 의무 원장을 자동 생성합니다.",
+        description="Alchemist 클린룸 한글 명세 자동 추출기(reconstruct-spec): 참조 아티팩트(Tier 1 + Tier 2 심층 심볼)를 분석하여 오염 없는 한글 기능 명세서(approved-spec/00_CLEANROOM_SPEC.md), Golden I/O 템플릿, 의무 원장을 자동 생성합니다.",
         input_schema={
             "type": "object",
             "properties": {
@@ -334,7 +334,7 @@ MCP_TOOLS: tuple[McpToolDefinition, ...] = (
     ),
     McpToolDefinition(
         name="dreampia_squad_worktree",
-        description="병렬 스쿼드 Git Worktree 오케스트레이터(squad-worktree): Neo(백엔드), Mouse(UI), Trinity(테스트) 트랙별 물리적 격리 작업 트리(.dreampia/worktrees/*)를 계획·생성·정리합니다.",
+        description="병렬 길드 파티 Git Worktree 오케스트레이터(squad-worktree): Paladin(백엔드/코어), Archer(UI), Inquisitor(테스트/심판) 트랙별 물리적 격리 작업 트리(.dreampia/worktrees/*)를 계획·생성·정리합니다.",
         input_schema={
             "type": "object",
             "properties": {

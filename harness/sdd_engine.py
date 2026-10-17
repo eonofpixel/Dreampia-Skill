@@ -1,7 +1,7 @@
 """Dreampia Spec-Driven Development (SDD) & TDD Traceability Governance Engine.
 
-Bridges Oracle/Architect specifications (PRD-R*, REQ-*, API-*, UX-S*) with Neo's TDD
-execution (TASK-*, TEST-*, real test files) and Tank's evidence verification.
+Bridges Sage/Archmage specifications (PRD-R*, REQ-*, API-*, UX-S*) with Paladin's TDD
+execution (TASK-*, TEST-*, real test files) and Cleric's evidence verification.
 
 SOLID Architecture:
 - SpecItem: Single-responsibility immutable value object for SDD entities
@@ -395,9 +395,10 @@ def build_sdd_ledger(root: Path) -> dict[str, object]:
         "schema_version": SDD_LEDGER_VERSION,
         "generated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "squad_owners": {
-            "spec_author": "Oracle (planner) & Architect (architect)",
-            "tdd_executor": "Neo (executor)",
-            "evidence_verifier": "Tank (verifier)",
+            "protagonist": "Hero (주인공 영웅)",
+            "spec_author": "Sage (planner) & Archmage (architect)",
+            "tdd_executor": "Paladin (executor)",
+            "evidence_verifier": "Cleric (verifier)",
         },
         "summary": {
             "requirement_count": len(requirements),
@@ -516,7 +517,7 @@ def compile_interview_to_sdd(
     *,
     apply: bool = False,
 ) -> dict[str, object]:
-    """Oracle 소크라테스식 인터뷰 질문과 사용자 답변을 결합하여 SDD 명세서(PRD-R*, TASK-*, TEST-*) 및 추적 원장으로 자동 컴파일한다."""
+    """Sage 소크라테스식 인터뷰 질문과 주인공 영웅(사용자) 답변을 결합하여 SDD 퀘스트 저널(PRD-R*, TASK-*, TEST-*) 및 추적 원장으로 자동 컴파일한다."""
     import json
     try:
         from . import route_planner
@@ -547,7 +548,7 @@ def compile_interview_to_sdd(
     default_answers = [
         "기본 표준 경계 및 데스크톱/모바일 반응형 흐름 적용",
         "사용자 친화적 한글 오류 메시지 및 중복 요청(연타) 방어 적용",
-        "Trinity 정적 코드 감사 위반 0건 및 핵심 엣지케이스 TDD 단언문 통과",
+        "Inquisitor 정적 코드 감사 위반 0건 및 핵심 엣지케이스 TDD 단언문 통과",
     ]
     qa_pairs: list[dict[str, str]] = []
     for idx, q_text in enumerate(questions):

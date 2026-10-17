@@ -126,37 +126,42 @@ class RoutePlannerTests(unittest.TestCase):
         self.assertEqual(explain_route.profile, "quick")
         self.assertFalse(explain_route.requires_write_boundary)
 
-    def test_matrix_callsign_resolution_and_squad_metadata(self) -> None:
-        self.assertEqual(route_planner.resolve_role_alias("Morpheus"), "router")
-        self.assertEqual(route_planner.resolve_role_alias("모피어스"), "router")
-        self.assertEqual(route_planner.resolve_role_alias("Oracle"), "planner")
-        self.assertEqual(route_planner.resolve_role_alias("오라클"), "planner")
-        self.assertEqual(route_planner.resolve_role_alias("Architect"), "architect")
-        self.assertEqual(route_planner.resolve_role_alias("Niobe"), "ux-designer")
-        self.assertEqual(route_planner.resolve_role_alias("Keymaker"), "analyst")
-        self.assertEqual(route_planner.resolve_role_alias("키메이커"), "analyst")
-        self.assertEqual(route_planner.resolve_role_alias("Neo"), "executor")
-        self.assertEqual(route_planner.resolve_role_alias("네오"), "executor")
-        self.assertEqual(route_planner.resolve_role_alias("Trinity"), "reviewer")
-        self.assertEqual(route_planner.resolve_role_alias("Tank"), "verifier")
-        self.assertEqual(route_planner.resolve_role_alias("Seraph"), "privacy-guard")
+    def test_rpg_guild_callsign_resolution_and_squad_metadata(self) -> None:
+        self.assertEqual(route_planner.resolve_role_alias("GuildMaster"), "router")
+        self.assertEqual(route_planner.resolve_role_alias("길드마스터"), "router")
+        self.assertEqual(route_planner.resolve_role_alias("길드장"), "router")
+        self.assertEqual(route_planner.resolve_role_alias("Sage"), "planner")
+        self.assertEqual(route_planner.resolve_role_alias("세이지"), "planner")
+        self.assertEqual(route_planner.resolve_role_alias("Archmage"), "architect")
+        self.assertEqual(route_planner.resolve_role_alias("Bard"), "ux-designer")
+        self.assertEqual(route_planner.resolve_role_alias("Alchemist"), "analyst")
+        self.assertEqual(route_planner.resolve_role_alias("알케미스트"), "analyst")
+        self.assertEqual(route_planner.resolve_role_alias("Paladin"), "executor")
+        self.assertEqual(route_planner.resolve_role_alias("팔라딘"), "executor")
+        self.assertEqual(route_planner.resolve_role_alias("Knight"), "implementer")
+        self.assertEqual(route_planner.resolve_role_alias("Inquisitor"), "reviewer")
+        self.assertEqual(route_planner.resolve_role_alias("Cleric"), "verifier")
+        self.assertEqual(route_planner.resolve_role_alias("Guardian"), "privacy-guard")
+        self.assertEqual(route_planner.resolve_role_alias("Archer"), "design-critic")
 
         cleanroom_dict = route_planner.plan_route(
             "외부 바이너리 클린룸 역공학 명세 기반 재구현", repo_dirty=False
         ).to_dict()
-        self.assertEqual(cleanroom_dict["commander"]["callsign"], "Morpheus")  # type: ignore[index]
+        self.assertEqual(cleanroom_dict["protagonist"]["callsign"], "Hero")  # type: ignore[index]
+        self.assertEqual(cleanroom_dict["commander"]["callsign"], "GuildMaster")  # type: ignore[index]
+        self.assertEqual(cleanroom_dict["quest_rank"]["rank"], "S")  # type: ignore[index]
         callsigns = [member["callsign"] for member in cleanroom_dict["agent_squad"]]  # type: ignore[union-attr]
-        self.assertEqual(callsigns, ["Oracle", "Keymaker", "Neo", "Trinity", "Tank", "Seraph"])
+        self.assertEqual(callsigns, ["Sage", "Alchemist", "Paladin", "Inquisitor", "Cleric", "Guardian"])
 
-        # Cleanroom bundle & handoff also accept Matrix callsigns
-        keymaker_ok = write_boundary.validate_cleanroom_bundle(
-            "Keymaker", ["cases/c1/contaminated-zone/binary.dump", "cases/c1/approved-spec/spec.md"]
+        # Cleanroom bundle & handoff also accept Fantasy RPG Guild callsigns
+        alchemist_ok = write_boundary.validate_cleanroom_bundle(
+            "Alchemist", ["cases/c1/contaminated-zone/binary.dump", "cases/c1/approved-spec/spec.md"]
         )
-        self.assertEqual(keymaker_ok["status"], "PASS")
-        neo_blocked = write_boundary.validate_cleanroom_bundle(
-            "Neo", ["cases/c1/contaminated-zone/binary.dump", "cases/c1/approved-spec/spec.md"]
+        self.assertEqual(alchemist_ok["status"], "PASS")
+        paladin_blocked = write_boundary.validate_cleanroom_bundle(
+            "Paladin", ["cases/c1/contaminated-zone/binary.dump", "cases/c1/approved-spec/spec.md"]
         )
-        self.assertEqual(neo_blocked["status"], "FAIL")
+        self.assertEqual(paladin_blocked["status"], "FAIL")
 
     def test_unsafe_injection_goal_rejected(self) -> None:
         for unsafe_text in (

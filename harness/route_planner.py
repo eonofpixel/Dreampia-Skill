@@ -90,62 +90,109 @@ UI_DOMAIN_PATTERNS: tuple[re.Pattern[str], ...] = (
 )
 
 
+HERO_PERSONA: dict[str, str] = {
+    "callsign": "Hero",
+    "name_ko": "주인공 영웅",
+    "title_ko": "퀘스트 발주자 및 원정 총사령관",
+}
+
+QUEST_RANKS: dict[str, dict[str, str]] = {
+    "quick": {
+        "rank": "C",
+        "name_ko": "C급 단기 토벌",
+        "description_ko": "단일 탐색·빠른 수정 퀘스트",
+    },
+    "team": {
+        "rank": "B",
+        "name_ko": "B급 정규 파티 원정",
+        "description_ko": "역할 분리 기반 정규 기능 구현 퀘스트",
+    },
+    "controlled": {
+        "rank": "A",
+        "name_ko": "A급 정예 공성전",
+        "description_ko": "고위험·운영·전 관문 검증 퀘스트",
+    },
+    "cleanroom": {
+        "rank": "S",
+        "name_ko": "S급 고대 유물 복원",
+        "description_ko": "오염 격리 기반 클린룸 역설계·재구현 퀘스트",
+    },
+}
+
 AGENT_CALLSIGNS: dict[str, dict[str, str]] = {
     "router": {
-        "callsign": "Morpheus",
-        "name_ko": "모피어스",
-        "title_ko": "총괄 라우터 및 작전 지휘관",
+        "callsign": "GuildMaster",
+        "name_ko": "길드마스터",
+        "title_ko": "총괄 길드장 및 퀘스트 라우터",
     },
     "planner": {
-        "callsign": "Oracle",
-        "name_ko": "오라클",
-        "title_ko": "제품 기획 및 요구사항·백로그 설계자",
+        "callsign": "Sage",
+        "name_ko": "세이지",
+        "title_ko": "대현자 · 제품 기획 및 퀘스트 저널(SDD)·백로그 설계자",
     },
     "architect": {
-        "callsign": "Architect",
-        "name_ko": "아키텍트",
-        "title_ko": "시스템·데이터·신뢰 경계 설계자",
+        "callsign": "Archmage",
+        "name_ko": "아크메이지",
+        "title_ko": "대마법사 · 시스템·데이터·폭발 반경 설계자",
     },
     "ux-designer": {
-        "callsign": "Niobe",
-        "name_ko": "니오베",
-        "title_ko": "사용자 경험·화면 흐름·뷰포트 디자이너",
+        "callsign": "Bard",
+        "name_ko": "바드",
+        "title_ko": "음유시인 · 사용자 경험·화면 흐름·뷰포트 디자이너",
     },
     "analyst": {
-        "callsign": "Keymaker",
-        "name_ko": "키메이커",
-        "title_ko": "바이너리·레거시 역설계 및 복원 원장 분석가",
+        "callsign": "Alchemist",
+        "name_ko": "알케미스트",
+        "title_ko": "연금술사 · 바이너리·레거시 역설계 및 복원 원장 분석가",
     },
     "executor": {
-        "callsign": "Neo",
-        "name_ko": "네오",
-        "title_ko": "TDD 기반 핵심 코드 구현자",
+        "callsign": "Paladin",
+        "name_ko": "팔라딘",
+        "title_ko": "성기사 · TDD 기반 핵심 코드 구현자",
     },
     "implementer": {
-        "callsign": "Neo",
-        "name_ko": "네오",
-        "title_ko": "클린룸 명세 기반 핵심 구현자",
+        "callsign": "Knight",
+        "name_ko": "나이트",
+        "title_ko": "기사 · 클린룸 명세 기반 핵심 구현자",
     },
     "reviewer": {
-        "callsign": "Trinity",
-        "name_ko": "트리니티",
-        "title_ko": "SOLID 원칙·설계 정합성·결함 수석 리뷰어",
+        "callsign": "Inquisitor",
+        "name_ko": "인퀴지터",
+        "title_ko": "심판관 · SOLID 원칙·설계 정합성·결함 수석 감사관",
     },
     "verifier": {
-        "callsign": "Tank",
-        "name_ko": "탱크",
-        "title_ko": "실행 증거·시각 픽셀·원장 커버리지 검증 오퍼레이터",
+        "callsign": "Cleric",
+        "name_ko": "클레릭",
+        "title_ko": "치유사 · 실행 증거·시각 픽셀·보스 관문 검증 오퍼레이터",
     },
     "privacy-guard": {
-        "callsign": "Seraph",
-        "name_ko": "세라프",
-        "title_ko": "개인정보·비밀키·클린룸 무오염 경계 수호자",
+        "callsign": "Guardian",
+        "name_ko": "가디언",
+        "title_ko": "수호기사 · 개인정보·비밀키·클린룸 무오염 경계 수호자",
     },
     "design-critic": {
-        "callsign": "Mouse",
-        "name_ko": "마우스",
-        "title_ko": "UI/UX 컴포넌트·반응형 레이아웃·시각 규격 구현 및 비평자",
+        "callsign": "Archer",
+        "name_ko": "아처",
+        "title_ko": "궁수 · UI/UX 컴포넌트·반응형 레이아웃·시각 규격 구현 및 비평자",
     },
+}
+
+ROLE_TITLE_ALIASES_KO: dict[str, str] = {
+    "길드장": "router",
+    "대현자": "planner",
+    "현자": "planner",
+    "대마법사": "architect",
+    "음유시인": "ux-designer",
+    "연금술사": "analyst",
+    "성기사": "executor",
+    "기사": "implementer",
+    "심판관": "reviewer",
+    "치유사": "verifier",
+    "힐러": "verifier",
+    "수호기사": "privacy-guard",
+    "궁수": "design-critic",
+    "레인저": "design-critic",
+    "ranger": "design-critic",
 }
 
 _SKILL_OWNED_DREAMPIA_ENTRIES: frozenset[str] = frozenset(
@@ -452,19 +499,20 @@ def is_briefing_enabled(root: Path | None) -> bool:
 
 
 def resolve_role_alias(name_or_callsign: str) -> str:
-
-    """역할 ID 또는 매트릭스 코드네임(영문/한글)을 표준 역할 ID로 변환한다."""
+    """역할 ID 또는 판타지 RPG 길드 클래스 콜사인(영문/한글)을 표준 역할 ID로 변환한다."""
     token = str(name_or_callsign or "").strip().lower()
     if token in AGENT_CALLSIGNS:
         return token
+    if token in ROLE_TITLE_ALIASES_KO:
+        return ROLE_TITLE_ALIASES_KO[token]
     for role_id, meta in AGENT_CALLSIGNS.items():
         if token in (meta["callsign"].lower(), meta["name_ko"].lower()):
-            return "executor" if role_id == "implementer" else role_id
-    raise ValueError(f"알 수 없는 에이전트 역할 또는 코드네임입니다: {name_or_callsign}")
+            return role_id
+    raise ValueError(f"알 수 없는 길드 에이전트 역할 또는 클래스 콜사인입니다: {name_or_callsign}")
 
 
 def describe_agent_squad(roles: tuple[str, ...] | list[str]) -> list[dict[str, str]]:
-    """역할 목록에 대응하는 매트릭스 에이전트 스쿼드 메타데이터 목록을 반환한다."""
+    """역할 목록에 대응하는 판타지 RPG 길드 파티 메타데이터 목록을 반환한다."""
     squad: list[dict[str, str]] = []
     for r in roles:
         meta = AGENT_CALLSIGNS.get(r, {"callsign": r.title(), "name_ko": r, "title_ko": r})
@@ -554,8 +602,14 @@ class RouteDecision:
     rigor_tier: str = "standard"
 
     def to_dict(self) -> dict[str, object]:
+        quest_rank = QUEST_RANKS.get(
+            self.profile,
+            {"rank": "B", "name_ko": "B급 정규 파티 원정", "description_ko": "정규 퀘스트"},
+        )
         return {
+            "protagonist": HERO_PERSONA,
             "commander": AGENT_CALLSIGNS["router"],
+            "quest_rank": quest_rank,
             "goal_kind": self.goal_kind,
             "profile": self.profile,
             "rigor_tier": self.rigor_tier,
@@ -603,12 +657,14 @@ MAGIC_PREFIX_MAP: dict[str, str] = {
     "역설계": "re",
     "클린룸": "re",
     "audit": "audit",
-    "trinity": "audit",
+    "inquisitor": "audit",
     "sec": "audit",
     "감사": "audit",
+    "심판": "audit",
     "보안점검": "audit",
     "ui": "ui",
-    "niobe": "ui",
+    "bard": "ui",
+    "archer": "ui",
     "화면": "ui",
     "디자인": "ui",
     "climb": "climb",
@@ -912,7 +968,7 @@ def _apply_shorthand_overrides(
             requires_write_boundary=False,
             cleanroom_isolation=False,
             reason="magic-shorthand-btw",
-            message_ko="btw(잠깐/빠르게) 단축어가 활성화되어 파일 변경 없이 Oracle이 즉시 답변하는 quick 모드로 동작합니다.",
+            message_ko="btw(잠깐/빠르게) 단축어가 활성화되어 파일 변경 없이 Sage가 즉시 답변하는 quick 모드로 동작합니다.",
             magic_shorthands=shorthands,
             execution_mode="side-query",
             continuous_loop=False,
@@ -1108,7 +1164,7 @@ def plan_route(
             requires_write_boundary=True,
             cleanroom_isolation=True,
             reason="cleanroom-isolation-required",
-            message_ko="역공학/오염 격리 대상이므로 분석가(Keymaker/analyst)와 구현자(Neo/executor) 번들을 분리하는 cleanroom 프로파일을 적용합니다.",
+            message_ko="역공학/오염 격리 대상이므로 분석가(Alchemist/analyst)와 구현자(Paladin/executor) 번들을 분리하는 cleanroom 프로파일을 적용합니다.",
             rigor_tier="full",
         )
         return _apply_shorthand_overrides(base_dec, shorthands, goal)
@@ -1228,7 +1284,7 @@ class PromptExpansionBrief:
 
 
 def _format_squad_pipeline_ko(roles: tuple[str, ...]) -> str:
-    parts: list[str] = ["Morpheus(라우터)"]
+    parts: list[str] = ["Hero(주인공 영웅)", "GuildMaster(길드장)"]
     for r in roles:
         meta = AGENT_CALLSIGNS.get(r, {"callsign": r.title(), "name_ko": r})
         parts.append(f"{meta['callsign']}({meta['name_ko']})")
@@ -1843,7 +1899,7 @@ def expand_prompt_brief(
             edge_cases.append("시그니처 변경 시 1-Hop/2-Hop 상위 호출 모듈의 하위 호환성 유지")
 
         criteria.append("핵심 정상 동작 + 예외/엣지케이스를 검증하는 실제 TDD 단위 테스트 작성 및 통과")
-        criteria.append("Trinity 정적 코드 감사(audit-code: 가짜 테스트·any·반환타입·슬롭·UI 규칙) 위반 0건")
+        criteria.append("Inquisitor 정적 코드 감사(audit-code: 가짜 테스트·any·반환타입·슬롭·UI 규칙) 위반 0건")
         if eff_decision.required_gates:
             criteria.append(f"필수 품질 게이트({', '.join(eff_decision.required_gates)}) 전원 PASS 판정")
 
@@ -1892,11 +1948,16 @@ def expand_prompt_brief(
     if has_climb:
         auto_care_tags.insert(0, "불변 벤치마크 기반 성능 개선")
 
+    quest_meta = QUEST_RANKS.get(
+        eff_decision.profile,
+        {"rank": "B", "name_ko": "B급 정규 파티 원정", "description_ko": "정규 퀘스트"},
+    )
     echo_lines = [
-        "[Dreampia 국문 프롬프트 고도화 & 작전 브리핑]",
+        "[Dreampia 국문 프롬프트 고도화 & 퀘스트 작전 브리핑]",
+        f"- 퀘스트 등급: {quest_meta['name_ko']} ({eff_decision.profile}) / 발주자: Hero(주인공 영웅)",
         f"- 한 번 더 생각한 고도화 프롬프트: {expanded}",
         f"- 자동 챙김 항목: {', '.join(auto_care_tags)}",
-        f"- 담당 스쿼드: {squad_str}",
+        f"- 출정 길드 파티: {squad_str}",
     ]
     if repo_rule_files:
         echo_lines.append(
@@ -1904,7 +1965,7 @@ def expand_prompt_brief(
         )
     if eff_decision.execution_mode == "prompt-sharpen" or ambiguity_level == "high":
         questions_md = "\n".join(f"  {idx}. {q}" for idx, q in enumerate(clarifying_questions, start=1))
-        echo_lines.append("- Oracle(오라클) 사전 인터뷰 핵심 질문:")
+        echo_lines.append("- Sage(세이지) 사전 인터뷰 핵심 질문:")
         echo_lines.append(questions_md)
 
     if next_actions_tuple:

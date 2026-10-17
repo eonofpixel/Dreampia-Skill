@@ -2,15 +2,15 @@
 
 | 계층 | 파일 | 책임 |
 |---|---|---|
-| 공통 스킬 | `ai-dev-execution/` | 목표·SDD 명세·TDD·매트릭스 10인 스쿼드 역할(`Mouse` 포함)·검토·완료 보고 정책 |
+| 공통 스킬 | `ai-dev-execution/` | 주인공 영웅(`Hero`) 퀘스트 목표·SDD 명세·TDD·RPG 길드 10인 파티 역할(`Archer` 포함)·검토·완료 보고 정책 |
 | 팀 정책 | `team/policy.json`, `WORK_CONTRACT.ko.md` | 단일 실행자·`gpt-6.1-sol`/`medium`·모델 자동 상향 없음·최대 2회 검토 |
 | 프로젝트 설정 | 설치된 `.dreampia/project.json` | 호스트 선택·원시 출력 폐기·provider 정보; 미지 키 거부, 비관리 데이터 폴더 충돌 시 `.dreampia-skill/` 격리 |
-| 목표·라우트 지휘 | `harness/route_planner.py` | **Morpheus(모피어스)** 한글/영문 목표·위험도 분류, 프로파일·매트릭스 스쿼드 편성, 13종 매직 단축어 |
+| 목표·라우트 지휘 | `harness/route_planner.py` | **GuildMaster(길드장)** 한글/영문 목표·위험도 분류, 퀘스트 등급(`C/B/A/S`)·RPG 길드 파티 편성, 13종 매직 단축어 |
 | SDD+TDD 추적 엔진 | `harness/sdd_engine.py` | 마크다운 다줄 섹션 `PRD-R*/SPEC-* → API/UX → TASK-*/T* → TEST-*` 계층 BFS 추적, 고아 명세·Spec Drift(`STALE`) 차단 |
-| 역설계·클린룸 엔진 | `harness/reconstruct_engine.py` | **Keymaker(키메이커)** PE/ELF/Mach-O/WASM/ASAR/APK 정적 해부 및 복원 의무 원장 100% 커버리지 검증 |
-| 쓰기·오염 경계 | `harness/write_boundary.py`, `handoff_contract.py` | **Seraph(세라프)** & **Tank(탱크)** 소유 경로(`owned_paths`), 3-Zone 클린룸 분리, SHA-256 인계 검증 |
-| 시각 수용 검증 | `harness/visual_acceptance.py` | **Niobe(니오베)** & **Tank(탱크)** 8-bit RGBA PNG 디코딩, 뷰포트 예산, 픽셀 차이율 대조 |
-| 자율 완주·감사 엔진 | `harness/autopilot_engine.py` | **Trinity(트리니티)** AST 코드·가짜 TDD 감사, 컨텍스트 압축 패킷, Golden I/O 동치성, **Morpheus & Tank** 통합 오토파일럿 게이트 |
+| 역설계·클린룸 엔진 | `harness/reconstruct_engine.py` | **Alchemist(연금술사)** PE/ELF/Mach-O/WASM/ASAR/APK 정적 해부 및 복원 의무 원장 100% 커버리지 검증 |
+| 쓰기·오염 경계 | `harness/write_boundary.py`, `handoff_contract.py` | **Guardian(수호기사)** & **Cleric(치유사)** 소유 경로(`owned_paths`), 3-Zone 클린룸 분리, SHA-256 인계 검증 |
+| 시각 수용 검증 | `harness/visual_acceptance.py` | **Bard(음유시인)** & **Cleric(치유사)** 8-bit RGBA PNG 디코딩, 뷰포트 예산, 픽셀 차이율 대조 |
+| 자율 완주·감사 엔진 | `harness/autopilot_engine.py` | **Inquisitor(심판관)** AST 코드·가짜 TDD 감사, 컨텍스트 압축 패킷, Golden I/O 동치성, **GuildMaster & Cleric** 통합 오토파일럿 게이트 |
 | 유니버설 라우터 | `harness/universal_router.py` | 11종 에이전트 CLI 어댑터 디스패치, 스킬/플러그인 배포, 루프백 HTTP 게이트웨이 |
 | STDIO MCP 서버 | `harness/mcp_server.py` | Zero-Dependency JSON-RPC 2.0 MCP 도구(`dreampia_discover`, `dreampia_status`, `dreampia_doctor`, `dreampia_config`, `dreampia_expand_prompt`, `dreampia_route_plan`, `dreampia_sdd_check`, `dreampia_audit_code`, `dreampia_autopilot_gate` 등 30종) 제공 |
 | 실행 하네스 | `harness/core.py`, `process.py`, `schema.py` | 의존성·한정 실행·크로스플랫폼(Windows Job Object / POSIX 프로세스 그룹)·원자 상태·현재 소스 증거 |
@@ -25,6 +25,6 @@ manifest와 실행 상태의 엄격한 구조, JSON 중복 키·NaN/Infinity 거
 
 프로젝트 installer는 전체 사용자 프로젝트를 스캔하지 않고 지정된 관리 경로만 읽는다. 임의 파일이나 `.env`를 백업/배포하지 않는다. symlink를 거부하고 hash 충돌을 보존한다.
 
-## 선택적 제품 디자인 및 매트릭스 스쿼드 거버넌스 (0.7.0)
+## 선택적 제품 디자인 및 판타지 RPG 길드 거버넌스 (0.7.0)
 
-공통 SKILL은 작업 범위 판단과 실행 원칙의 짧은 진입점이다. `product-design` 및 웹·데스크톱·모바일·시각검증 4개 reference는 사용자용 UI가 범위인 때만 선택 로드한다. 매트릭스 10인 스쿼드(`Morpheus`, `Oracle`, `Architect`, `Niobe`, `Keymaker`, `Neo`, `Trinity`, `Tank`, `Seraph`, `Mouse`)는 역할 분리와 인계 계약(`handoff_contract.py`), SDD 추적(`sdd_engine.py`), 클린룸 역설계(`reconstruct_engine.py`) 전 과정에서 일관된 코드네임과 책임 경계로 작동한다.
+공통 SKILL은 작업 범위 판단과 실행 원칙의 짧은 진입점이다. `product-design` 및 웹·데스크톱·모바일·시각검증 4개 reference는 사용자용 UI가 범위인 때만 선택 로드한다. 주인공 영웅(`Hero`)을 보좌하는 판타지 RPG 10인 길드 파티(`GuildMaster`, `Sage`, `Archmage`, `Bard`, `Alchemist`, `Paladin`, `Inquisitor`, `Cleric`, `Guardian`, `Archer`)는 역할 분리와 인계 계약(`handoff_contract.py`), SDD 추적(`sdd_engine.py`), 클린룸 역설계(`reconstruct_engine.py`) 전 과정에서 일관된 클래스 콜사인과 책임 경계로 작동한다.

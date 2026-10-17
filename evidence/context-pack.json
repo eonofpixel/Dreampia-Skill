@@ -1,25 +1,35 @@
 {
-  "schema_version": "0.6.1",
-  "generated_at": "2026-10-16T16:15:25.663161+00:00",
-  "goal": "드림피아 스킬 품질 고도화 및 규칙 검증 완주",
-  "commander": {
-    "callsign": "Morpheus",
-    "name_ko": "모피어스",
-    "title_ko": "총괄 라우터 및 작전 지휘관"
+  "schema_version": "0.7.0",
+  "generated_at": "2026-10-17T10:44:55.225536+00:00",
+  "goal": "판타지 RPG 영웅 퀘스트 길드 파티 체제 전환",
+  "protagonist": {
+    "callsign": "Hero",
+    "name_ko": "주인공 영웅",
+    "title_ko": "퀘스트 발주자 및 원정 총사령관"
   },
-  "profile": "team",
+  "commander": {
+    "callsign": "GuildMaster",
+    "name_ko": "길드마스터",
+    "title_ko": "총괄 길드장 및 퀘스트 라우터"
+  },
+  "quest_rank": {
+    "rank": "A",
+    "name_ko": "A급 정예 공성전",
+    "description_ko": "고위험·운영·전 관문 검증 퀘스트"
+  },
+  "profile": "controlled",
   "agent_squad": [
     {
-      "role": "executor",
-      "callsign": "Neo",
-      "name_ko": "네오",
-      "title_ko": "TDD 기반 핵심 코드 구현자"
+      "role": "planner",
+      "callsign": "Sage",
+      "name_ko": "세이지",
+      "title_ko": "대현자 · 제품 기획 및 퀘스트 저널(SDD)·백로그 설계자"
     },
     {
-      "role": "verifier",
-      "callsign": "Tank",
-      "name_ko": "탱크",
-      "title_ko": "실행 증거·시각 픽셀·원장 커버리지 검증 오퍼레이터"
+      "role": "reviewer",
+      "callsign": "Inquisitor",
+      "name_ko": "인퀴지터",
+      "title_ko": "심판관 · SOLID 원칙·설계 정합성·결함 수석 감사관"
     }
   ],
   "sdd_traceability": {
@@ -160,6 +170,13 @@
   ],
   "next_actionable_tasks": [
     {
+      "id": "T1207",
+      "status": "approved",
+      "verdict": "NOT_RUN",
+      "statement": "1. **SDD+TDD 계층 추적 (`sdd-ledger` / `sdd-check`)**: `PRD-R* / REQ-* / SPEC-* → API-* / UX-S* → TASK-* / T* → TEST-*` 4단계 계층 BFS 추적(테스트 파일 내 `T1207`/`TASK-*` 직접 인용 및 브라운필드 `brownfield-baseline.md` 포함), 고아 요구사항 차단, 명세 해시(`spec_sha256`) 기반 Spec",
+      "linked_ids": []
+    },
+    {
       "id": "TASK-003",
       "status": "deferred",
       "verdict": "NOT_RUN",
@@ -187,7 +204,7 @@
   "anti_amnesia_rules_ko": [
     "1. 과거 PASS 증거를 코드 수정 후 재실행 없이 현재 PASS로 재사용하지 마십시오.",
     "2. 모든 공개 함수에 반환 타입을 명시하고 any 타입을 절대 사용하지 마십시오.",
-    "3. 테스트 함수에 assert True 같은 가짜 단언문을 작성하지 마십시오 (Trinity 감사기가 즉시 차단합니다).",
+    "3. 테스트 함수에 assert True 같은 가짜 단언문을 작성하지 마십시오 (Inquisitor 감사기가 즉시 차단합니다).",
     "4. 클린룸 프로파일에서는 contaminated-zone 파일을 구현 코드에 직접 복사하지 마십시오."
   ]
 }

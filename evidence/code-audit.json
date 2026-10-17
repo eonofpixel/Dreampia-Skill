@@ -1,13 +1,19 @@
 {
   "status": "PASS",
-  "auditor": "Trinity (reviewer)",
+  "auditor": "Inquisitor (reviewer)",
+  "audit_scope": "full",
+  "changed_files": null,
   "applied": true,
   "report_path": "evidence/code-audit.json",
-  "ui_rules_enforced": true,
-  "scanned_file_count": 70,
+  "ui_rules_enforced": false,
+  "has_tailwind": false,
+  "has_lucide_react": false,
+  "enforce_tailwind": false,
+  "enforce_lucide_react": false,
+  "scanned_file_count": 71,
   "finding_count": 0,
   "blocking_count": 0,
   "learned_rule_count": 3,
   "findings": [],
-  "message_ko": "Trinity 코드·TDD·규칙 정적 감사를 통과했습니다. (검사 파일 70개, 차단 결함 0건)"
+  "message_ko": "Inquisitor 코드·TDD·규칙 정적 감사(full)를 통과했습니다. (검사 파일 71개, 차단 결함 0건)"
 }

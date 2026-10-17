@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 480" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgMat" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#060b16"/>
+      <stop offset="100%" stop-color="#091526"/>
+    </linearGradient>
+    <linearGradient id="cmdGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#065f46"/>
+      <stop offset="100%" stop-color="#0f766e"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="480" rx="18" fill="url(#bgMat)" stroke="#1e293b" stroke-width="1.5"/>
+
+  <!-- Header -->
+  <g transform="translate(50, 42)" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+    <text x="0" y="0" font-size="22" font-weight="800" fill="#f8fafc">
+      HERO · QUEST RANKS (C/B/A/S) &amp; RPG GUILD PARTY ROUTER
+    </text>
+    <text x="640" y="0" font-size="14" font-weight="600" fill="#34d399">
+      sharpen · ulw · loop · climb · blast · btw · sdd · tdd · re · audit · ui
+    </text>
+  </g>
+
+  <!-- Hero & GuildMaster Box -->
+  <g transform="translate(260, 68)" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+    <rect width="680" height="76" rx="14" fill="url(#cmdGrad)" stroke="#34d399" stroke-width="1.8"/>
+    <text x="340" y="30" text-anchor="middle" font-size="18" font-weight="800" fill="#ecfdf5">
+      HERO (주인공 영웅 · 사용자) &#8594; GUILDMASTER (길드장 · 총괄 라우터)
+    </text>
+    <text x="340" y="54" text-anchor="middle" font-size="13" fill="#a7f3d0">
+      Quest Rank Classifier (C/B/A/S) · Multi-Agent Worktree &amp; Camp 1~10 Dispatcher
+    </text>
+  </g>
+
+  <!-- Connector Lines from GuildMaster to 2 Rows of 4 Agents -->
+  <g stroke="#334155" stroke-width="1.5" fill="none">
+    <path d="M 600 144 L 600 168"/>
+    <path d="M 175 168 L 1025 168"/>
+    <path d="M 175 168 L 175 188"/>
+    <path d="M 455 168 L 455 188"/>
+    <path d="M 745 168 L 745 188"/>
+    <path d="M 1025 168 L 1025 188"/>
+  </g>
+
+  <!-- Row 1: Spec, Architecture, Design, Cleanroom -->
+  <g transform="translate(50, 188)" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+    <!-- Sage -->
+    <g transform="translate(0, 0)">
+      <rect width="250" height="112" rx="12" fill="#0f172a" stroke="#38bdf8" stroke-width="1.3"/>
+      <text x="18" y="30" font-size="16" font-weight="700" fill="#38bdf8">SAGE (세이지 · 대현자)</text>
+      <text x="18" y="50" font-size="12" font-weight="600" fill="#e2e8f0">role: planner · [sharpen / sdd]</text>
+      <text x="18" y="74" font-size="12" fill="#94a3b8">Socratic Interview &amp; PRD-R* Spec</text>
+      <text x="18" y="94" font-size="12" fill="#94a3b8">Quest Journal &amp; Backlog Design</text>
+    </g>
+
+    <!-- Archmage -->
+    <g transform="translate(280, 0)">
+      <rect width="250" height="112" rx="12" fill="#0f172a" stroke="#60a5fa" stroke-width="1.3"/>
+      <text x="18" y="30" font-size="16" font-weight="700" fill="#60a5fa">ARCHMAGE (대마법사)</text>
+      <text x="18" y="50" font-size="12" font-weight="600" fill="#e2e8f0">role: architect · [blast / ulw]</text>
+      <text x="18" y="74" font-size="12" fill="#94a3b8">API-* &amp; Data Contract Design</text>
+      <text x="18" y="94" font-size="12" fill="#94a3b8">1/2-Hop Blast Radius &amp; ADR-*</text>
+    </g>
+
+    <!-- Bard & Archer -->
+    <g transform="translate(565, 0)">
+      <rect width="250" height="112" rx="12" fill="#0f172a" stroke="#f472b6" stroke-width="1.3"/>
+      <text x="18" y="30" font-size="16" font-weight="700" fill="#f472b6">BARD &amp; ARCHER (음유시인·궁수)</text>
+      <text x="18" y="50" font-size="12" font-weight="600" fill="#e2e8f0">role: ux-designer / design-critic</text>
+      <text x="18" y="74" font-size="12" fill="#94a3b8">UX-S* Flow &amp; Viewport Budget</text>
+      <text x="18" y="94" font-size="12" fill="#94a3b8">Visual Diff &amp; UI Token Critic</text>
+    </g>
+
+    <!-- Alchemist -->
+    <g transform="translate(850, 0)">
+      <rect width="250" height="112" rx="12" fill="#0f172a" stroke="#fbbf24" stroke-width="1.3"/>
+      <text x="18" y="30" font-size="16" font-weight="700" fill="#fbbf24">ALCHEMIST (연금술사)</text>
+      <text x="18" y="50" font-size="12" font-weight="600" fill="#e2e8f0">role: analyst · [re / cleanroom]</text>
+      <text x="18" y="74" font-size="12" fill="#94a3b8">PE/ELF/Mach-O/WASM/ASAR</text>
+      <text x="18" y="94" font-size="12" fill="#94a3b8">Obligation Ledger Extraction</text>
+    </g>
+  </g>
+
+  <!-- Row 2: Execution, Review, Verification, Privacy Guard -->
+  <g transform="translate(50, 326)" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+    <!-- Paladin & Knight -->
+    <g transform="translate(0, 0)">
+      <rect width="250" height="112" rx="12" fill="#0f172a" stroke="#34d399" stroke-width="1.3"/>
+      <text x="18" y="30" font-size="16" font-weight="700" fill="#34d399">PALADIN &amp; KNIGHT (성기사·기사)</text>
+      <text x="18" y="50" font-size="12" font-weight="600" fill="#e2e8f0">role: executor / implementer</text>
+      <text x="18" y="74" font-size="12" fill="#94a3b8">Red-Green-Refactor TDD</text>
+      <text x="18" y="94" font-size="12" fill="#94a3b8">Owned-Paths Worktree Coding</text>
+    </g>
+
+    <!-- Inquisitor -->
+    <g transform="translate(280, 0)">
+      <rect width="250" height="112" rx="12" fill="#0f172a" stroke="#c084fc" stroke-width="1.3"/>
+      <text x="18" y="30" font-size="16" font-weight="700" fill="#c084fc">INQUISITOR (인퀴지터 · 심판관)</text>
+      <text x="18" y="50" font-size="12" font-weight="600" fill="#e2e8f0">role: reviewer · [audit / interrogate]</text>
+      <text x="18" y="74" font-size="12" fill="#94a3b8">AST Hollow-TDD Blocker</text>
+      <text x="18" y="94" font-size="12" fill="#94a3b8">SOLID &amp; No-Any Static Audit</text>
+    </g>
+
+    <!-- Cleric -->
+    <g transform="translate(565, 0)">
+      <rect width="250" height="112" rx="12" fill="#0f172a" stroke="#22d3ee" stroke-width="1.3"/>
+      <text x="18" y="30" font-size="16" font-weight="700" fill="#22d3ee">CLERIC (클레릭 · 치유사)</text>
+      <text x="18" y="50" font-size="12" font-weight="600" fill="#e2e8f0">role: verifier · [ulw / loop / climb]</text>
+      <text x="18" y="74" font-size="12" fill="#94a3b8">Golden I/O &amp; RGBA PNG Diff</text>
+      <text x="18" y="94" font-size="12" fill="#94a3b8">SHA-256 Boss Gate Verdict</text>
+    </g>
+
+    <!-- Guardian -->
+    <g transform="translate(850, 0)">
+      <rect width="250" height="112" rx="12" fill="#0f172a" stroke="#f87171" stroke-width="1.3"/>
+      <text x="18" y="30" font-size="16" font-weight="700" fill="#f87171">GUARDIAN (가디언 · 수호기사)</text>
+      <text x="18" y="50" font-size="12" font-weight="600" fill="#e2e8f0">role: privacy-guard · [sec / re]</text>
+      <text x="18" y="74" font-size="12" fill="#94a3b8">3-Zone Cleanroom Isolation</text>
+      <text x="18" y="94" font-size="12" fill="#94a3b8">Secret &amp; Instruction Drift Guard</text>
+    </g>
+  </g>
+</svg>
