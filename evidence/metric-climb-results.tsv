@@ -1,3 +1,4 @@
 config_hash	metric_mean	metric_std	loc_delta	win_probability	verdict	hypothesis
 358725673fd1	350.689033	12.063587	+0	1.0000	KEEP	baseline-route-plan-3x-latency-ms
 26f1cd5aebb9	172.442533	8.273138	+60	1.0000	KEEP	eliminate-duplicate-git-status-and-rules-io
+653f31ee9ef9	296.880000	0.000000	-696	0.0000	DISCARD	v1.0.0-benchmark-50-cases-latency

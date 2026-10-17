@@ -1,6 +1,6 @@
 {
   "immutable_baseline": {
-    "harness/mcp_server.py": "f58a29dd6360b2a0bb7b711fa5b34edf2c6905540928f27d266408ea8f10a20e"
+    "harness/mcp_server.py": "87507a08192f25a97ff7845a1423d825345dd0f20e123769bf429da2e4bc39f8"
   },
   "entries": [
     {
@@ -40,6 +40,25 @@
       "fast_failed": false,
       "verdict": "KEEP",
       "message_ko": "통계적 유의성(승률 1.00 >= 0.90) 또는 코드 단순화(60 LOC)를 달성하여 채택(KEEP)되었습니다."
+    },
+    {
+      "timestamp": "2026-10-17T15:36:15.198704+00:00",
+      "config_hash": "653f31ee9ef9",
+      "hypothesis": "v1.0.0-benchmark-50-cases-latency",
+      "direction": "minimize",
+      "samples": [
+        296.88
+      ],
+      "metric_mean": 296.88,
+      "metric_std": 0.0,
+      "loc_count": 683,
+      "loc_delta": -696,
+      "win_probability": 0.0,
+      "fast_failed": true,
+      "verdict": "DISCARD",
+      "message_ko": "첫 시드 측정값(296.88)이 기존 최고 평균(172.442533)보다 열등하여 조기 중단(Fast-Fail) 및 기각(DISCARD)되었습니다.",
+      "auto_rolled_back": false,
+      "checkpoint_id": null
     }
   ]
 }

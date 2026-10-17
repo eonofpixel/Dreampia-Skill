@@ -2600,7 +2600,7 @@ def run_metric_climb(
     entries: list[dict[str, object]] = list(ledger_data.get("entries", []))  # type: ignore[arg-type]
     immutable_baseline: dict[str, str] = dict(ledger_data.get("immutable_baseline", {}))  # type: ignore[arg-type]
 
-    norm_immutables = [PurePosixPath(p).as_posix() for p in immutable_files if p.strip()]
+    norm_immutables = sorted({PurePosixPath(p).as_posix() for p in immutable_files if p.strip()} | set(immutable_baseline.keys()))
     _, _, current_immutables = _compute_files_hash_and_loc(resolved, norm_immutables)
 
     if not immutable_baseline and current_immutables:
