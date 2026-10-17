@@ -97,6 +97,7 @@ def _is_test_or_check_file(rel: str, fpath: Path) -> bool:
     parts = PurePosixPath(rel).parts
     return (
         fpath.name.startswith("test_")
+        or name_low.startswith(("test-", "check-", "verify-"))
         or fpath.name.endswith(("_test.py", "_test.go", "_test.rs", "Test.java", "Test.kt", "Tests.cs", "Tests.swift"))
         or name_low.endswith(
             (
@@ -117,13 +118,14 @@ def _is_test_or_check_file(rel: str, fpath: Path) -> bool:
         or ".test." in name_low
         or ".spec." in name_low
         or "tests" in parts
+        or "fixtures" in parts
     )
 
 
 ensure_local_git_exclude = route_planner.ensure_local_git_exclude
 
 _C_LEX_STANDARD_RE = re.compile(
-    r'("(?:\\[\s\S]|[^"\\\n])*"|\'(?:\\[\s\S]|[^\'\\\n])*\'|`(?:\\[\s\S]|[^`\\])*`)'
+    r'("(?:\\[\s\S]|[^"\\\n])*"|\'(?:\\[\s\S]|[^\'\\\n])*\'|`(?:\\[\s\S]|\$\{(?:`(?:\\[\s\S]|[^`\\])*`|"(?:\\[\s\S]|[^"\\\n])*"|\'(?:\\[\s\S]|[^\'\\\n])*\'|[^}])*\}|[^`\\])*`)'
     r"|(?://[^\n]*|/\*[\s\S]*?\*/)"
 )
 _C_LEX_RUST_RE = re.compile(
@@ -231,16 +233,24 @@ _TS_TEST_CALL_RE = re.compile(r"\b(?:it|test)\s*\(")
 _TS_CALLBACK_MARKER_RE = re.compile(r"(?:=>|\bfunction\b)")
 _TS_REAL_ASSERT_RE = re.compile(
     r"(?:\b(?:expect|expectTypeOf|assert|should)\b"
-    r"|\b(?:assert\w*|expect\w*|verify\w*|check\w*)\s*\("
-    r"|\.(?:toBe\w*|toEqual\w*|toStrictEqual|toHave\w*|toContain\w*|toMatch\w*|toThrow\w*|rejects|resolves)\s*\()"
+    r"|\b(?:assert\w*|expect\w*|verify\w*|check\w*|execFileSync|spawnSync)\s*\("
+    r"|\.(?:toBe\w*|toEqual\w*|toStrictEqual|toHave\w*|toContain\w*|toMatch\w*|toThrow\w*|rejects|resolves)\b)"
 )
-_TS_WEAK_MATCHER_RE = re.compile(r"\.(?:toBeDefined|toBeNull|toBeUndefined)\s*\(")
+_TS_WEAK_MATCHER_RE = re.compile(
+    r"(?:(?<!\bnot\.)\.toBeDefined\s*\(|\bnot\s*\.\s*(?:toBeNull|toBeUndefined)\s*\()"
+)
 _TS_STRONG_ASSERT_RE = re.compile(
     r"(?:\b(?:expectTypeOf|assert|should)\b"
     r"|\b(?:assert\w*|verify\w*|check\w*|expect[A-Z]\w*)\s*\("
-    r"|\.(?:toBe|toBeTruthy|toBeFalsy|toBeGreaterThan\w*|toBeLessThan\w*|toBeCloseTo|toBeInstanceOf|toEqual\w*|toStrictEqual|toHave\w*|toContain\w*|toMatch\w*|toThrow\w*|rejects|resolves)\s*\()"
+    r"|(?<!\bnot\.)\.(?:toBeNull|toBeUndefined)\s*\("
+    r"|\bnot\s*\.\s*toBeDefined\s*\("
+    r"|\.(?:toBe|toBeTruthy|toBeFalsy|toBeGreaterThan\w*|toBeLessThan\w*|toBeCloseTo|toBeInstanceOf|toEqual\w*|toStrictEqual|toHave\w*|toContain\w*|toMatch\w*|toThrow\w*|rejects|resolves)\b)"
 )
-_C_EMPTY_CATCH_RE = re.compile(r"\bcatch\b\s*(?:\([^)]*\))?\s*\{")
+_C_EMPTY_CATCH_RE = re.compile(r"\bcatch\b\s*(\([^)]*\))?\s*\{")
+_SLOP_CATCH_COMMENT_RE = re.compile(
+    r"(?:묵살|^\s*(?://|/\*+)\s*(?:ignore|pass|noop|todo|fixme|empty)\b[^;.,\n]{0,15}(?:\*+/)?\s*$)",
+    re.IGNORECASE,
+)
 _FORBIDDEN_ICON_RE = re.compile(
     r"""from\s+['"](@heroicons/[^'"]+|react-icons[^'"]*|@mui/icons-material[^'"]*|@fortawesome/[^'"]+)['"]"""
 )
@@ -1255,6 +1265,12 @@ def audit_project_code(
                         )
 
             if is_test_file:
+                file_has_real_assert = bool(_TS_REAL_ASSERT_RE.search(code_skeleton))
+                local_helper_names: set[str] = (
+                    set(re.findall(r"\b(?:const|let|var|function)\s+([A-Za-z_$][A-Za-z0-9_$]*)\b", code_skeleton))
+                    if file_has_real_assert
+                    else set()
+                )
                 for t_match in _TS_TEST_CALL_RE.finditer(code_skeleton):
                     prefix_start = t_match.start()
                     if prefix_start > 0 and code_skeleton[prefix_start - 1] in (".", "$", "_"):
@@ -1266,7 +1282,14 @@ def audit_project_code(
                     call_skel = code_skeleton[open_paren + 1 : close_paren]
                     if not _TS_CALLBACK_MARKER_RE.search(call_skel):
                         continue
-                    if not _TS_HOLLOW_TEST_RE.search(call_skel) and not _TS_REAL_ASSERT_RE.search(call_skel):
+                    has_helper_assert = bool(
+                        local_helper_names
+                        and any(
+                            called_fn in local_helper_names
+                            for called_fn in re.findall(r"\b([A-Za-z_$][A-Za-z0-9_$]*)\s*\(", call_skel)
+                        )
+                    )
+                    if not _TS_HOLLOW_TEST_RE.search(call_skel) and not _TS_REAL_ASSERT_RE.search(call_skel) and not has_helper_assert:
                         line_no = code_skeleton[:prefix_start].count("\n") + 1
                         findings.append(
                             AuditFinding(
@@ -1297,16 +1320,25 @@ def audit_project_code(
                 open_brace = c_match.end() - 1
                 close_brace = _find_matching_delimiter(code_skeleton, open_brace, "{", "}")
                 if close_brace is not None and code_skeleton[open_brace + 1 : close_brace].strip() == "":
-                    line_no = code_skeleton[: c_match.start()].count("\n") + 1
-                    findings.append(
-                        AuditFinding(
-                            severity="HIGH",
-                            rule_id="slop-bare-except-pass",
-                            evidence=f"{rel}:{line_no}",
-                            issue_ko="예외를 포착한 뒤 아무 처리도 하지 않고 묵살하는 AI 슬롭 패턴(빈 catch 블록)이 감지되었습니다.",
-                            fix_ko="구체적인 예외 복구 로직, 에러 상태 갱신 또는 사용자 친화적인 한글 오류 처리를 작성하십시오.",
-                        )
+                    raw_inner = text[open_brace + 1 : close_brace].strip()
+                    has_param = c_match.group(1) is not None
+                    is_slop_catch = (
+                        raw_inner == ""
+                        or has_param
+                        or len(raw_inner) < 12
+                        or bool(_SLOP_CATCH_COMMENT_RE.search(raw_inner))
                     )
+                    if is_slop_catch:
+                        line_no = code_skeleton[: c_match.start()].count("\n") + 1
+                        findings.append(
+                            AuditFinding(
+                                severity="HIGH",
+                                rule_id="slop-bare-except-pass",
+                                evidence=f"{rel}:{line_no}",
+                                issue_ko="예외를 포착한 뒤 아무 처리도 하지 않고 묵살하는 AI 슬롭 패턴(빈 catch 블록)이 감지되었습니다.",
+                                fix_ko="구체적인 예외 복구 로직, 에러 상태 갱신 또는 사용자 친화적인 한글 오류 처리를 작성하십시오.",
+                            )
+                        )
 
             if enforce_tailwind and suffix in (".tsx", ".jsx"):
                 for start_offset, attrs in _iter_jsx_button_attrs(comment_masked):
