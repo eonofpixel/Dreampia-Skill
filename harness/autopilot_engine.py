@@ -2209,9 +2209,9 @@ DEFAULT_BLAST_RADIUS_REL = "evidence/blast-radius-report.json"
 DEFAULT_METRIC_CLIMB_LEDGER_REL = "evidence/metric-climb-ledger.json"
 DEFAULT_METRIC_CLIMB_TSV_REL = "evidence/metric-climb-results.tsv"
 
-_PY_TOP_SYMBOL_RE = re.compile(r"^(?:async\s+def|def|class)\s+([A-Za-z][A-Za-z0-9_]*)\b", re.MULTILINE)
+_PY_TOP_SYMBOL_RE = re.compile(r"^(?:async\s+def|def|class)\s+([A-Za-z\uac00-\ud7a3][A-Za-z0-9_\uac00-\ud7a3]*)\b", re.MULTILINE)
 _TS_EXPORT_SYMBOL_RE = re.compile(
-    r"\bexport\s+(?:default\s+)?(?:async\s+)?(?:function|class|interface|type|const|let|var|enum)\s+([A-Za-z_][A-Za-z0-9_]*)"
+    r"\bexport\s+(?:default\s+)?(?:async\s+)?(?:function|class|interface|type|const|let|var|enum)\s+([A-Za-z_$\uac00-\ud7a3][A-Za-z0-9_$\uac00-\ud7a3]*)"
 )
 _TS_EXPORT_LIST_RE = re.compile(r"\bexport\s+(?:type\s+)?\{([^}]+)\}")
 _TS_IMPORT_FROM_RE = re.compile(r"""\b(?:import|export)\b[^;]*?\bfrom\s+['"]([^'"]+)['"]""")
@@ -2253,7 +2253,7 @@ def _extract_defined_symbols(fpath: Path, text: str, *, precomputed_skeleton: st
                     continue
                 parts = [p.strip() for p in re.split(r"\bas\b", cleaned) if p.strip()]
                 candidate = parts[-1].lstrip("type ").strip() if parts else ""
-                if candidate and re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", candidate) and candidate not in symbols:
+                if candidate and re.match(r"^[A-Za-z_$\uac00-\ud7a3][A-Za-z0-9_$\uac00-\ud7a3]*$", candidate) and candidate not in symbols:
                     symbols.append(candidate)
     elif suffix == ".rs":
         skel = (

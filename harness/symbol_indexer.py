@@ -163,36 +163,38 @@ class PythonAstSymbolExtractor:
         return symbols
 
 
+_IDENT_PAT = r"[A-Za-z_$\uac00-\ud7a3][A-Za-z0-9_$\uac00-\ud7a3]*"
+
 _CFAMILY_DECL_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     (
         "class",
-        re.compile(r"^[ \t]*(?:export\s+)?(?:default\s+)?(?:abstract\s+)?class\s+([A-Za-z_$][A-Za-z0-9_$]*)[^{]*\{", re.MULTILINE),
+        re.compile(rf"^[ \t]*(?:export\s+)?(?:default\s+)?(?:abstract\s+)?class\s+({_IDENT_PAT})[^{{]*\{{", re.MULTILINE),
     ),
     (
         "interface",
-        re.compile(r"^[ \t]*(?:export\s+)?interface\s+([A-Za-z_$][A-Za-z0-9_$]*)[^{]*\{", re.MULTILINE),
+        re.compile(rf"^[ \t]*(?:export\s+)?interface\s+({_IDENT_PAT})[^{{]*\{{", re.MULTILINE),
     ),
     (
         "struct",
-        re.compile(r"^[ \t]*(?:pub(?:\([^)]*\))?\s+)?(?:struct|enum|trait|type)\s+([A-Za-z_][A-Za-z0-9_]*)(?:\s+struct|\s+interface)?[^{;]*\{", re.MULTILINE),
+        re.compile(rf"^[ \t]*(?:pub(?:\([^)]*\))?\s+)?(?:struct|enum|trait|type)\s+({_IDENT_PAT})(?:\s+struct|\s+interface)?[^{{;]*\{{", re.MULTILINE),
     ),
     (
         "function",
         re.compile(
-            r"^[ \t]*(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:pub(?:\([^)]*\))?\s+)?(?:fn|function|func)\s+(?:\([^)]*\)\s*)?([A-Za-z_$][A-Za-z0-9_$]*)\s*(?:<[^>]*>)?\s*\([^{;]*\{",
+            rf"^[ \t]*(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:pub(?:\([^)]*\))?\s+)?(?:fn|function|func)\s+(?:\([^)]*\)\s*)?({_IDENT_PAT})\s*(?:<[^>]*>)?\s*\([^{{;]*\{{",
             re.MULTILINE,
         ),
     ),
     (
         "function",
         re.compile(
-            r"^[ \t]*(?:export\s+)?(?:const|let)\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*(?::[^=]+)?=\s*(?:async\s*)?\([^)]*\)\s*(?::[^=]+)?=>\s*\{",
+            rf"^[ \t]*(?:export\s+)?(?:const|let)\s+({_IDENT_PAT})\s*(?::[^=]+)?=\s*(?:async\s*)?\([^)]*\)\s*(?::[^=]+)?=>\s*\{{",
             re.MULTILINE,
         ),
     ),
 )
 
-_CALL_IDENT_RE = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\(")
+_CALL_IDENT_RE = re.compile(rf"\b({_IDENT_PAT})\s*\(")
 _CALL_STOPWORDS: frozenset[str] = frozenset(
     {"if", "for", "while", "switch", "catch", "return", "sizeof", "typeof", "function", "fn", "func"}
 )
