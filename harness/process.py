@@ -96,7 +96,7 @@ if os.name == "nt":
         try:
             p_str = os.fspath(path_obj)
             st = os.lstat(p_str)
-            if stat.S_ISLNK(st.st_mode) or getattr(st, "st_reparse_tag", 0) != 0:
+            if stat.S_ISLNK(st.st_mode):
                 return True
             if stat.S_ISREG(st.st_mode) and len(_SYMLINK_MAGIC) < st.st_size <= 536:
                 with open(p_str, "rb") as f:
