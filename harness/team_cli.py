@@ -2354,13 +2354,13 @@ def main(argv=None) -> int:
             return 0 if out.get('status')=='PASS' else 1
         if not a.project and a.action in ('status','doctor','config','clean','discover','onboard','guild-camp','benchmark','hook-dispatch','symbol-map','symbol-slice','checkpoint','squad-merge-check','camp-worker-run','memory-compact','sdd-synthesize'):
             default_dir = pathlib.Path.cwd()
-            root = project_root(str(default_dir), allow_package=True, allow_home=False)
+            root = project_root(str(default_dir), allow_package=True, allow_home=(a.action == 'hook-dispatch'))
             implicit_global = (a.action == 'doctor')
         else:
             if not a.project:
                 raise InstallError('explicit project directory required')
             allow_pkg = a.action not in MUTATING_INSTALL_ACTIONS
-            allow_hm = a.action == 'mcp-serve'
+            allow_hm = a.action in ('mcp-serve', 'hook-dispatch')
             root=project_root(a.project,allow_package=allow_pkg,allow_home=allow_hm)
             implicit_global = False
         if a.action=='mcp-serve':
