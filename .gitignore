@@ -1,6 +1,12 @@
 # Local runtime/builds/credentials; source and reviewed documentation remain explicit.
 .harness/
 .dreampia-install/
+.dreampia/security/
+.dreampia/quests/
+.dreampia/worktrees/
+.dreampia-skill/security/
+.dreampia-skill/quests/
+.dreampia-skill/worktrees/
 node_modules/
 __pycache__/
 *.pyc

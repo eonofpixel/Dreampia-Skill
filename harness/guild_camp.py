@@ -2,19 +2,20 @@
 
 SOLID Architecture:
 - CampNodeSpec / SignedQuestEnvelope: 단일 책임 불변 데이터 모델 (슬롯 ID, 다중 파티 클래스, 소유 경로, 서명 봉투)
-- ZeroSecretGuard: 단일 책임 보안 검문기 (비밀키 유출 차단, 위험 명령어 하드 차단, Zero-Secret Worker 강제)
-- CampPairingManager: 단일 책임 1~10호기(bot-01~bot-10) 등록·6자리 페어링 코드·다중 파티원 배치 관리자
-- SignedQuestDispenser: 단일 책임 HMAC-SHA256 퀘스트 전자서명 발급·검증 및 리플레이 공격 차단기
-- BossGateMergeGuard: 단일 책임 보스 관문(autopilot-gate PASS + Hero 승인) 기반 무충돌 병합 승인기
+- ZeroSecretGuard: 단일 책임 보안 검문기 (비밀키 유출 차단, 위험 명령어 하드 차단, 소유 경로 탈출 차단)
+- CampPairingManager: 단일 책임 1~10호기(bot-01~bot-10) 등록·일회용 5분 만료 6자리 페어링 코드·다중 파티원 배치 관리자
+- SignedQuestDispenser: 단일 책임 CSPRNG 마스터키 기반 HMAC-SHA256 퀘스트 전자서명 발급·검증·만료(TTL) 및 리플레이 공격 차단기
+- BossGateMergeGuard: 단일 책임 보스 관문(autopilot-gate PASS + SHA-256 무결성 검증 + Hero 승인) 기반 무충돌 병합 승인기
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import hashlib
 import hmac
 import json
-from pathlib import Path
+import os
+from pathlib import Path, PurePosixPath
 import re
 import secrets
 
@@ -101,13 +102,62 @@ _SECRET_LEAK_RE = re.compile(
     r"(?i)-----BEGIN (?:[A-Z ]*PRIVATE KEY|OPENSSH PRIVATE KEY)-----"
     r"|\b(?:api[_-]?key|access[_-]?token|auth[_-]?token|client[_-]?secret|password|passwd|secret)\b\s*[:=]\s*['\"]?[A-Za-z0-9_\-./+=]{8,}"
     r"|\bBearer\s+[A-Za-z0-9._~+/=-]{12,}"
-    r"|\b(?:gh[pousr]_|github_pat_|sk-(?:proj-)?)[A-Za-z0-9_-]{16,}"
-    r"|\.env\.production\b"
+    r"|\b(?:gh[pousr]_|github_pat_|sk-(?:proj-)?|xox[baprs]-)[A-Za-z0-9_-]{16,}"
+    r"|\bAKIA[0-9A-Z]{16}\b"
+    r"|\bAIza[0-9A-Za-z_-]{35}\b"
+    r"|\.env\.(?:production|prod|local|staging)\b"
+    r"|\bguild-master\.key\b"
 )
 
 _DESTRUCTIVE_CMD_RE = re.compile(
-    r"(?i)(?:\brm\s+-[rf]{1,2}\b|\bgit\s+push\s+[^\n]*--force\b|\bgit\s+reset\s+--hard\b|\bsudo\s+|\bmkfs\b|\bformat\s+[a-z]:|\bdel\s+/[fsq])"
+    r"(?i)(?:\brm\s+-[rf]{1,2}\b"
+    r"|\bgit\s+push\s+[^\n]*(?:--force|-f\b)"
+    r"|\bgit\s+reset\s+--hard\b"
+    r"|\bgit\s+clean\s+-[fdqx]{2,}\b"
+    r"|\bsudo\s+"
+    r"|\bmkfs\b"
+    r"|\bformat\s+[a-z]:"
+    r"|\bdel\s+/[fsq]"
+    r"|\bRemove-Item\b[^\n]*-Recurse"
+    r"|\b(?:Invoke-Expression|iex)\b"
+    r"|\bchmod\s+777\b"
+    r"|\b(?:curl|wget)\b[^\n]*\|\s*(?:sh|bash|zsh|pwsh|powershell)\b"
+    r"|\b(?:DROP\s+TABLE|DROP\s+DATABASE|TRUNCATE\s+TABLE)\b)"
 )
+
+_FORBIDDEN_OWNED_PREFIXES: tuple[str, ...] = (
+    ".git",
+    ".dreampia/security",
+    ".dreampia-skill/security",
+    ".dreampia-install",
+    "contaminated-zone",
+    ".env",
+)
+
+_HEX_NONCE_RE = re.compile(r"^[0-9a-fA-F]{24,128}$")
+_HEX_SHA256_RE = re.compile(r"^[0-9a-fA-F]{64}$")
+PAIRING_TTL_SECONDS = 300
+QUEST_TTL_SECONDS = 86400
+
+
+def _safe_project_path(project_root: Path, rel_path: str) -> Path:
+    """프로젝트 루트 외부 탈출(..), 절대 경로, 심볼릭 링크를 차단하고 안전한 Path를 반환한다."""
+    resolved_root = project_root.resolve()
+    raw = rel_path.strip().replace("\\", "/")
+    if not raw or "\x00" in raw or re.match(r"^[A-Za-z]:", raw):
+        raise ValueError(f"유효하지 않은 상대 경로입니다: {rel_path}")
+    pure = PurePosixPath(raw)
+    if pure.is_absolute() or any(part in ("", ".", "..") for part in pure.parts):
+        raise ValueError(f"보안 정책상 상위 디렉터리(..) 또는 절대 경로 접근은 차단됩니다: {rel_path}")
+    curr = resolved_root
+    for part in pure.parts:
+        curr = curr / part
+        if curr.is_symlink():
+            raise ValueError(f"보안 정책상 심볼릭 링크 경로는 허용되지 않습니다: {rel_path}")
+    resolved_target = curr.resolve()
+    if resolved_target != resolved_root and resolved_root not in resolved_target.parents:
+        raise ValueError(f"보안 정책상 프로젝트 루트 외부 경로는 접근할 수 없습니다: {rel_path}")
+    return resolved_target
 
 
 @dataclass(frozen=True)
@@ -161,7 +211,7 @@ class CampNodeSpec:
 
 
 class ZeroSecretGuard:
-    """워커 캠프(1~10호기)로 전달되거나 반환되는 텍스트에서 비밀키 유출 및 파괴적 명령을 차단한다."""
+    """워커 캠프(1~10호기)로 전달되거나 반환되는 텍스트·경로에서 비밀키 유출, 파괴적 명령, 제어판 침범을 차단한다."""
 
     @staticmethod
     def validate_goal_and_command(text: str) -> tuple[bool, list[str]]:
@@ -172,8 +222,32 @@ class ZeroSecretGuard:
             )
         if _DESTRUCTIVE_CMD_RE.search(text):
             violations.append(
-                "FORBIDDEN_COMMAND: 파괴적 명령(rm -rf, git push --force, git reset --hard, sudo 등)은 길드 보안 정책상 원천 차단됩니다."
+                "FORBIDDEN_COMMAND: 파괴적 명령(rm -rf, git push --force/-f, git reset --hard, sudo, 파이프 셸 실행 등)은 길드 보안 정책상 원천 차단됩니다."
             )
+        return (len(violations) == 0, violations)
+
+    @staticmethod
+    def validate_owned_paths(owned_paths: list[str] | tuple[str, ...]) -> tuple[bool, list[str]]:
+        violations: list[str] = []
+        for raw_p in owned_paths:
+            norm = str(raw_p).strip().replace("\\", "/")
+            while norm.startswith("./"):
+                norm = norm[2:]
+            norm = norm.rstrip("/")
+            if not norm or "\x00" in norm or re.match(r"^[A-Za-z]:", norm) or norm.startswith("/"):
+                violations.append(f"INVALID_OWNED_PATH: 절대 경로 또는 빈 소유 경로는 허용되지 않습니다 ({raw_p}).")
+                continue
+            parts = PurePosixPath(norm).parts
+            if ".." in parts:
+                violations.append(f"PATH_ESCAPE_BLOCKED: 소유 경로에 상위 디렉터리(..)를 포함할 수 없습니다 ({raw_p}).")
+                continue
+            lower_norm = norm.lower()
+            for forbidden in _FORBIDDEN_OWNED_PREFIXES:
+                if lower_norm == forbidden or lower_norm.startswith(forbidden + "/"):
+                    violations.append(
+                        f"PROTECTED_CONTROL_PLANE_PATH: 보안 제어 영역({forbidden})은 워커 캠프 소유 경로로 지정할 수 없습니다 ({raw_p})."
+                    )
+                    break
         return (len(violations) == 0, violations)
 
     @staticmethod
@@ -182,42 +256,53 @@ class ZeroSecretGuard:
 
 
 def _resolve_state_dir(project_root: Path) -> Path:
-    skill_dir = project_root / ".dreampia-skill"
-    if skill_dir.is_dir():
-        return skill_dir
-    default_dir = project_root / ".dreampia"
-    if default_dir.is_dir() and not (default_dir / "project.json").is_file() and not (default_dir / "config.json").is_file():
-        return skill_dir
-    return default_dir
+    return project_root / route_planner.resolve_skill_state_dir(project_root)
 
 
 def _load_or_init_master_secret(state_dir: Path, apply: bool) -> str:
+    """CSPRNG 256-bit 마스터 서명키를 로드하거나 생성한다. 경로 기반의 예측 가능한 해시 폴백은 절대 사용하지 않는다."""
     sec_dir = state_dir / "security"
     key_file = sec_dir / "guild-master.key"
+    if key_file.is_symlink():
+        raise ValueError("보안 정책상 guild-master.key 심볼릭 링크는 허용되지 않습니다.")
     if key_file.is_file():
         raw = key_file.read_text(encoding="utf-8").strip()
-        if len(raw) >= 32:
+        if len(raw) >= 64:
             return raw
-    derived = hashlib.sha256(f"dreampia-guild-master::{state_dir.resolve().as_posix()}".encode("utf-8")).hexdigest()
+    secret_hex = secrets.token_hex(32)
     if apply:
         sec_dir.mkdir(parents=True, exist_ok=True)
-        secret_hex = secrets.token_hex(32)
         key_file.write_text(secret_hex + "\n", encoding="utf-8")
-        return secret_hex
-    return derived
+        try:
+            os.chmod(key_file, 0o600)
+        except OSError:
+            pass
+    return secret_hex
+
+
+def _require_persisted_master_secret(state_dir: Path) -> str | None:
+    """검증(verify) 시 디스크에 실제로 저장된 CSPRNG 마스터 서명키만 신뢰하며, 없거나 심볼릭 링크이면 None을 반환한다."""
+    key_file = state_dir / "security" / "guild-master.key"
+    if key_file.is_symlink() or not key_file.is_file():
+        return None
+    raw = key_file.read_text(encoding="utf-8").strip()
+    if len(raw) < 64:
+        return None
+    return raw
 
 
 class CampPairingManager:
-    """1~10호기(bot-01~bot-10) 원정 캠프 레지스트리, 다중 파티원 배치 및 6자리 페어링 코드를 관리한다."""
+    """1~10호기(bot-01~bot-10) 원정 캠프 레지스트리, 다중 파티원 배치 및 일회용 5분 만료 6자리 페어링 코드를 관리한다."""
 
     def __init__(self, project_root: Path) -> None:
         self.project_root = project_root.resolve()
         self.state_dir = _resolve_state_dir(self.project_root)
         self.registry_path = self.state_dir / "guild-camps.json"
+        self.tickets_path = self.state_dir / "security" / "pairing-tickets.json"
 
     def load_camps(self) -> list[CampNodeSpec]:
         saved_map: dict[str, dict[str, object]] = {}
-        if self.registry_path.is_file():
+        if self.registry_path.is_file() and not self.registry_path.is_symlink():
             try:
                 raw_obj = json.loads(self.registry_path.read_text(encoding="utf-8"))
                 if isinstance(raw_obj, dict) and isinstance(raw_obj.get("camps"), list):
@@ -259,13 +344,17 @@ class CampPairingManager:
     def generate_pairing_ticket(self, slot_id: str, apply: bool = False) -> dict[str, object]:
         normalized_slot = self._normalize_slot_id(slot_id)
         master_secret = _load_or_init_master_secret(self.state_dir, apply=apply)
+        ticket_nonce = secrets.token_hex(16)
+        now_utc = datetime.now(timezone.utc)
+        expires_at = (now_utc + timedelta(seconds=PAIRING_TTL_SECONDS)).isoformat()
         digest = hmac.new(
             master_secret.encode("utf-8"),
-            f"pair::{normalized_slot}".encode("utf-8"),
+            f"pair::{normalized_slot}::{ticket_nonce}::{expires_at}".encode("utf-8"),
             hashlib.sha256,
         ).hexdigest()
-        num_val = int(digest[:8], 16) % 900000 + 100000
+        num_val = secrets.randbelow(900000) + 100000
         pairing_code = f"{str(num_val)[:3]}-{str(num_val)[3:]}"
+        code_sha256 = hashlib.sha256(f"{normalized_slot}:{pairing_code}:{ticket_nonce}".encode("utf-8")).hexdigest()
         fingerprint = f"ed25519-hmac:{digest[:16]}"
 
         camps = self.load_camps()
@@ -291,6 +380,27 @@ class CampPairingManager:
 
         if apply:
             self._save_camps(updated_camps)
+            self.tickets_path.parent.mkdir(parents=True, exist_ok=True)
+            existing_tickets: dict[str, object] = {}
+            if self.tickets_path.is_file() and not self.tickets_path.is_symlink():
+                try:
+                    loaded_t = json.loads(self.tickets_path.read_text(encoding="utf-8"))
+                    if isinstance(loaded_t, dict):
+                        existing_tickets = loaded_t
+                except ValueError:
+                    existing_tickets = {}
+            existing_tickets[normalized_slot] = {
+                "slot_id": normalized_slot,
+                "code_sha256": code_sha256,
+                "ticket_nonce": ticket_nonce,
+                "issued_at": now_utc.isoformat(),
+                "expires_at": expires_at,
+                "ttl_seconds": PAIRING_TTL_SECONDS,
+                "single_use": True,
+                "used": False,
+                "key_fingerprint": fingerprint,
+            }
+            self.tickets_path.write_text(json.dumps(existing_tickets, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
         return {
             "action": "guild-camp",
@@ -300,20 +410,27 @@ class CampPairingManager:
             "slot_id": normalized_slot,
             "pairing_code": pairing_code,
             "key_fingerprint": fingerprint,
+            "expires_at": expires_at,
+            "ttl_seconds": PAIRING_TTL_SECONDS,
             "pairing_ticket": {
                 "slot_id": normalized_slot,
                 "pairing_code": pairing_code,
                 "key_fingerprint": fingerprint,
+                "ticket_nonce": ticket_nonce,
+                "expires_at": expires_at,
+                "ttl_seconds": PAIRING_TTL_SECONDS,
+                "single_use": True,
                 "inbound_ports_required": 0,
             },
             "camp": target_spec.to_dict() if target_spec else {},
             "security_guarantees_ko": [
                 "인바운드 포트 개방 0개 (Outbound-Only 역방향 연결 및 비공개 Git 큐 사용)",
+                f"CSPRNG 일회용 6자리 페어링 코드 ({PAIRING_TTL_SECONDS}초 후 자동 만료 및 평문 미저장)",
                 "워커 내 운영 비밀키(.env.production, 실DB 암호) 미보관 (Zero-Secret Worker)",
                 "GuildMaster HMAC-SHA256 전자서명 없는 퀘스트 지시문 자동 거부",
             ],
             "message_ko": (
-                f"{normalized_slot} 원정 캠프 6자리 페어링 코드({pairing_code})가 발급되었습니다. "
+                f"{normalized_slot} 원정 캠프 일회용 6자리 페어링 코드({pairing_code}, 유효시간 5분)가 발급되었습니다. "
                 "드림피아 브라우저 또는 모바일 리모트 앱에 입력하면 포트 개방 없이 즉시 연결됩니다."
             ),
         }
@@ -327,6 +444,19 @@ class CampPairingManager:
         apply: bool = False,
     ) -> dict[str, object]:
         normalized_slot = self._normalize_slot_id(slot_id)
+        if owned_paths:
+            ok_paths, path_violations = ZeroSecretGuard.validate_owned_paths(owned_paths)
+            if not ok_paths:
+                return {
+                    "action": "guild-camp",
+                    "mode": "configure",
+                    "status": "FAIL",
+                    "applied": False,
+                    "slot_id": normalized_slot,
+                    "violations": path_violations,
+                    "message_ko": f"허용되지 않는 소유 경로(owned_paths)가 포함되어 설정이 거부되었습니다: {'; '.join(path_violations)}",
+                }
+
         camps = self.load_camps()
         updated_camps: list[CampNodeSpec] = []
         updated_target: CampNodeSpec | None = None
@@ -396,7 +526,7 @@ class CampPairingManager:
 
 
 class SignedQuestDispenser:
-    """GuildMaster 전자서명 기반 퀘스트 봉투(Signed Quest Envelope) 발급 및 무결성·리플레이 방어 검증기."""
+    """GuildMaster 전자서명 기반 퀘스트 봉투(Signed Quest Envelope) 발급 및 무결성·만료(TTL)·리플레이 방어 검증기."""
 
     def __init__(self, project_root: Path) -> None:
         self.project_root = project_root.resolve()
@@ -431,15 +561,29 @@ class SignedQuestDispenser:
         camps = pairing_mgr.load_camps()
         camp_spec = next((c for c in camps if c.slot_id == normalized_slot), camps[0])
 
+        ok_paths, path_violations = ZeroSecretGuard.validate_owned_paths(camp_spec.owned_paths)
+        if not ok_paths:
+            return {
+                "action": "guild-camp",
+                "mode": "dispatch-quest",
+                "status": "FAIL",
+                "applied": False,
+                "security_blocked": True,
+                "violations": path_violations,
+                "message_ko": "캠프 소유 경로(owned_paths)에 보안 제어 영역 또는 경로 탈출이 포함되어 퀘스트 발주가 차단되었습니다.",
+            }
+
         route_dec = route_planner.plan_route(clean_goal).to_dict()
         quest_rank = route_dec.get("quest_rank", {})
-        nonce = secrets.token_hex(12)
-        issued_at = datetime.now(timezone.utc).isoformat()
+        nonce = secrets.token_hex(16)
+        now_utc = datetime.now(timezone.utc)
+        issued_at = now_utc.isoformat()
+        expires_at = (now_utc + timedelta(seconds=QUEST_TTL_SECONDS)).isoformat()
         quest_id = f"QUEST-{hashlib.sha256(f'{normalized_slot}:{clean_goal}:{nonce}'.encode('utf-8')).hexdigest()[:10].upper()}"
 
         worktree_tracks: list[dict[str, object]] = []
         for cls_name in camp_spec.party_classes:
-            slug = cls_name.lower()
+            slug = re.sub(r"[^a-z0-9_-]", "", cls_name.lower()) or "agent"
             worktree_tracks.append(
                 {
                     "class_callsign": cls_name,
@@ -462,6 +606,7 @@ class SignedQuestDispenser:
             "worktree_tracks": worktree_tracks,
             "nonce": nonce,
             "issued_at": issued_at,
+            "expires_at": expires_at,
             "security_policy": {
                 "inbound_ports_opened": 0,
                 "zero_secret_worker": True,
@@ -505,32 +650,86 @@ class SignedQuestDispenser:
         record_nonce: bool = False,
     ) -> dict[str, object]:
         provided_sig = str(envelope.get("signature_sha256") or "").strip()
-        if not provided_sig:
+        if not _HEX_SHA256_RE.fullmatch(provided_sig):
             return {
                 "action": "guild-camp",
                 "mode": "verify-quest",
                 "status": "FAIL",
                 "verified": False,
-                "reason": "MISSING_SIGNATURE",
-                "reason_ko": "퀘스트 전자서명(signature_sha256)이 누락되어 실행이 거부되었습니다.",
-                "message_ko": "퀘스트 전자서명(signature_sha256)이 누락되어 실행이 거부되었습니다.",
+                "reason": "MISSING_OR_MALFORMED_SIGNATURE",
+                "reason_ko": "퀘스트 전자서명(signature_sha256)이 누락되었거나 유효한 64자리 SHA-256 형식이 아닙니다.",
+                "message_ko": "퀘스트 전자서명(signature_sha256)이 누락되었거나 유효한 64자리 SHA-256 형식이 아닙니다.",
+            }
+
+        master_secret = _require_persisted_master_secret(self.state_dir)
+        if not master_secret:
+            return {
+                "action": "guild-camp",
+                "mode": "verify-quest",
+                "status": "FAIL",
+                "verified": False,
+                "reason": "MISSING_MASTER_KEY",
+                "reason_ko": "GuildMaster 마스터 서명키(guild-master.key)가 초기화되지 않아 서명 검증이 Fail-Closed로 차단되었습니다.",
+                "message_ko": "GuildMaster 마스터 서명키(guild-master.key)가 초기화되지 않아 서명 검증이 Fail-Closed로 차단되었습니다.",
             }
 
         goal_str = str(envelope.get("goal") or "")
         is_safe, violations = ZeroSecretGuard.validate_goal_and_command(goal_str)
-        if not is_safe:
+        raw_owned = envelope.get("owned_paths")
+        owned_list = [str(x) for x in raw_owned] if isinstance(raw_owned, list) else []
+        ok_paths, path_violations = ZeroSecretGuard.validate_owned_paths(owned_list)
+        all_violations = violations + path_violations
+        if not is_safe or not ok_paths:
             return {
                 "action": "guild-camp",
                 "mode": "verify-quest",
                 "status": "FAIL",
                 "verified": False,
                 "reason": "SECURITY_POLICY_VIOLATION",
-                "violations": violations,
-                "reason_ko": "퀘스트 본문에 금지된 비밀키 또는 파괴적 명령이 포함되어 실행이 거부되었습니다.",
-                "message_ko": "퀘스트 본문에 금지된 비밀키 또는 파괴적 명령이 포함되어 실행이 거부되었습니다.",
+                "violations": all_violations,
+                "reason_ko": "퀘스트 본문 또는 소유 경로에 금지된 비밀키·파괴적 명령·경로 탈출이 포함되어 실행이 거부되었습니다.",
+                "message_ko": "퀘스트 본문 또는 소유 경로에 금지된 비밀키·파괴적 명령·경로 탈출이 포함되어 실행이 거부되었습니다.",
             }
 
         nonce = str(envelope.get("nonce") or "").strip()
+        if not _HEX_NONCE_RE.fullmatch(nonce):
+            return {
+                "action": "guild-camp",
+                "mode": "verify-quest",
+                "status": "FAIL",
+                "verified": False,
+                "reason": "INVALID_NONCE",
+                "reason_ko": "퀘스트 일회용 토큰(nonce)이 누락되었거나 최소 24자리 16진수 규격에 맞지 않아 차단되었습니다.",
+                "message_ko": "퀘스트 일회용 토큰(nonce)이 누락되었거나 최소 24자리 16진수 규격에 맞지 않아 차단되었습니다.",
+            }
+
+        expires_at_str = str(envelope.get("expires_at") or "").strip()
+        if expires_at_str:
+            try:
+                exp_dt = datetime.fromisoformat(expires_at_str)
+                if exp_dt.tzinfo is None:
+                    exp_dt = exp_dt.replace(tzinfo=timezone.utc)
+                if datetime.now(timezone.utc) > exp_dt:
+                    return {
+                        "action": "guild-camp",
+                        "mode": "verify-quest",
+                        "status": "FAIL",
+                        "verified": False,
+                        "reason": "QUEST_EXPIRED",
+                        "reason_ko": f"퀘스트 유효기간({expires_at_str})이 만료되어 실행이 거부되었습니다.",
+                        "message_ko": f"퀘스트 유효기간({expires_at_str})이 만료되어 실행이 거부되었습니다.",
+                    }
+            except ValueError:
+                return {
+                    "action": "guild-camp",
+                    "mode": "verify-quest",
+                    "status": "FAIL",
+                    "verified": False,
+                    "reason": "INVALID_EXPIRES_AT",
+                    "reason_ko": "퀘스트 만료 시각(expires_at) 형식이 올바르지 않아 실행이 거부되었습니다.",
+                    "message_ko": "퀘스트 만료 시각(expires_at) 형식이 올바르지 않아 실행이 거부되었습니다.",
+                }
+
         used_nonces = self._load_used_nonces()
         if nonce in used_nonces:
             return {
@@ -545,7 +744,6 @@ class SignedQuestDispenser:
 
         body_copy = {k: v for k, v in envelope.items() if k != "signature_sha256"}
         canonical_json = json.dumps(body_copy, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-        master_secret = _load_or_init_master_secret(self.state_dir, apply=False)
         expected_sig = hmac.new(master_secret.encode("utf-8"), canonical_json.encode("utf-8"), hashlib.sha256).hexdigest()
 
         if not hmac.compare_digest(provided_sig, expected_sig):
@@ -559,7 +757,7 @@ class SignedQuestDispenser:
                 "message_ko": "HMAC-SHA256 퀘스트 전자서명이 일치하지 않습니다 (위변조 의심). 워커가 실행을 거부했습니다.",
             }
 
-        if record_nonce and nonce:
+        if record_nonce:
             used_nonces.append(nonce)
             self._save_used_nonces(used_nonces)
 
@@ -571,11 +769,11 @@ class SignedQuestDispenser:
             "quest_id": envelope.get("quest_id"),
             "target_slot": envelope.get("target_slot"),
             "signature_verified": True,
-            "message_ko": "GuildMaster 전자서명 및 무오염 보안 검증을 통과했습니다. 안전하게 워크트리 작업을 시작할 수 있습니다.",
+            "message_ko": "GuildMaster 전자서명, 유효기간(TTL), 논스 및 무오염 보안 검증을 통과했습니다. 안전하게 워크트리 작업을 시작할 수 있습니다.",
         }
 
     def _load_used_nonces(self) -> list[str]:
-        if not self.nonce_ledger_path.is_file():
+        if not self.nonce_ledger_path.is_file() or self.nonce_ledger_path.is_symlink():
             return []
         try:
             data = json.loads(self.nonce_ledger_path.read_text(encoding="utf-8"))
@@ -587,11 +785,11 @@ class SignedQuestDispenser:
 
     def _save_used_nonces(self, nonces: list[str]) -> None:
         self.nonce_ledger_path.parent.mkdir(parents=True, exist_ok=True)
-        self.nonce_ledger_path.write_text(json.dumps(nonces[-500:], ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        self.nonce_ledger_path.write_text(json.dumps(nonces[-2000:], ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 class BossGateMergeGuard:
-    """보스 관문(Cleric autopilot-gate PASS + Hero 승인) 통과 전 main 브랜치 병합/푸시를 원천 차단한다."""
+    """보스 관문(Cleric autopilot-gate PASS + SHA-256 판정서 무결성 + Hero 승인) 통과 전 main 브랜치 병합/푸시를 원천 차단한다."""
 
     def __init__(self, project_root: Path) -> None:
         self.project_root = project_root.resolve()
@@ -602,7 +800,7 @@ class BossGateMergeGuard:
         hero_approved: bool = False,
         verdict_rel: str = "evidence/autopilot-verdict.json",
     ) -> dict[str, object]:
-        verdict_path = self.project_root / verdict_rel
+        verdict_path = _safe_project_path(self.project_root, verdict_rel)
         blockers: list[str] = []
         verdict_sha256 = ""
         verdict_status = "MISSING"
@@ -614,9 +812,22 @@ class BossGateMergeGuard:
                 verdict_data = json.loads(verdict_path.read_text(encoding="utf-8"))
                 if isinstance(verdict_data, dict):
                     verdict_status = str(verdict_data.get("status") or "FAIL")
-                    verdict_sha256 = str(verdict_data.get("verdict_sha256") or "")
+                    verdict_sha256 = str(verdict_data.get("verdict_sha256") or "").strip()
                     if verdict_status != "PASS" or not verdict_sha256:
                         blockers.append(f"Cleric 보스 관문 판정이 PASS가 아닙니다 (현재 상태: {verdict_status}).")
+                    elif "stages" in verdict_data:
+                        doc_without_hash = {k: v for k, v in verdict_data.items() if k != "verdict_sha256"}
+                        expected_bytes = (json.dumps(doc_without_hash, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+                        expected_sha = hashlib.sha256(expected_bytes).hexdigest()
+                        if not hmac.compare_digest(verdict_sha256, expected_sha):
+                            blockers.append(
+                                "보스 관문 판정서(autopilot-verdict.json)의 SHA-256 무결성 해시가 본문과 일치하지 않습니다 (판정서 위변조 감지)."
+                            )
+                        stages_obj = verdict_data.get("stages")
+                        if isinstance(stages_obj, list) and any(
+                            isinstance(s, dict) and s.get("status") != "PASS" for s in stages_obj
+                        ):
+                            blockers.append("보스 관문 판정서 내부에 실패(FAIL)한 검증 단계가 존재합니다.")
             except (OSError, ValueError):
                 blockers.append(f"보스 관문 판정서({verdict_rel}) JSON 파싱에 실패했습니다.")
 
@@ -676,8 +887,8 @@ def run_guild_camp_command(
             "zero_secret_worker": True,
             "signed_quest_hmac_sha256": True,
             "worker_secret_policy": "zero-secret-worker (운영 비밀키 미보관 + SecretSanitizer 자동 마스킹)",
-            "command_auth": "HMAC-SHA256 Signed Quest Envelope + Nonce Replay Guard",
-            "merge_policy": "Cleric autopilot-gate PASS + Hero 최종 승인 필수",
+            "command_auth": "CSPRNG HMAC-SHA256 Signed Quest Envelope + TTL + Nonce Replay Guard",
+            "merge_policy": "Cleric autopilot-gate PASS (SHA-256 Verified) + Hero 최종 승인 필수",
         }
         return {
             "action": "guild-camp",
@@ -697,13 +908,15 @@ def run_guild_camp_command(
         if eff_party or eff_owned:
             party_list = [x.strip() for x in eff_party.split(",") if x.strip()] if eff_party else None
             owned_list = [x.strip() for x in eff_owned.split(",") if x.strip()] if eff_owned else None
-            pairing_mgr.configure_camp_party(
+            cfg_res = pairing_mgr.configure_camp_party(
                 slot_id=slot_id,
                 party_classes=party_list,
                 owned_paths=owned_list,
                 label_ko=label_ko,
                 apply=apply,
             )
+            if cfg_res.get("status") == "FAIL":
+                return cfg_res
         return pairing_mgr.generate_pairing_ticket(slot_id=slot_id, apply=apply)
 
     if clean_mode == "configure":
@@ -721,20 +934,22 @@ def run_guild_camp_command(
         if eff_party or eff_owned:
             party_list = [x.strip() for x in eff_party.split(",") if x.strip()] if eff_party else None
             owned_list = [x.strip() for x in eff_owned.split(",") if x.strip()] if eff_owned else None
-            pairing_mgr.configure_camp_party(
+            cfg_res = pairing_mgr.configure_camp_party(
                 slot_id=slot_id,
                 party_classes=party_list,
                 owned_paths=owned_list,
                 label_ko=label_ko,
                 apply=apply,
             )
+            if cfg_res.get("status") == "FAIL":
+                return cfg_res
         dispenser = SignedQuestDispenser(project_root)
         return dispenser.issue_signed_quest(goal=goal, slot_id=slot_id, apply=apply)
 
     if clean_mode in ("verify", "verify-quest"):
         if not quest_file.strip():
             raise ValueError("verify-quest 모드에는 --quest-file 경로가 필요합니다.")
-        q_path = (project_root / quest_file).resolve()
+        q_path = _safe_project_path(project_root, quest_file)
         if not q_path.is_file():
             raise ValueError(f"퀘스트 파일을 찾을 수 없습니다: {quest_file}")
         env_data = json.loads(q_path.read_text(encoding="utf-8"))

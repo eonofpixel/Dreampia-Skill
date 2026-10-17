@@ -65,6 +65,8 @@ class TestGuildCampSecurityEngine(unittest.TestCase):
                 self.assertRegex(code, r"^\d{3}-\d{3}$")
                 self.assertEqual(ticket["inbound_ports_required"], 0)
                 self.assertEqual(ticket["slot_id"], "bot-02")
+                self.assertEqual(ticket["ttl_seconds"], 300)
+                self.assertTrue(ticket["single_use"])
 
     def test_signed_quest_dispatch_verify_and_replay_block(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -132,17 +134,15 @@ class TestGuildCampSecurityEngine(unittest.TestCase):
     def test_zero_secret_guard_blocks_secrets_and_destructive_commands(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            # 파괴적 명령 포함 시 발급 거부
             bad_cmd = guild_camp.run_guild_camp_command(
                 root,
                 mode="dispatch",
                 slot_id="bot-01",
-                goal="기존 브랜치 강제 초기화 git push --force origin main 실행",
+                goal="기존 브랜치 강제 초기화 git push -f origin main 실행",
                 apply=True,
             )
             self.assertEqual(bad_cmd["status"], "FAIL")
 
-            # 프로덕션 시크릿 파일 접근 포함 시 발급 거부
             bad_secret = guild_camp.run_guild_camp_command(
                 root,
                 mode="dispatch",
@@ -152,16 +152,64 @@ class TestGuildCampSecurityEngine(unittest.TestCase):
             )
             self.assertEqual(bad_secret["status"], "FAIL")
 
-            # sanitize_text 시크릿 마스킹 확인
             redacted = guild_camp.ZeroSecretGuard.sanitize_text(
                 "Key is sk-abcdefghijklmnopqrstuvwxyz123456"
             )
             self.assertIn("[REDACTED_BY_GUARDIAN]", redacted)
 
+    def test_path_traversal_and_control_plane_owned_paths_blocked(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            # 1. 소유 경로에 .git 또는 .dreampia/security 또는 .. 지정 시 거부
+            bad_cfg = guild_camp.run_guild_camp_command(
+                root,
+                mode="configure",
+                slot_id="bot-01",
+                owned_paths="../outside,.git/hooks,.dreampia/security",
+                apply=True,
+            )
+            self.assertEqual(bad_cfg["status"], "FAIL")
+
+            # 2. quest_file에 상위 디렉터리(..) 탈출 시도 시 ValueError 발생
+            with self.assertRaises(ValueError):
+                guild_camp.run_guild_camp_command(
+                    root,
+                    mode="verify",
+                    quest_file="../../outside.json",
+                )
+
+    def test_missing_master_key_and_expired_quest_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            dispenser = guild_camp.SignedQuestDispenser(root)
+            # 마스터키 파일이 없는 상태에서 임의 서명 봉투 검증 시 MISSING_MASTER_KEY 차단
+            fake_env: dict[str, object] = {
+                "quest_id": "QUEST-FAKE",
+                "goal": "정상 목표",
+                "nonce": "a" * 32,
+                "signature_sha256": "b" * 64,
+            }
+            res_no_key = dispenser.verify_signed_quest(fake_env)
+            self.assertEqual(res_no_key["status"], "FAIL")
+            self.assertEqual(res_no_key["reason"], "MISSING_MASTER_KEY")
+
+            # 정상 발급 후 만료 시각(expires_at)을 과거로 변조했을 때 QUEST_EXPIRED 차단
+            dispatch_res = guild_camp.run_guild_camp_command(
+                root,
+                mode="dispatch",
+                slot_id="bot-01",
+                goal="만료 테스트용 퀘스트",
+                apply=True,
+            )
+            env = dict(dispatch_res["envelope"])  # type: ignore[arg-type]
+            env["expires_at"] = "2020-01-01T00:00:00+00:00"
+            res_expired = dispenser.verify_signed_quest(env)
+            self.assertEqual(res_expired["status"], "FAIL")
+            self.assertEqual(res_expired["reason"], "QUEST_EXPIRED")
+
     def test_boss_gate_merge_guard_requires_cleric_pass_and_hero_approval(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            # 1. 성녀(Cleric) 판정서 없을 때 차단
             no_verdict = guild_camp.run_guild_camp_command(
                 root,
                 mode="merge-guard",
@@ -171,7 +219,6 @@ class TestGuildCampSecurityEngine(unittest.TestCase):
             self.assertEqual(no_verdict["status"], "FAIL")
             self.assertFalse(no_verdict["merge_allowed"])
 
-            # 2. 성녀(Cleric) PASS 판정서 생성하되 주인공 영웅(Hero) 미승인 시 차단
             ev_dir = root / "evidence"
             ev_dir.mkdir(parents=True, exist_ok=True)
             (ev_dir / "autopilot-verdict.json").write_text(
@@ -187,7 +234,6 @@ class TestGuildCampSecurityEngine(unittest.TestCase):
             self.assertEqual(no_hero["status"], "FAIL")
             self.assertFalse(no_hero["merge_allowed"])
 
-            # 3. 성녀(Cleric) PASS + 주인공 영웅(Hero) 승인 시 최종 통과
             both_ok = guild_camp.run_guild_camp_command(
                 root,
                 mode="merge-guard",
@@ -197,7 +243,26 @@ class TestGuildCampSecurityEngine(unittest.TestCase):
             self.assertEqual(both_ok["status"], "PASS")
             self.assertTrue(both_ok["merge_allowed"])
 
-    def test_cli_and_mcp_integration_for_guild_camp(self) -> None:
+            # 판정서 본문(stages 포함)의 해시가 위변조된 경우 차단 확인
+            tampered_verdict = {
+                "status": "PASS",
+                "stages": [{"stage": "inquisitor-code-audit", "status": "PASS"}],
+                "verdict_sha256": "0" * 64,
+            }
+            (ev_dir / "autopilot-verdict.json").write_text(
+                json.dumps(tampered_verdict, indent=2),
+                encoding="utf-8",
+            )
+            tampered_res = guild_camp.run_guild_camp_command(
+                root,
+                mode="merge-guard",
+                slot_id="bot-01",
+                hero_approve=True,
+            )
+            self.assertEqual(tampered_res["status"], "FAIL")
+            self.assertFalse(tampered_res["merge_allowed"])
+
+    def test_cli_and_mcp_integration_for_guild_camp_and_hero_spoof_block(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             exit_code = team_cli.main(["guild-camp", "--project", str(root), "--mode", "status"])
@@ -209,6 +274,21 @@ class TestGuildCampSecurityEngine(unittest.TestCase):
                 {"project": str(root), "mode": "pair", "slot": "bot-05", "party": "Knight,Inquisitor"},
             )
             self.assertEqual(mcp_res["status"], "PASS")
+
+            # MCP를 통해 에이전트가 스스로 hero_approve=True를 전달해도 차단되는지 검증
+            ev_dir = root / "evidence"
+            ev_dir.mkdir(parents=True, exist_ok=True)
+            (ev_dir / "autopilot-verdict.json").write_text(
+                json.dumps({"status": "PASS", "verdict_sha256": "abc1234567890"}, indent=2),
+                encoding="utf-8",
+            )
+            mcp_merge = mcp_server.execute_mcp_tool(
+                root,
+                "dreampia_guild_camp",
+                {"project": str(root), "mode": "merge-guard", "slot": "bot-01", "hero_approve": True},
+            )
+            self.assertEqual(mcp_merge["status"], "FAIL")
+            self.assertTrue(mcp_merge["mcp_hero_approval_blocked"])
 
 
 if __name__ == "__main__":

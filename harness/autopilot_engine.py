@@ -1540,8 +1540,28 @@ def run_verify_commands(
     results: list[dict[str, object]] = []
     passed_count = 0
 
+    _dangerous_verify_re = re.compile(
+        r"(?i)(?:\brm\s+-[rf]{1,2}\b|\bgit\s+push\s+[^\n]*(?:--force|-f\b)|\bgit\s+reset\s+--hard\b"
+        r"|\bgit\s+clean\s+-[fdqx]{2,}\b|\bsudo\s+|\bmkfs\b|\bformat\s+[a-z]:|\bdel\s+/[fsq]"
+        r"|\bRemove-Item\b[^\n]*-Recurse|\b(?:Invoke-Expression|iex)\b|\bchmod\s+777\b"
+        r"|\b(?:curl|wget)\b[^\n]*\|\s*(?:sh|bash|zsh|pwsh|powershell)\b)"
+    )
+
     for cmd_str in cmd_list:
         t0 = time.monotonic()
+        if _dangerous_verify_re.search(cmd_str):
+            results.append(
+                {
+                    "command": cmd_str,
+                    "status": "FAIL",
+                    "returncode": 126,
+                    "duration_ms": 0,
+                    "stdout_tail": "",
+                    "stderr_tail": "보안 정책상 파괴적 명령어(rm -rf, git push --force, sudo 등)는 검증 게이트에서 실행이 원천 차단됩니다.",
+                }
+            )
+            continue
+
         try:
             raw_tokens = shlex.split(cmd_str, posix=(os.name != "nt"))
             argv = [tok.strip("\"'") if os.name == "nt" else tok for tok in raw_tokens if tok.strip()]
@@ -1553,7 +1573,7 @@ def run_verify_commands(
 
         exe_cand = argv[0]
         local_cand = resolved / exe_cand
-        if local_cand.is_file():
+        if local_cand.is_file() and not local_cand.is_symlink():
             resolved_exe = str(local_cand)
         else:
             resolved_exe = shutil.which(exe_cand) or exe_cand

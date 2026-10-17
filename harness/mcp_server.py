@@ -596,9 +596,9 @@ def execute_mcp_tool(default_root: Path, tool_name: str, arguments: dict[str, ob
         party = str(arguments.get("party") or "").strip()
         owned_paths = str(arguments.get("owned_paths") or "").strip()
         quest_file = str(arguments.get("quest_file") or "").strip()
-        hero_approve = bool(arguments.get("hero_approve", False))
+        requested_hero_approve = bool(arguments.get("hero_approve", False))
         apply_flag = bool(arguments.get("apply", False))
-        return team_cli.guild_camp_check(
+        res = team_cli.guild_camp_check(
             root,
             mode=mode,
             slot_id=slot,
@@ -606,9 +606,16 @@ def execute_mcp_tool(default_root: Path, tool_name: str, arguments: dict[str, ob
             party_classes=party,
             owned_paths=owned_paths,
             quest_file=quest_file,
-            hero_approve=hero_approve,
+            hero_approve=False,
             apply=apply_flag,
         )
+        if requested_hero_approve:
+            res["mcp_hero_approval_blocked"] = True
+            res["security_notice_ko"] = (
+                "보안 정책상 AI 에이전트가 MCP를 통해 스스로 주인공 영웅(Hero)의 최종 병합 승인(hero_approve=True)을 사칭하는 것은 차단됩니다. "
+                "최종 병합 승인은 사용자가 직접 터미널 CLI(--hero-approve) 또는 승인 앱에서 실행해야 합니다."
+            )
+        return res
 
     if tool_name == "dreampia_reconstruct_inspect":
         target = str(arguments.get("target") or "").strip()
