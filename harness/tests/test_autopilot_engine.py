@@ -176,7 +176,11 @@ class AutopilotEngineTests(unittest.TestCase):
     def test_setup_global_one_click_installer(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             fake_home = Path(tmp) / "home"
-            fake_home.mkdir(parents=True, exist_ok=True)
+            (fake_home / ".codex").mkdir(parents=True, exist_ok=True)
+            (fake_home / ".codex" / "config.toml").write_text(
+                '[mcp_servers.rea]\ncommand = "node"\nargs = ["rea.mjs"]\n',
+                encoding="utf-8",
+            )
 
             preview = team_cli.setup_global(apply=False, home_dir=fake_home)
             self.assertEqual(preview["status"], "PASS")
@@ -189,9 +193,29 @@ class AutopilotEngineTests(unittest.TestCase):
             self.assertTrue((fake_home / ".gemini/config/skills/ai-dev-execution/SKILL.md").is_file())
             self.assertTrue((fake_home / ".gemini/antigravity/skills/ai-dev-execution/SKILL.md").is_file())
             self.assertTrue((fake_home / ".claude/skills/ai-dev-execution/SKILL.md").is_file())
+            self.assertTrue((fake_home / ".codex/skills/ai-dev-execution/SKILL.md").is_file())
+            self.assertTrue((fake_home / ".codex/skills/ai-dev-execution/agents/openai.yaml").is_file())
             self.assertTrue((fake_home / ".cursor/skills/ai-dev-execution/SKILL.md").is_file())
             self.assertTrue((fake_home / ".agents/skills/ai-dev-execution/SKILL.md").is_file())
+            self.assertTrue((fake_home / ".gemini/config/mcp_config.json").is_file())
             self.assertTrue((fake_home / ".gemini/antigravity/mcp_config.json").is_file())
+            self.assertTrue((fake_home / ".gemini/settings.json").is_file())
+            self.assertTrue((fake_home / ".claude.json").is_file())
+            self.assertTrue((fake_home / ".claude/commands/update.md").is_file())
+            self.assertTrue((fake_home / ".claude/commands/discover.md").is_file())
+            self.assertTrue((fake_home / ".codex/prompts/update.md").is_file())
+            self.assertTrue((fake_home / ".codex/prompts/discover.md").is_file())
+            codex_toml = (fake_home / ".codex/config.toml").read_text(encoding="utf-8")
+            self.assertIn("[mcp_servers.rea]", codex_toml)
+            self.assertIn("[mcp_servers.dreampia_skill]", codex_toml)
+            health = team_cli.check_global_health(home_dir=fake_home)
+            self.assertTrue(health["healthy"])
+            native_hosts = health["native_hosts"]  # type: ignore[index]
+            self.assertTrue(native_hosts["antigravity"]["mcp_ready"])  # type: ignore[index]
+            self.assertTrue(native_hosts["claude_code"]["mcp_ready"])  # type: ignore[index]
+            self.assertTrue(native_hosts["claude_code"]["slash_ready"])  # type: ignore[index]
+            self.assertTrue(native_hosts["codex"]["mcp_ready"])  # type: ignore[index]
+            self.assertTrue(native_hosts["codex"]["slash_ready"])  # type: ignore[index]
 
     def test_blast_radius_and_new_magic_shorthands(self) -> None:
         from harness import route_planner

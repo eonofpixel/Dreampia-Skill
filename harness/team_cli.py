@@ -1217,15 +1217,84 @@ _GLOBAL_SKILL_REL_TARGETS: tuple[str, ...] = (
     '.gemini/config/skills/ai-dev-execution',
     '.gemini/antigravity/skills/ai-dev-execution',
     '.claude/skills/ai-dev-execution',
+    '.codex/skills/ai-dev-execution',
     '.cursor/skills/ai-dev-execution',
     '.agents/skills/ai-dev-execution',
 )
 
 _GLOBAL_MCP_CONFIG_REL_TARGETS: tuple[str, ...] = (
+    '.gemini/config/mcp_config.json',
     '.gemini/antigravity/mcp_config.json',
-    '.cursor/mcp.json',
+    '.gemini/settings.json',
+    '.claude.json',
     '.claude/mcp.json',
+    '.cursor/mcp.json',
 )
+
+_CODEX_GLOBAL_CONFIG_REL = '.codex/config.toml'
+
+_GLOBAL_COMMAND_REL_DIRS: tuple[str, ...] = (
+    '.claude/commands',
+    '.codex/prompts',
+)
+
+_CODEX_MCP_SECTION_RE = _re.compile(
+    r'^\s*\[mcp_servers\.(?:dreampia_skill|"dreampia-skill"|\'dreampia-skill\')(?:\.[^\]]+)?\]\s*$'
+)
+_TOML_SECTION_HEADER_RE = _re.compile(r'^\s*\[[^\]]+\]\s*$')
+
+
+def _strip_codex_mcp_section(toml_text: str) -> tuple[str, bool]:
+    """Codex config.toml 텍스트에서 기존 dreampia_skill MCP 섹션만 안전하게 분리·제거한다."""
+    lines = toml_text.splitlines()
+    kept: list[str] = []
+    skipping = False
+    removed = False
+    for line in lines:
+        if _CODEX_MCP_SECTION_RE.match(line):
+            skipping = True
+            removed = True
+            continue
+        if skipping and _TOML_SECTION_HEADER_RE.match(line):
+            skipping = False
+        if not skipping:
+            kept.append(line)
+    cleaned = '\n'.join(kept).rstrip()
+    return (cleaned + '\n' if cleaned else ''), removed
+
+
+def _upsert_codex_mcp_toml(config_path: pathlib.Path, command: str, args: list[str]) -> None:
+    """Codex 네이티브 앱의 ~/.codex/config.toml에 기존 설정 손상 없이 [mcp_servers.dreampia_skill] 블록을 병합한다."""
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    existing = config_path.read_text(encoding='utf-8', errors='replace') if config_path.is_file() else ''
+    base_text, _ = _strip_codex_mcp_section(existing)
+    section = (
+        '[mcp_servers.dreampia_skill]\n'
+        f'command = {json.dumps(command)}\n'
+        f'args = {json.dumps(args)}\n'
+        'startup_timeout_sec = 30\n'
+    )
+    merged = (base_text.rstrip() + '\n\n' + section) if base_text.strip() else section
+    config_path.write_text(merged, encoding='utf-8')
+
+
+def _remove_codex_mcp_toml(config_path: pathlib.Path, apply: bool = False) -> bool:
+    """Codex ~/.codex/config.toml에서 [mcp_servers.dreampia_skill] 섹션을 제거한다."""
+    if not config_path.is_file():
+        return False
+    existing = config_path.read_text(encoding='utf-8', errors='replace')
+    cleaned, removed = _strip_codex_mcp_section(existing)
+    if removed and apply:
+        config_path.write_text(cleaned, encoding='utf-8')
+    return removed
+
+
+def _has_codex_mcp_toml(config_path: pathlib.Path) -> bool:
+    """Codex ~/.codex/config.toml에 [mcp_servers.dreampia_skill] 섹션이 등록되어 있는지 확인한다."""
+    if not config_path.is_file():
+        return False
+    text = config_path.read_text(encoding='utf-8', errors='ignore')
+    return any(_CODEX_MCP_SECTION_RE.match(line) for line in text.splitlines())
 
 
 def setup_global(
@@ -1233,7 +1302,7 @@ def setup_global(
     home_dir: pathlib.Path | None = None,
     project_dir: pathlib.Path | None = None,
 ) -> dict[str, object]:
-    """원클릭 전역 스킬(Antigravity, Gemini, Claude, Cursor, Agents) 및 MCP 서버 일괄 설치기 (비관리 기존 스킬 자동 백업 지원)."""
+    """원클릭 전역 스킬(Antigravity, Claude Code, Codex, Gemini, Cursor, Agents), 네이티브 슬래시 커맨드 및 MCP 서버 일괄 설치기."""
     import shutil
     home = (home_dir or pathlib.Path.home()).resolve()
     skill_src = PACKAGE / 'ai-dev-execution'
@@ -1258,17 +1327,44 @@ def setup_global(
                             backed_up_targets.append(str(bak))
             shutil.copytree(skill_src, dst, dirs_exist_ok=True)
 
-    mcp_cfg_path = home / '.gemini/antigravity/mcp_config.json'
-    mcp_cfg_paths: list[str] = [str(home / m_rel) for m_rel in _GLOBAL_MCP_CONFIG_REL_TARGETS]
-    mcp_project = str(project_dir.resolve()) if project_dir is not None else str(PACKAGE.resolve())
+    commands_src = PACKAGE / 'commands'
+    installed_commands: list[str] = []
+    abs_cli_invoke = f'"{sys.executable}" "{(PACKAGE / "harness/team_cli.py").resolve()}"'
+    if commands_src.is_dir():
+        cmd_files = sorted(commands_src.glob('*.md'))
+        for cmd_dir_rel in _GLOBAL_COMMAND_REL_DIRS:
+            cmd_dir = home / cmd_dir_rel
+            for src_md in cmd_files:
+                dst_md = cmd_dir / src_md.name
+                installed_commands.append(str(dst_md))
+                if apply:
+                    cmd_dir.mkdir(parents=True, exist_ok=True)
+                    if dst_md.is_file() and not dst_md.is_symlink():
+                        existing_cmd_txt = dst_md.read_text(encoding='utf-8', errors='ignore')
+                        if 'dreampia' not in existing_cmd_txt.lower():
+                            cmd_bak = dst_md.with_name(dst_md.name + '.pre-dreampia.bak')
+                            if not cmd_bak.exists():
+                                shutil.copy2(dst_md, cmd_bak)
+                                backed_up_targets.append(str(cmd_bak))
+                    rendered_cmd = src_md.read_text(encoding='utf-8').replace(
+                        'python -m harness.team_cli',
+                        abs_cli_invoke,
+                    )
+                    dst_md.write_text(rendered_cmd, encoding='utf-8')
+
+    mcp_cfg_path = home / '.gemini/config/mcp_config.json'
+    codex_cfg_path = home / _CODEX_GLOBAL_CONFIG_REL
+    mcp_cfg_paths: list[str] = [str(home / m_rel) for m_rel in _GLOBAL_MCP_CONFIG_REL_TARGETS] + [str(codex_cfg_path)]
+    mcp_project = str(PACKAGE.resolve())
+    mcp_args = [
+        str((PACKAGE / 'harness/team_cli.py').resolve()),
+        'mcp-serve',
+        '--project',
+        mcp_project,
+    ]
     mcp_entry = {
         'command': sys.executable,
-        'args': [
-            str((PACKAGE / 'harness/team_cli.py').resolve()),
-            'mcp-serve',
-            '--project',
-            mcp_project,
-        ],
+        'args': mcp_args,
     }
     if apply:
         for m_rel in _GLOBAL_MCP_CONFIG_REL_TARGETS:
@@ -1288,6 +1384,7 @@ def setup_global(
                 existing_cfg['mcpServers'] = servers
             servers['dreampia-skill'] = mcp_entry
             m_path.write_text(json.dumps(existing_cfg, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+        _upsert_codex_mcp_toml(codex_cfg_path, sys.executable, mcp_args)
 
     project_result: dict[str, object] | None = None
     if project_dir is not None:
@@ -1307,12 +1404,13 @@ def setup_global(
         'applied': apply,
         'version': VERSION,
         'global_skill_targets': installed_targets,
+        'global_command_targets': installed_commands,
         'backed_up_targets': backed_up_targets,
         'mcp_config_path': str(mcp_cfg_path),
         'mcp_config_paths': mcp_cfg_paths,
         'project_setup': project_result,
         'message_ko': (
-            f'Dreampia v{VERSION} 전역 스킬({len(installed_targets)}개 호스트 경로) 및 MCP 서버 등록이 완료되었습니다.'
+            f'Dreampia v{VERSION} 전역 스킬({len(installed_targets)}개 호스트 경로), 네이티브 슬래시 명령어({len(installed_commands)}개) 및 3대 앱(Antigravity, Claude Code, Codex) MCP 서버 등록이 완료되었습니다.'
             if apply
             else f'Dreampia v{VERSION} 전역 설치 미리보기입니다. 실제 설치하려면 --apply 옵션을 추가하십시오.'
         ),
@@ -1323,10 +1421,11 @@ def uninstall_global(
     apply: bool = False,
     home_dir: pathlib.Path | None = None,
 ) -> dict[str, object]:
-    """전역 설치된 5개 호스트 스킬 폴더 및 MCP 서버 설정을 안전하게 제거하고 백업본(.pre-dreampia.bak)이 있으면 복원한다."""
+    """전역 설치된 6개 호스트 스킬 폴더, 네이티브 슬래시 명령어 및 MCP 서버 설정을 안전하게 제거하고 백업본(.pre-dreampia.bak)이 있으면 복원한다."""
     import shutil
     home = (home_dir or pathlib.Path.home()).resolve()
     removed_targets: list[str] = []
+    removed_commands: list[str] = []
     restored_backups: list[str] = []
 
     for rel in _GLOBAL_SKILL_REL_TARGETS:
@@ -1340,6 +1439,22 @@ def uninstall_global(
                 if bak.exists() and not bak.is_symlink():
                     shutil.move(str(bak), str(dst))
                     restored_backups.append(str(dst))
+
+    commands_src = PACKAGE / 'commands'
+    cmd_names = [p.name for p in sorted(commands_src.glob('*.md'))] if commands_src.is_dir() else []
+    for cmd_dir_rel in _GLOBAL_COMMAND_REL_DIRS:
+        cmd_dir = home / cmd_dir_rel
+        for cname in cmd_names:
+            dst_md = cmd_dir / cname
+            bak_md = dst_md.with_name(dst_md.name + '.pre-dreampia.bak')
+            if dst_md.is_file() or bak_md.is_file():
+                removed_commands.append(str(dst_md))
+                if apply:
+                    if dst_md.is_file() and not dst_md.is_symlink():
+                        dst_md.unlink(missing_ok=True)
+                    if bak_md.is_file() and not bak_md.is_symlink():
+                        shutil.move(str(bak_md), str(dst_md))
+                        restored_backups.append(str(dst_md))
 
     mcp_removed = False
     for m_rel in _GLOBAL_MCP_CONFIG_REL_TARGETS:
@@ -1357,15 +1472,19 @@ def uninstall_global(
             except ValueError:
                 pass
 
+    if _remove_codex_mcp_toml(home / _CODEX_GLOBAL_CONFIG_REL, apply=apply):
+        mcp_removed = True
+
     return {
         'action': 'uninstall-global',
         'status': 'PASS',
         'applied': apply,
         'removed_skill_targets': removed_targets,
+        'removed_command_targets': removed_commands,
         'restored_backups': restored_backups,
         'mcp_config_updated': mcp_removed,
         'message_ko': (
-            f'Dreampia 전역 스킬({len(removed_targets)}개 경로) 및 MCP 서버 등록이 안전하게 제거되었습니다.'
+            f'Dreampia 전역 스킬({len(removed_targets)}개 경로), 슬래시 명령어({len(removed_commands)}개) 및 MCP 서버 등록이 안전하게 제거되었습니다.'
             if apply
             else f'[미리보기] Dreampia 전역 스킬({len(removed_targets)}개 경로) 제거 계획입니다. 실제 제거하려면 --apply 옵션을 추가하십시오.'
         ),
@@ -1440,8 +1559,18 @@ def get_version_info(check_remote: bool = False) -> dict[str, object]:
     }
 
 
+def _has_json_mcp(cfg_path: pathlib.Path) -> bool:
+    if not cfg_path.is_file():
+        return False
+    try:
+        loaded = json.loads(cfg_path.read_text(encoding='utf-8'))
+        return isinstance(loaded, dict) and isinstance(loaded.get('mcpServers'), dict) and 'dreampia-skill' in loaded['mcpServers']
+    except ValueError:
+        return False
+
+
 def check_global_health(home_dir: pathlib.Path | None = None) -> dict[str, object]:
-    """5개 글로벌 에이전트 호스트 스킬 폴더 및 MCP 서버 등록 상태를 점검한다."""
+    """6개 글로벌 에이전트 호스트 스킬 폴더, 3대 네이티브 앱(Antigravity, Claude Code, Codex) MCP 및 슬래시 커맨드 상태를 점검한다."""
     home = (home_dir or pathlib.Path.home()).resolve()
     live_ver = (PACKAGE / 'VERSION').read_text(encoding='utf-8').strip() if (PACKAGE / 'VERSION').is_file() else VERSION
     targets_report: list[dict[str, object]] = []
@@ -1465,22 +1594,41 @@ def check_global_health(home_dir: pathlib.Path | None = None) -> dict[str, objec
             'version_synced': version_matched,
             'has_backup': bak.exists(),
         })
-    mcp_cfg_path = home / '.gemini/antigravity/mcp_config.json'
-    mcp_registered = False
-    if mcp_cfg_path.is_file():
-        try:
-            loaded = json.loads(mcp_cfg_path.read_text(encoding='utf-8'))
-            if isinstance(loaded, dict) and isinstance(loaded.get('mcpServers'), dict):
-                mcp_registered = 'dreampia-skill' in loaded['mcpServers']
-        except ValueError:
-            mcp_registered = False
+
+    agy_mcp = _has_json_mcp(home / '.gemini/config/mcp_config.json') and _has_json_mcp(home / '.gemini/antigravity/mcp_config.json')
+    claude_mcp = _has_json_mcp(home / '.claude.json') and _has_json_mcp(home / '.claude/mcp.json')
+    codex_mcp = _has_codex_mcp_toml(home / _CODEX_GLOBAL_CONFIG_REL)
+    mcp_registered = agy_mcp and claude_mcp and codex_mcp
+
+    claude_cmds_ready = (home / '.claude/commands/update.md').is_file() and (home / '.claude/commands/discover.md').is_file()
+    codex_prompts_ready = (home / '.codex/prompts/update.md').is_file() and (home / '.codex/prompts/discover.md').is_file()
+
+    native_hosts = {
+        'antigravity': {
+            'skill_ready': (home / '.gemini/config/skills/ai-dev-execution/SKILL.md').is_file(),
+            'mcp_ready': agy_mcp,
+            'slash_ready': (home / '.gemini/config/skills/ai-dev-execution/SKILL.md').is_file(),
+        },
+        'claude_code': {
+            'skill_ready': (home / '.claude/skills/ai-dev-execution/SKILL.md').is_file(),
+            'mcp_ready': claude_mcp,
+            'slash_ready': claude_cmds_ready,
+        },
+        'codex': {
+            'skill_ready': (home / '.codex/skills/ai-dev-execution/SKILL.md').is_file() and (home / '.codex/skills/ai-dev-execution/agents/openai.yaml').is_file(),
+            'mcp_ready': codex_mcp,
+            'slash_ready': codex_prompts_ready,
+        },
+    }
+
     return {
         'expected_version': live_ver,
         'installed_count': installed_count,
         'synced_count': synced_count,
         'total_targets': len(_GLOBAL_SKILL_REL_TARGETS),
         'mcp_registered': mcp_registered,
-        'healthy': synced_count == len(_GLOBAL_SKILL_REL_TARGETS) and mcp_registered,
+        'native_hosts': native_hosts,
+        'healthy': synced_count == len(_GLOBAL_SKILL_REL_TARGETS) and mcp_registered and claude_cmds_ready and codex_prompts_ready,
         'targets': targets_report,
     }
 

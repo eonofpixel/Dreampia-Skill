@@ -11,7 +11,7 @@
     },
     {
       "path": "agents/openai.yaml",
-      "sha256": "38afee50dfc2d929e8359d115f1961a99a6f8c859240951b208d51a815fa53de",
+      "sha256": "2ed3ca33b579acaf6f4b5f9e582f3f1fbb434295d25dbb0ba3faa61304ad1e27",
       "required": true
     },
     {
