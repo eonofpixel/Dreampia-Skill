@@ -18,7 +18,6 @@ import argparse
 import base64
 from dataclasses import dataclass
 import hashlib
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -26,8 +25,11 @@ import re
 import shutil
 import sys
 import time
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 import uuid
+
+if TYPE_CHECKING:
+    from http.server import ThreadingHTTPServer
 
 try:
     from . import process, route_planner, skill_bundle, write_boundary
@@ -321,7 +323,7 @@ def _mcp_headers(server_cfg: dict[str, object]) -> dict[str, str]:
 def discover_harnesses(
     root: Path | None = None,
     *,
-    which_fn: Callable[[str], str | None] = shutil.which,
+    which_fn: Callable[[str], str | None] = process.fast_which,
 ) -> dict[str, object]:
     """현재 시스템과 워크스페이스에서 사용 가능한 하네스 노드 및 라우터 기능을 결정론적으로 탐색한다."""
     harnesses: list[dict[str, object]] = []
@@ -1132,6 +1134,8 @@ def create_router_http_server(
     api_key: str | None = None,
 ) -> ThreadingHTTPServer:
     """표준 라이브러리만으로 동작하는 로컬 루프백 드림피아 라우터 HTTP 서버를 생성한다."""
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
     resolved_root = root.resolve()
 
     class RouterRequestHandler(BaseHTTPRequestHandler):

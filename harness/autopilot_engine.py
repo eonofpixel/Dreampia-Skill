@@ -154,14 +154,28 @@ def _iter_auditable_files(
     root: Path,
     changed_only: bool = False,
     base_ref: str = "HEAD",
+    *,
+    precomputed_changed: set[str] | None = None,
 ) -> list[Path]:
     """Git 저장소일 경우 git ls-files -z --cached --others --exclude-standard로 .gitignore/.git/info/exclude를 반영해 스캔하고, 실패 시 os.walk + _IGNORED_DIRS 폴백을 수행한다."""
     import subprocess
 
     resolved = root.resolve()
     changed_filter: set[str] | None = (
-        set(collect_git_changed_files(resolved, base_ref=base_ref)) if changed_only else None
+        (precomputed_changed if precomputed_changed is not None else set(collect_git_changed_files(resolved, base_ref=base_ref)))
+        if changed_only
+        else None
     )
+    if changed_filter is not None:
+        direct_files: list[Path] = []
+        for rel_str in sorted(changed_filter):
+            parts = PurePosixPath(rel_str).parts
+            if any(part in _IGNORED_DIRS for part in parts):
+                continue
+            fpath = resolved / rel_str
+            if not fpath.is_symlink() and fpath.is_file():
+                direct_files.append(fpath)
+        return direct_files
 
     if (resolved / ".git").exists():
         try:
@@ -185,8 +199,6 @@ def _iter_auditable_files(
                     parts = PurePosixPath(rel_str).parts
                     if any(part in _IGNORED_DIRS for part in parts):
                         continue
-                    if changed_filter is not None and rel_str not in changed_filter:
-                        continue
                     fpath = resolved / rel_str
                     if not fpath.is_symlink() and fpath.is_file():
                         git_files.append(fpath)
@@ -200,10 +212,6 @@ def _iter_auditable_files(
         for fname in sorted(filenames):
             fpath = Path(current_root) / fname
             if not fpath.is_symlink() and fpath.is_file():
-                if changed_filter is not None:
-                    rel_posix = fpath.relative_to(resolved).as_posix()
-                    if rel_posix not in changed_filter:
-                        continue
                 files.append(fpath)
     return files
 
@@ -347,6 +355,7 @@ def collect_git_changed_files(root: Path, base_ref: str = "HEAD") -> list[str]:
         return []
     changed: set[str] = set()
     ref = (base_ref or "HEAD").strip()
+    status_ok = False
 
     try:
         r_status = subprocess.run(
@@ -358,6 +367,7 @@ def collect_git_changed_files(root: Path, base_ref: str = "HEAD") -> list[str]:
             check=False,
         )
         if r_status.returncode == 0:
+            status_ok = True
             for raw_line in r_status.stdout.splitlines():
                 if len(raw_line) < 4:
                     continue
@@ -373,27 +383,28 @@ def collect_git_changed_files(root: Path, base_ref: str = "HEAD") -> list[str]:
     except (OSError, subprocess.TimeoutExpired):
         pass
 
-    try:
-        r_diff = subprocess.run(
-            ["git", "diff", "--name-only", ref],
-            cwd=str(resolved),
-            capture_output=True,
-            text=True,
-            timeout=10,
-            check=False,
-        )
-        if r_diff.returncode == 0:
-            for raw_line in r_diff.stdout.splitlines():
-                path_part = raw_line.strip().strip('"')
-                if not path_part:
-                    continue
-                cand = (resolved / path_part).resolve()
-                if cand.is_file() and not cand.is_symlink() and (cand == resolved or resolved in cand.parents):
-                    rel_posix = cand.relative_to(resolved).as_posix()
-                    if not any(part in _IGNORED_DIRS for part in PurePosixPath(rel_posix).parts):
-                        changed.add(rel_posix)
-    except (OSError, subprocess.TimeoutExpired):
-        pass
+    if ref.upper() != "HEAD" or not status_ok:
+        try:
+            r_diff = subprocess.run(
+                ["git", "diff", "--name-only", ref],
+                cwd=str(resolved),
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+            )
+            if r_diff.returncode == 0:
+                for raw_line in r_diff.stdout.splitlines():
+                    path_part = raw_line.strip().strip('"')
+                    if not path_part:
+                        continue
+                    cand = (resolved / path_part).resolve()
+                    if cand.is_file() and not cand.is_symlink() and (cand == resolved or resolved in cand.parents):
+                        rel_posix = cand.relative_to(resolved).as_posix()
+                        if not any(part in _IGNORED_DIRS for part in PurePosixPath(rel_posix).parts):
+                            changed.add(rel_posix)
+        except (OSError, subprocess.TimeoutExpired):
+            pass
 
     return sorted(changed)
 
@@ -859,20 +870,25 @@ def _should_auto_incremental_audit(
     changed_only: bool | None,
     force_all: bool,
     base_ref: str,
+    *,
+    precomputed_changed_list: list[str] | None = None,
+    precomputed_sdd_ledger: dict[str, object] | None = None,
 ) -> tuple[bool, list[str]]:
     """브라운필드 Git 저장소에서 변경 파일이 존재할 때 자동으로 changed_only=True 증분 감사를 활성화할지 판별한다."""
-    git_changed = collect_git_changed_files(resolved, base_ref=base_ref) if (resolved / ".git").exists() else []
     if force_all or changed_only is False:
-        return False, git_changed
+        return False, precomputed_changed_list or []
+    git_changed = (
+        precomputed_changed_list
+        if precomputed_changed_list is not None
+        else (collect_git_changed_files(resolved, base_ref=base_ref) if (resolved / ".git").exists() else [])
+    )
     if changed_only is True:
         return True, git_changed
     # changed_only is None (auto mode): enable incremental audit for brownfield Git repos with modified/added files
-    if (resolved / ".git").exists() and git_changed:
-        sdd_reqs = sdd_engine.build_sdd_ledger(resolved).get("requirements", [])
-        is_brownfield = (not isinstance(sdd_reqs, list) or len(sdd_reqs) == 0) and not (
-            resolved / "docs" / "01_PRD_REQUIREMENTS.md"
-        ).is_file()
-        if is_brownfield:
+    if (resolved / ".git").exists() and git_changed and not (resolved / "docs" / "01_PRD_REQUIREMENTS.md").is_file():
+        sdd_doc = precomputed_sdd_ledger if precomputed_sdd_ledger is not None else sdd_engine.build_sdd_ledger(resolved)
+        sdd_reqs = sdd_doc.get("requirements", [])
+        if not isinstance(sdd_reqs, list) or len(sdd_reqs) == 0:
             return True, git_changed
     return False, git_changed
 
@@ -886,6 +902,7 @@ def audit_project_code(
     force_all: bool = False,
     base_ref: str = "HEAD",
     apply: bool = False,
+    precomputed_changed_list: list[str] | None = None,
 ) -> dict[str, object]:
     """Inquisitor(인퀴지터/심판관) 정적 감사기: 가짜 TDD 테스트(assert True/빈 테스트), any 타입, 반환 타입 누락, UI 아이콘/버튼 규칙 및 자가 학습 규칙을 검사한다 (브라운필드 Git 저장소 또는 changed_only 활성 시 변경 파일만 증분 감사)."""
     if root.is_symlink() or not root.is_dir():
@@ -906,7 +923,11 @@ def audit_project_code(
         eff_ui_rules = bool(ui_caps["enforce_ui_rules"])
 
     eff_changed_only, git_changed_list = _should_auto_incremental_audit(
-        resolved, changed_only, force_all, base_ref
+        resolved,
+        changed_only,
+        force_all,
+        base_ref,
+        precomputed_changed_list=precomputed_changed_list,
     )
     findings: list[AuditFinding] = []
     scanned_files: list[str] = []
@@ -921,7 +942,12 @@ def audit_project_code(
             except re.error:
                 continue
 
-    for fpath in _iter_auditable_files(resolved, changed_only=eff_changed_only, base_ref=base_ref):
+    for fpath in _iter_auditable_files(
+        resolved,
+        changed_only=eff_changed_only,
+        base_ref=base_ref,
+        precomputed_changed=changed_set,
+    ):
         rel = fpath.relative_to(resolved).as_posix()
         if changed_set is not None and rel not in changed_set:
             continue
@@ -1335,8 +1361,8 @@ def compile_context_pack(
     resolved = root.resolve()
     eff_goal = goal.strip() or "현재 프로젝트 다음 수직 기능 구현 및 검증"
     route_dec = route_planner.plan_route(eff_goal, root=resolved).to_dict()
-    sdd_res = sdd_engine.verify_sdd_compliance(resolved, require_tdd_files=False)
     scan = sdd_engine.scan_project_specs(resolved)
+    sdd_res = sdd_engine.verify_sdd_compliance(resolved, require_tdd_files=False, precomputed_scan=scan)
     items: dict[str, sdd_engine.SpecItem] = scan["items"]  # type: ignore[assignment]
 
     invariants: list[dict[str, str]] = []
@@ -1649,8 +1675,26 @@ def run_autopilot_gate(
         raise ValueError("유효하지 않은 프로젝트 디렉터리입니다.")
     resolved = root.resolve()
     eff_goal = goal.strip() or "프로젝트 기능 구현 및 품질 게이트 통합 검증"
-    decision = route_planner.plan_route(eff_goal, root=resolved)
-    eff_changed_only, _ = _should_auto_incremental_audit(resolved, changed_only, force_all, base_ref)
+    git_changed_list = collect_git_changed_files(resolved, base_ref=base_ref) if (resolved / ".git").exists() else []
+    decision = (
+        route_planner.plan_route(
+            eff_goal,
+            root=resolved,
+            repo_dirty=bool(git_changed_list),
+            repo_inspection_failed=False,
+        )
+        if (base_ref or "HEAD").strip().upper() == "HEAD" and (resolved / ".git").exists()
+        else route_planner.plan_route(eff_goal, root=resolved)
+    )
+    initial_sdd_ledger = sdd_engine.build_sdd_ledger(resolved)
+    eff_changed_only, _ = _should_auto_incremental_audit(
+        resolved,
+        changed_only,
+        force_all,
+        base_ref,
+        precomputed_changed_list=git_changed_list,
+        precomputed_sdd_ledger=initial_sdd_ledger,
+    )
     eff_verify_cmds = normalize_verify_commands(verify_cmd, root=resolved)
 
     budget = max(1, min(5, max_iterations if max_iterations is not None else (3 if decision.continuous_loop else 1)))
@@ -1684,6 +1728,7 @@ def run_autopilot_gate(
             resolved,
             saved_ledger=saved_sdd,
             require_tdd_files=not allow_doc_only,
+            precomputed_ledger=initial_sdd_ledger if attempt == 1 else None,
         )
         sdd_blockers: list[str] = list(sdd_res["blockers"])  # type: ignore[arg-type]
         brownfield_no_sdd = (
@@ -1719,6 +1764,7 @@ def run_autopilot_gate(
                 changed_only=eff_changed_only,
                 force_all=force_all,
                 base_ref=base_ref,
+                precomputed_changed_list=git_changed_list,
             )
             stages.append(
                 {
@@ -1872,6 +1918,7 @@ DEFAULT_BLAST_RADIUS_REL = "evidence/blast-radius-report.json"
 DEFAULT_METRIC_CLIMB_LEDGER_REL = "evidence/metric-climb-ledger.json"
 DEFAULT_METRIC_CLIMB_TSV_REL = "evidence/metric-climb-results.tsv"
 
+_PY_TOP_SYMBOL_RE = re.compile(r"^(?:async\s+def|def|class)\s+([A-Za-z][A-Za-z0-9_]*)\b", re.MULTILINE)
 _TS_EXPORT_SYMBOL_RE = re.compile(
     r"\bexport\s+(?:async\s+)?(?:function|class|interface|type|const)\s+([A-Za-z_][A-Za-z0-9_]*)"
 )
@@ -1889,14 +1936,10 @@ def _extract_defined_symbols(fpath: Path, text: str) -> list[str]:
     suffix = fpath.suffix.lower()
     symbols: list[str] = []
     if suffix == ".py":
-        try:
-            tree = ast.parse(text)
-            for node in tree.body:
-                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-                    if not node.name.startswith("_"):
-                        symbols.append(node.name)
-        except SyntaxError:
-            pass
+        for m in _PY_TOP_SYMBOL_RE.finditer(text):
+            sym = m.group(1)
+            if sym not in symbols:
+                symbols.append(sym)
     elif suffix in (".ts", ".tsx", ".js", ".jsx"):
         for m in _TS_EXPORT_SYMBOL_RE.finditer(text):
             sym = m.group(1)
@@ -1927,18 +1970,19 @@ def analyze_blast_radius(
             if "test" not in f.name.lower()
         ][:5]
 
+    file_paths: dict[str, Path] = {}
     file_texts: dict[str, str] = {}
-    file_symbols: dict[str, list[str]] = {}
     for fpath in code_files:
         rel = fpath.relative_to(resolved).as_posix()
-        txt = fpath.read_text(encoding="utf-8", errors="replace")
-        file_texts[rel] = txt
-        file_symbols[rel] = _extract_defined_symbols(fpath, txt)
+        file_paths[rel] = fpath
+        file_texts[rel] = fpath.read_text(encoding="utf-8", errors="replace")
 
     exported_by_targets: dict[str, list[str]] = {}
     target_symbol_set: set[str] = set()
     for t_rel in normalized_targets:
-        syms = file_symbols.get(t_rel, [])
+        t_path = file_paths.get(t_rel)
+        t_txt = file_texts.get(t_rel)
+        syms = _extract_defined_symbols(t_path, t_txt) if (t_path is not None and t_txt is not None) else []
         exported_by_targets[t_rel] = syms
         target_symbol_set.update(syms)
 
@@ -1946,40 +1990,48 @@ def analyze_blast_radius(
     direct_rel_set: set[str] = set()
     linked_test_files: list[str] = []
 
-    for rel, txt in file_texts.items():
-        if rel in normalized_targets:
-            continue
-        matched_syms = [
-            sym
-            for sym in sorted(target_symbol_set)
-            if re.search(rf"\b{re.escape(sym)}\b", txt) is not None
-        ]
-        if matched_syms:
-            direct_rel_set.add(rel)
-            is_test = "test" in PurePosixPath(rel).name.lower() or "tests" in PurePosixPath(rel).parts
-            if is_test:
-                linked_test_files.append(rel)
-            boundaries = [b_name for b_name, b_re in _BOUNDARY_SIGNALS if b_re.search(txt)]
-            direct_dependents.append(
-                {
-                    "file": rel,
-                    "is_test": is_test,
-                    "matched_symbols": matched_syms,
-                    "boundaries_crossed": boundaries,
-                }
-            )
+    target_sym_re = (
+        re.compile(r"\b(?:" + "|".join(re.escape(s) for s in sorted(target_symbol_set)) + r")\b")
+        if target_symbol_set
+        else None
+    )
+
+    if target_sym_re is not None:
+        for rel, txt in file_texts.items():
+            if rel in normalized_targets:
+                continue
+            matched_syms = sorted(set(target_sym_re.findall(txt)))
+            if matched_syms:
+                direct_rel_set.add(rel)
+                is_test = "test" in PurePosixPath(rel).name.lower() or "tests" in PurePosixPath(rel).parts
+                if is_test:
+                    linked_test_files.append(rel)
+                boundaries = [b_name for b_name, b_re in _BOUNDARY_SIGNALS if b_re.search(txt)]
+                direct_dependents.append(
+                    {
+                        "file": rel,
+                        "is_test": is_test,
+                        "matched_symbols": matched_syms,
+                        "boundaries_crossed": boundaries,
+                    }
+                )
 
     hop1_symbols: set[str] = set()
     for d_rel in direct_rel_set:
         if d_rel not in linked_test_files:
-            hop1_symbols.update(file_symbols.get(d_rel, []))
+            d_path = file_paths.get(d_rel)
+            d_txt = file_texts.get(d_rel)
+            if d_path is not None and d_txt is not None:
+                hop1_symbols.update(_extract_defined_symbols(d_path, d_txt))
 
     transitive_dependents: list[str] = []
-    for rel, txt in file_texts.items():
-        if rel in normalized_targets or rel in direct_rel_set:
-            continue
-        if any(re.search(rf"\b{re.escape(sym)}\b", txt) is not None for sym in hop1_symbols):
-            transitive_dependents.append(rel)
+    if hop1_symbols:
+        hop1_sym_re = re.compile(r"\b(?:" + "|".join(re.escape(s) for s in sorted(hop1_symbols)) + r")\b")
+        for rel, txt in file_texts.items():
+            if rel in normalized_targets or rel in direct_rel_set:
+                continue
+            if hop1_sym_re.search(txt) is not None:
+                transitive_dependents.append(rel)
 
     test_passed = False
     if test_command:

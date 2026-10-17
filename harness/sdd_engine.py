@@ -28,12 +28,22 @@ _IGNORED_DIRS: frozenset[str] = frozenset(
         ".git",
         ".harness",
         ".dreampia-install",
+        ".dreampia",
         ".dreampia-skill",
+        ".agents",
+        ".claude",
+        ".gemini",
+        ".qwen",
         ".workflow",
         ".dreampia-workflow",
         "__pycache__",
         "node_modules",
         ".next",
+        ".venv",
+        "venv",
+        "dist",
+        "build",
+        "target",
     }
 )
 
@@ -346,9 +356,13 @@ def scan_project_specs(root: Path) -> dict[str, object]:
     }
 
 
-def build_sdd_ledger(root: Path) -> dict[str, object]:
+def build_sdd_ledger(
+    root: Path,
+    *,
+    precomputed_scan: dict[str, object] | None = None,
+) -> dict[str, object]:
     """프로젝트의 SDD 요구사항·계약·작업·TDD 테스트 추적 원장을 생성한다."""
-    scan = scan_project_specs(root)
+    scan = precomputed_scan if precomputed_scan is not None else scan_project_specs(root)
     items: dict[str, SpecItem] = scan["items"]  # type: ignore[assignment]
     test_id_to_files: dict[str, list[str]] = scan["test_id_to_files"]  # type: ignore[assignment]
 
@@ -424,9 +438,11 @@ def verify_sdd_compliance(
     *,
     saved_ledger: dict[str, object] | None = None,
     require_tdd_files: bool = True,
+    precomputed_scan: dict[str, object] | None = None,
+    precomputed_ledger: dict[str, object] | None = None,
 ) -> dict[str, object]:
     """SDD 명세-작업-TDD 테스트 추적성, 고아 요구사항, 명세 드리프트(STALE)를 Fail-Closed로 검증한다."""
-    live = build_sdd_ledger(root)
+    live = precomputed_ledger if precomputed_ledger is not None else build_sdd_ledger(root, precomputed_scan=precomputed_scan)
     requirements: list[dict[str, object]] = live["requirements"]  # type: ignore[assignment]
     tasks: list[dict[str, object]] = live["tasks"]  # type: ignore[assignment]
     test_files: list[str] = live["test_files"]  # type: ignore[assignment]

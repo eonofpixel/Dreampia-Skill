@@ -606,7 +606,7 @@ def _detect_os_key() -> str:
 def detect_package_managers() -> dict[str, str | None]:
     """호스트 OS에서 사용 가능한 패키지 매니저(winget, scoop, choco, brew, apt-get, npm) 경로를 탐색한다."""
     managers = ("winget", "scoop", "choco", "brew", "apt-get", "npm")
-    return {name: shutil.which(name) for name in managers}
+    return {name: _proc.fast_which(name) for name in managers}
 
 
 def _infer_package_manager_from_cmd(cmd: str) -> str:
@@ -629,7 +629,7 @@ def _infer_package_manager_from_cmd(cmd: str) -> str:
 def probe_optional_external_tools() -> dict[str, str | None]:
     """호스트에 선택적으로 설치된 네이티브 역공학 보조 도구(objdump, nm, rizin, jadx, wasm2wat, ghidra, adb) 가용성을 탐색한다."""
     tools = ("objdump", "llvm-objdump", "nm", "llvm-nm", "strings", "rizin", "rz-bin", "jadx", "wasm2wat", "analyzeHeadless", "adb")
-    return {name: shutil.which(name) for name in tools}
+    return {name: _proc.fast_which(name) for name in tools}
 
 
 
@@ -655,7 +655,7 @@ def reconstruct_doctor(
         resolved: str | None = None
         matched_bin: str | None = None
         for b in binaries:  # type: ignore[union-attr]
-            found = shutil.which(str(b))
+            found = _proc.fast_which(str(b))
             if found:
                 resolved = found
                 matched_bin = str(b)

@@ -94,13 +94,11 @@ if os.name == "nt":
 
     def _win_is_marker_symlink(path_obj: pathlib.Path) -> bool:
         try:
-            if _orig_is_symlink(path_obj):
-                return True
             p_str = os.fspath(path_obj)
             st = os.lstat(p_str)
-            if getattr(st, "st_reparse_tag", 0) != 0:
+            if stat.S_ISLNK(st.st_mode) or getattr(st, "st_reparse_tag", 0) != 0:
                 return True
-            if stat.S_ISREG(st.st_mode) and 0 < st.st_size <= 4096:
+            if stat.S_ISREG(st.st_mode) and len(_SYMLINK_MAGIC) < st.st_size <= 536:
                 with open(p_str, "rb") as f:
                     return f.read(len(_SYMLINK_MAGIC)) == _SYMLINK_MAGIC
         except OSError:
@@ -291,11 +289,85 @@ def release_lock(lock_fd: int) -> None:
         pass
 
 
+_DIR_STEM_CACHE: dict[tuple[str, str], frozenset[str]] = {}
+_WHICH_RESULT_CACHE: dict[tuple[str, str, str], str | None] = {}
+_TEMP_PREFIX = os.path.normcase(os.path.abspath(tempfile.gettempdir()))
+
+
+def _scan_dir_stems(d_str: str, exts: tuple[str, ...]) -> frozenset[str]:
+    stems: set[str] = set()
+    try:
+        with os.scandir(d_str) as it:
+            for entry in it:
+                name_low = entry.name.lower()
+                stems.add(name_low)
+                if os.name == "nt":
+                    for ext in exts:
+                        if name_low.endswith(ext) and len(name_low) > len(ext):
+                            stems.add(name_low[: -len(ext)])
+    except OSError:
+        pass
+    return frozenset(stems)
+
+
+def _get_path_stems(path_env: str, pathext_env: str) -> set[str]:
+    exts = tuple(e.strip().lower() for e in pathext_env.split(os.pathsep) if e.strip())
+    cwd_norm = os.path.normcase(os.path.abspath(os.getcwd()))
+    all_stems: set[str] = set()
+    for raw_dir in path_env.split(os.pathsep):
+        d_str = raw_dir.strip().strip('"')
+        if not d_str:
+            continue
+        norm_d = os.path.normcase(os.path.abspath(d_str))
+        if norm_d == cwd_norm or norm_d.startswith(_TEMP_PREFIX):
+            all_stems.update(_scan_dir_stems(d_str, exts))
+            continue
+        cache_key = (norm_d, pathext_env)
+        cached = _DIR_STEM_CACHE.get(cache_key)
+        if cached is None:
+            cached = _scan_dir_stems(d_str, exts)
+            if len(_DIR_STEM_CACHE) < 256:
+                _DIR_STEM_CACHE[cache_key] = cached
+        all_stems.update(cached)
+    return all_stems
+
+
+def fast_which(executable: str) -> str | None:
+    """PATH 디렉터리 엔트리 인덱싱(os.scandir)을 통해 반복적인 shutil.which 시스템 콜 병목을 제거한다."""
+    if not isinstance(executable, str) or not executable or "\x00" in executable:
+        return None
+    if "/" in executable or "\\" in executable or executable.startswith("."):
+        return shutil.which(executable)
+    raw_path = os.environ.get("PATH", "")
+    eff_path = f"{os.getcwd()}{os.pathsep}{raw_path}" if os.name == "nt" else raw_path
+    pathext_env = os.environ.get("PATHEXT", ".COM;.EXE;.BAT;.CMD") if os.name == "nt" else ""
+    cache_key = (executable, eff_path, pathext_env)
+    if cache_key in _WHICH_RESULT_CACHE:
+        hit = _WHICH_RESULT_CACHE[cache_key]
+        if hit is not None and os.path.exists(hit):
+            return hit
+        if hit is None and not any(
+            os.path.normcase(os.path.abspath(d.strip().strip('"'))).startswith(_TEMP_PREFIX)
+            for d in raw_path.split(os.pathsep)
+            if d.strip().strip('"')
+        ):
+            return None
+    stems = _get_path_stems(eff_path, pathext_env)
+    if executable.lower() not in stems:
+        if len(_WHICH_RESULT_CACHE) < 512:
+            _WHICH_RESULT_CACHE[cache_key] = None
+        return None
+    resolved = shutil.which(executable)
+    if len(_WHICH_RESULT_CACHE) < 512:
+        _WHICH_RESULT_CACHE[cache_key] = resolved
+    return resolved
+
+
 def resolve_executable(executable: str) -> str | None:
     """실행 파일 경로를 탐색하며, Windows에서도 셔뱅(#!) 스크립트 파일을 인식한다."""
     if not isinstance(executable, str) or not executable or "\x00" in executable:
         return None
-    found = shutil.which(executable)
+    found = fast_which(executable)
     if found:
         return found
     if os.name == "nt":
@@ -316,7 +388,7 @@ def normalize_command(command: list[str], cwd: str | os.PathLike[str] | None = N
         return list(command)
     cmd0 = str(command[0])
     if "/" not in cmd0 and "\\" not in cmd0 and not cmd0.startswith("."):
-        which_hit = shutil.which(cmd0)
+        which_hit = fast_which(cmd0)
         if which_hit and which_hit.lower().endswith((".cmd", ".bat")):
             return [which_hit, *command[1:]]
     p = pathlib.Path(cmd0)
