@@ -210,6 +210,12 @@ python -m harness.team_cli squad-worktree --project . --mode plan --goal "대규
 
 # 10. 프로젝트 상태(SDD/클린룸/감사/학습규칙) 기반 다음 추천 작업 1~3순위 가이드
 python -m harness.team_cli next-actions --project . --goal "결제 버튼 만들어줘"
+
+# 11. 1~10호기(bot-01~bot-10) 원정 야영지 다중 파티 배치, 6자리 페어링 코드 발급, HMAC-SHA256 서명 퀘스트 발주·검증 및 보스 병합 보호
+python -m harness.team_cli guild-camp --project . --mode status
+python -m harness.team_cli guild-camp --project . --mode pair --slot bot-01 --party "Paladin,Archer,Inquisitor,Cleric" --apply
+python -m harness.team_cli guild-camp --project . --mode dispatch --slot bot-01 --goal "결제 모듈 TDD 리팩토링" --apply
+python -m harness.team_cli guild-camp --project . --mode merge-guard --slot bot-01 --hero-approve
 ```
 
 ---
@@ -231,9 +237,9 @@ python -m harness.team_cli next-actions --project . --goal "결제 버튼 만들
 
 ---
 
-## 🔌 29종 네이티브 MCP 서버 도구 (`harness/mcp_server.py`)
+## 🔌 30종 네이티브 MCP 서버 도구 (`harness/mcp_server.py`)
 
-`setup --apply` 실행 시 IDE 및 에이전트에서 즉시 호출할 수 있는 **29개 표준 MCP 도구**가 등록됩니다:
+`setup --apply` 실행 시 IDE 및 에이전트에서 즉시 호출할 수 있는 **30개 표준 MCP 도구**가 등록됩니다:
 
 | 분류 | MCP 도구 이름 | 설명 |
 | :--- | :--- | :--- |
@@ -243,12 +249,14 @@ python -m harness.team_cli next-actions --project . --goal "결제 버튼 만들
 | | `dreampia_self_update` | 저장소 `git pull` 최신화, 번들 매니페스트 갱신 및 5개 글로벌 호스트 스킬 폴더 일괄 재동기화 |
 | | `dreampia_clean` | 병렬 길드 파티 임시 워크트리, 중단된 트랜잭션 저널 및 임시 증거 캐시 안전 정리 |
 | | `dreampia_release` | 저장소 내 모든 버전 상수·문서·번들 매니페스트·`CHANGELOG.md` 일괄 시맨틱 버전 릴리즈 |
+| | `dreampia_discover` | 브라운필드/폴리글랏/모노레포 스택 프로필(`project-profile.json`) 탐색 및 SDD 베이스라인 자동 부트스트랩 |
 | **프롬프트 고도화 & 라우팅** | `dreampia_expand_prompt` | 짧은 입력을 국문 엔지니어링 프롬프트, 제약조건(자가 학습 규칙 포함), 엣지케이스, 소크라테스식 역질문 3선 및 다음 추천 작업(`echo_markdown_ko`)으로 확장 |
 | | `dreampia_next_actions` | 현재 프로젝트 상태(Git, SDD 명세/원장, 클린룸, 코드 감사, 학습 규칙)와 목표를 분석해 우선순위별 다음 추천 작업(1~3순위), 단축어 프롬프트, CLI 명령어 안내 |
 | | `dreampia_interview_compile` | 목표(`goal`)와 사전 인터뷰 답변(`answers`)을 결합해 `PRD-R*`, `TASK-*`, `TEST-*` 명세서와 SDD 원장을 자동 생성 |
 | | `dreampia_route_plan` | 자연어 목표와 13종 매직 단축어를 분석해 최적 퀘스트 등급·길드 파티 요원·필수 게이트 산출 |
 | | `dreampia_router_discover` | 현재 시스템에서 사용 가능한 멀티 에이전트 하네스 노드 및 스킬 설치 상태 탐색 |
 | | `dreampia_squad_worktree` | `Paladin`·`Archer`·`Inquisitor` 병렬 길드 파티를 위한 Git Worktree 격리 작업 공간 계획(`plan`)·생성(`create`)·정리(`cleanup`) |
+| | `dreampia_guild_camp` | 1~10호기(`bot-01`~`bot-10`) 원정 야영지 다중 파티 배치(`configure`), 인바운드 포트 0개 6자리 페어링(`pair`), HMAC-SHA256 서명 퀘스트 발주(`dispatch`)/검증(`verify`), 시크릿·파괴적 명령 차단 및 보스 병합 보호(`merge-guard`) |
 | **2-Tier 클린룸 역공학** | `dreampia_reconstruct_doctor` | Tier 1 내장 엔진 및 Tier 2 외부 리버싱 도구(`rizin`, `jadx`, `ghidra`, `wasm2wat`, `objdump`, `nm`, `adb`) 상태 진단 및 설치 계획 안내 |
 | | `dreampia_reconstruct_inspect` | `PE/ELF/Mach-O/WASM/ASAR/APK/ZIP/Source` 아티팩트 구조 및 Tier 1 + Tier 2 심층 심볼 정적 분석 |
 | | `dreampia_reconstruct_spec` | 아티팩트 분석과 의무 원장을 결합해 한글 클린룸 명세서(`00_CLEANROOM_SPEC.md`) 및 `golden-io.json` 초안 자동 합성 |

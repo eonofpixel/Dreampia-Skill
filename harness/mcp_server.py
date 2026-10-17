@@ -442,6 +442,28 @@ MCP_TOOLS: tuple[McpToolDefinition, ...] = (
             },
         },
     ),
+    McpToolDefinition(
+        name="dreampia_guild_camp",
+        description="제로트러스트 길드 야영지(1~10호기 bot-01~bot-10) 및 서명 퀘스트 보안 엔진(guild-camp): 인바운드 포트 0개(Outbound-Only), 6자리 페어링 코드 발급(pair), 캠프별 다중 길드원 배치(configure), HMAC-SHA256 서명+일회용 논스 퀘스트 발급(dispatch)/검증(verify), 시크릿/파괴적 명령 차단(ZeroSecretGuard), Cleric PASS + Hero 승인 필수 병합 보호(merge-guard)를 수행합니다.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "project": {"type": "string", "description": "대상 프로젝트 루트 경로"},
+                "mode": {
+                    "type": "string",
+                    "enum": ["status", "pair", "configure", "dispatch", "verify", "merge-guard"],
+                    "description": "실행 모드 (status, pair, configure, dispatch, verify, merge-guard)",
+                },
+                "slot": {"type": "string", "description": "대상 야영지 슬롯 ID (bot-01 ~ bot-10)"},
+                "goal": {"type": "string", "description": "하달할 퀘스트 목표 설명 (dispatch 모드)"},
+                "party": {"type": "string", "description": "쉼표로 구분된 길드 파티 클래스 목록 (예: Paladin,Archer,Inquisitor)"},
+                "owned_paths": {"type": "string", "description": "쉼표로 구분된 허용 쓰기 경로 패턴 목록"},
+                "quest_file": {"type": "string", "description": "검증할 서명 퀘스트 JSON 상대 경로 (verify 모드)"},
+                "hero_approve": {"type": "boolean", "description": "주인공 영웅(Hero)의 명시적 최종 병합 승인 여부 (merge-guard 모드)"},
+                "apply": {"type": "boolean", "description": "true 지정 시 페어링 티켓/캠프 설정/서명 퀘스트 파일 실제 저장"},
+            },
+        },
+    ),
 )
 
 _FORBIDDEN_MCP_ROOT_NAMES: frozenset[str] = frozenset(
@@ -566,6 +588,27 @@ def execute_mcp_tool(default_root: Path, tool_name: str, arguments: dict[str, ob
         mode = str(arguments.get("mode") or "plan").strip()
         apply_flag = bool(arguments.get("apply", False))
         return team_cli.squad_worktree_check(root, goal=goal, mode=mode, apply=apply_flag)
+
+    if tool_name == "dreampia_guild_camp":
+        mode = str(arguments.get("mode") or "status").strip()
+        slot = str(arguments.get("slot") or "bot-01").strip()
+        goal = str(arguments.get("goal") or "").strip()
+        party = str(arguments.get("party") or "").strip()
+        owned_paths = str(arguments.get("owned_paths") or "").strip()
+        quest_file = str(arguments.get("quest_file") or "").strip()
+        hero_approve = bool(arguments.get("hero_approve", False))
+        apply_flag = bool(arguments.get("apply", False))
+        return team_cli.guild_camp_check(
+            root,
+            mode=mode,
+            slot_id=slot,
+            goal=goal,
+            party_classes=party,
+            owned_paths=owned_paths,
+            quest_file=quest_file,
+            hero_approve=hero_approve,
+            apply=apply_flag,
+        )
 
     if tool_name == "dreampia_reconstruct_inspect":
         target = str(arguments.get("target") or "").strip()

@@ -15,9 +15,9 @@ import stat
 import sys
 import uuid
 try:
-    from . import autopilot_engine, process as _proc, reconstruct_engine, route_planner, sdd_engine, skill_bundle, universal_router, visual_acceptance, write_boundary
+    from . import autopilot_engine, guild_camp, process as _proc, reconstruct_engine, route_planner, sdd_engine, skill_bundle, universal_router, visual_acceptance, write_boundary
 except ImportError:
-    import autopilot_engine, process as _proc, reconstruct_engine, route_planner, sdd_engine, skill_bundle, universal_router, visual_acceptance, write_boundary
+    import autopilot_engine, guild_camp, process as _proc, reconstruct_engine, route_planner, sdd_engine, skill_bundle, universal_router, visual_acceptance, write_boundary
 
 VERSION='0.7.0'
 PACKAGE=pathlib.Path(__file__).resolve().parents[1]
@@ -1215,6 +1215,32 @@ def squad_worktree_check(
     )
 
 
+def guild_camp_check(
+    root: pathlib.Path,
+    mode: str = 'status',
+    *,
+    slot_id: str = 'bot-01',
+    goal: str = '',
+    party_classes: str = '',
+    owned_paths: str = '',
+    quest_file: str = '',
+    hero_approve: bool = False,
+    apply: bool = False,
+) -> dict[str, object]:
+    effective_mode = 'status' if mode == 'plan' else mode
+    return guild_camp.run_guild_camp_command(
+        root,
+        mode=effective_mode,
+        slot_id=slot_id,
+        goal=goal,
+        party_classes=party_classes,
+        owned_paths=owned_paths,
+        quest_file=quest_file,
+        hero_approve=hero_approve,
+        apply=apply,
+    )
+
+
 _GLOBAL_SKILL_REL_TARGETS: tuple[str, ...] = (
     '.gemini/config/skills/ai-dev-execution',
     '.gemini/antigravity/skills/ai-dev-execution',
@@ -2136,7 +2162,7 @@ def main(argv=None) -> int:
         return mcp_main(args[1:])
     p=argparse.ArgumentParser(description='dreampia: offline project install and internal workflow helper, Python >=3.9 cross-platform')
     p.add_argument('--version',action='version',version=VERSION)
-    p.add_argument('action',choices=('version','status','config','clean','release','bump-version','self-update','setup','install-global','uninstall-global','discover','onboard','init','doctor','update','uninstall','rollback','scaffold','verify','export-client-summary','scaffold-app','plan-slice','package-client','app-check','ui-check','route-plan','expand-prompt','next-actions','interview-compile','learn-rule','visual-check','instruction-check','router-discover','router-materialize','router-export-plugin','router-dispatch','squad-worktree','reconstruct-doctor','reconstruct-inspect','reconstruct-ledger','reconstruct-spec','reconstruct-verify','reconstruct-compare','sdd-ledger','sdd-check','spec-check','audit-code','context-pack','golden-io','autopilot-gate','blast-radius','metric-climb','mcp-serve'))
+    p.add_argument('action',choices=('version','status','config','clean','release','bump-version','self-update','setup','install-global','uninstall-global','discover','onboard','init','doctor','update','uninstall','rollback','scaffold','verify','export-client-summary','scaffold-app','plan-slice','package-client','app-check','ui-check','route-plan','expand-prompt','next-actions','interview-compile','learn-rule','visual-check','instruction-check','router-discover','router-materialize','router-export-plugin','router-dispatch','squad-worktree','guild-camp','reconstruct-doctor','reconstruct-inspect','reconstruct-ledger','reconstruct-spec','reconstruct-verify','reconstruct-compare','sdd-ledger','sdd-check','spec-check','audit-code','context-pack','golden-io','autopilot-gate','blast-radius','metric-climb','mcp-serve'))
     p.add_argument('--project',default=None);p.add_argument('--apply',action='store_true',help='explicitly execute previewed project changes')
     p.add_argument('--global',dest='global_scope',action='store_true',help='operate on global 5-host skill installation and MCP config')
     p.add_argument('--check-remote',action='store_true',help='check remote origin/main version/commit status')
@@ -2158,12 +2184,17 @@ def main(argv=None) -> int:
     p.add_argument('--out',default='client',help='project-relative output folder or zip filename for export/package')
     p.add_argument('--app',choices=APP_TYPES,default='next-assessment-app',help='app scaffold preset')
     p.add_argument('--slice',choices=('student-submit-flow',),default='student-submit-flow',help='vertical slice task preset')
-    p.add_argument('--goal',default='',help='natural-language goal (Korean/English) for route-plan, expand-prompt, next-actions, interview-compile, learn-rule, squad-worktree, or router-dispatch')
+    p.add_argument('--goal',default='',help='natural-language goal (Korean/English) for route-plan, expand-prompt, next-actions, interview-compile, learn-rule, squad-worktree, guild-camp, or router-dispatch')
     p.add_argument('--answers',default='',help='semicolon-separated answers to Sage clarifying questions for interview-compile')
     p.add_argument('--rule',default='',help='Korean project rule text for learn-rule')
     p.add_argument('--forbidden-regex',default='',help='optional regex pattern to block in audit-code for learn-rule')
     p.add_argument('--severity',default='HIGH',help='severity level (CRITICAL, HIGH, MEDIUM, LOW) for learn-rule')
-    p.add_argument('--mode','--action',dest='mode',default='plan',help='worktree mode (plan, create, cleanup) for squad-worktree')
+    p.add_argument('--mode','--action',dest='mode',default='plan',help='mode for squad-worktree (plan, create, cleanup) or guild-camp (status, pair, configure, dispatch, verify, merge-guard)')
+    p.add_argument('--slot',default='bot-01',help='Guild Camp slot id (bot-01 ~ bot-10) for guild-camp')
+    p.add_argument('--party',default='',help='comma-separated Guild Party classes (e.g., Paladin,Archer,Inquisitor) for guild-camp configure/dispatch')
+    p.add_argument('--owned-paths',default='',help='comma-separated owned path glob patterns for guild-camp configure/dispatch')
+    p.add_argument('--quest-file',default='',help='project-relative signed quest JSON path for guild-camp verify')
+    p.add_argument('--hero-approve',action='store_true',help='explicit Hero merge approval flag for guild-camp merge-guard')
     p.add_argument('--no-ui-rules',action='store_true',help='disable default bg-transparent and lucide-react UI rules during audit-code')
     p.add_argument('--manifest',default=None,help='project-relative visual acceptance manifest path')
     p.add_argument('--baseline',default=None,help='project-relative baseline PNG path for visual-check')
@@ -2214,7 +2245,7 @@ def main(argv=None) -> int:
             out=reconstruct_doctor_check(install_tool=a.install_tool or a.target,apply=a.apply)
             _safe_print_json(out)
             return 0 if out.get('status')=='PASS' else 1
-        if not a.project and a.action in ('status','doctor','config','clean','discover','onboard'):
+        if not a.project and a.action in ('status','doctor','config','clean','discover','onboard','guild-camp'):
             default_dir = pathlib.Path.cwd()
             root = project_root(str(default_dir), allow_package=True, allow_home=False)
             implicit_global = (a.action == 'doctor')
@@ -2255,6 +2286,7 @@ def main(argv=None) -> int:
         elif a.action=='router-export-plugin':out=router_export_plugin_check()
         elif a.action=='router-dispatch':out=router_dispatch_check(root,a.goal,a.harness,a.previous_response_id)
         elif a.action=='squad-worktree':out=squad_worktree_check(root,a.goal,a.mode,a.apply)
+        elif a.action=='guild-camp':out=guild_camp_check(root,a.mode,slot_id=a.slot,goal=a.goal,party_classes=a.party,owned_paths=a.owned_paths,quest_file=a.quest_file or a.target or '',hero_approve=a.hero_approve,apply=a.apply)
         elif a.action=='reconstruct-inspect':out=reconstruct_inspect_check(root,a.target or '')
         elif a.action=='reconstruct-ledger':out=reconstruct_ledger_check(root,a.source or '',a.apply)
         elif a.action=='reconstruct-spec':out=reconstruct_spec_check(root,a.source or 'contaminated-zone',a.apply)
@@ -2270,7 +2302,7 @@ def main(argv=None) -> int:
         elif a.action=='metric-climb':out=metric_climb_check(root,a.cmd,a.metric_regex,a.direction,a.target or '',a.immutable,a.trials,a.confidence,a.goal or 'candidate-experiment',a.apply)
         else:out=install(root,a.action,a.apply)
         _safe_print_json(out)
-        return 0 if a.action not in ('doctor','verify','app-check','ui-check','route-plan','expand-prompt','next-actions','interview-compile','learn-rule','visual-check','instruction-check','router-dispatch','squad-worktree','reconstruct-inspect','reconstruct-ledger','reconstruct-spec','reconstruct-verify','reconstruct-compare','sdd-ledger','sdd-check','spec-check','audit-code','context-pack','golden-io','autopilot-gate','blast-radius','metric-climb') or out.get('healthy') or out.get('status')=='PASS' else 1
+        return 0 if a.action not in ('doctor','verify','app-check','ui-check','route-plan','expand-prompt','next-actions','interview-compile','learn-rule','visual-check','instruction-check','router-dispatch','squad-worktree','guild-camp','reconstruct-inspect','reconstruct-ledger','reconstruct-spec','reconstruct-verify','reconstruct-compare','sdd-ledger','sdd-check','spec-check','audit-code','context-pack','golden-io','autopilot-gate','blast-radius','metric-climb') or out.get('healthy') or out.get('status')=='PASS' else 1
     except (ValueError,TypeError,KeyError,OSError,RuntimeError) as e:
         print(json.dumps({'error':{'code':getattr(e,'code','INSTALL_INPUT_INVALID'),'type':type(e).__name__}},ensure_ascii=False));return 2
 

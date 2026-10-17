@@ -170,6 +170,12 @@ python -m harness.team_cli squad-worktree --project . --mode plan --goal "Parall
 
 # 9. State-Aware Next Action Navigator (1st~3rd priority recommendations)
 python -m harness.team_cli next-actions --project . --goal "Build checkout button"
+
+# 10. Zero-Trust Guild Camp (bot-01~bot-10) Multi-Party Assignment, 6-Digit Pairing, HMAC-SHA256 Signed Quests & Boss Merge Guard
+python -m harness.team_cli guild-camp --project . --mode status
+python -m harness.team_cli guild-camp --project . --mode pair --slot bot-01 --party "Paladin,Archer,Inquisitor,Cleric" --apply
+python -m harness.team_cli guild-camp --project . --mode dispatch --slot bot-01 --goal "Refactor payment module with TDD" --apply
+python -m harness.team_cli guild-camp --project . --mode merge-guard --slot bot-01 --hero-approve
 ```
 
 ---
@@ -191,9 +197,9 @@ All operational lifecycle commands use clean, prefix-free names in both IDE slas
 
 ---
 
-## 🔌 29 Native MCP Server Tools (`harness/mcp_server.py`)
+## 🔌 30 Native MCP Server Tools (`harness/mcp_server.py`)
 
-When installed via `setup --apply`, `harness/mcp_server.py` exposes **29 tools** directly to your MCP-compatible IDE or agent:
+When installed via `setup --apply`, `harness/mcp_server.py` exposes **30 tools** directly to your MCP-compatible IDE or agent:
 
 | Category | MCP Tool Name | Description |
 | :--- | :--- | :--- |
@@ -203,12 +209,14 @@ When installed via `setup --apply`, `harness/mcp_server.py` exposes **29 tools**
 | | `dreampia_self_update` | Pull latest git changes, rebuild bundle manifest, and re-synchronize all 5 global host skill directories |
 | | `dreampia_clean` | Safely clean up parallel guild party worktrees, interrupted transaction journals, and optional evidence caches |
 | | `dreampia_release` | Atomically bump version constants, docs, `bundle-manifest.json`, and `CHANGELOG.md` to a target semver |
+| | `dreampia_discover` | Brownfield/polyglot/monorepo stack profile discovery (`project-profile.json`) and automatic SDD baseline bootstrapping |
 | **Prompt Expansion & Routing** | `dreampia_expand_prompt` | Expand short goals into Korean engineering prompts, constraints (including learned rules), edge cases, 3 Socratic interview questions, and recommended next actions (`echo_markdown_ko`) |
 | | `dreampia_next_actions` | Inspect project state (Git, SDD specs/ledger, cleanroom, audit verdict, learned rules) and return 1st–3rd priority next actions with ready-to-copy prompts and CLI commands |
 | | `dreampia_interview_compile` | Compile a goal + interview answers directly into `PRD-R*`, `TASK-*`, `TEST-*` specs and refresh `evidence/sdd-ledger.json` |
 | | `dreampia_route_plan` | Parse 13 Magic Shorthands and compute deterministic quest rank, guild party roles, and required gates |
 | | `dreampia_router_discover` | Discover installed multi-agent harness CLIs and skill synchronization status |
 | | `dreampia_squad_worktree` | Plan, create, or clean up isolated Git Worktrees for parallel `Paladin`, `Archer`, and `Inquisitor` party tracks |
+| | `dreampia_guild_camp` | Zero-Trust Guild Camp (`bot-01`~`bot-10`) multi-party assignment (`configure`), 0-inbound-port 6-digit pairing (`pair`), HMAC-SHA256 signed quest dispatch/verify, secret/command guard, and boss merge guard (`merge-guard`) |
 | **2-Tier Cleanroom RE** | `dreampia_reconstruct_doctor` | Diagnose Tier 1 & Tier 2 RE tools, detect package managers, and preview tool installation plans |
 | | `dreampia_reconstruct_inspect` | Static binary/archive/source surface inspection (`PE/ELF/Mach-O/WASM/ASAR/APK/ZIP`) with Tier 2 symbol enrichment |
 | | `dreampia_reconstruct_spec` | Synthesize Korean cleanroom specification (`approved-spec/00_CLEANROOM_SPEC.md`) and `golden-io.json` vectors from artifact inspection |

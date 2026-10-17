@@ -10,10 +10,10 @@
   "has_lucide_react": false,
   "enforce_tailwind": false,
   "enforce_lucide_react": false,
-  "scanned_file_count": 71,
+  "scanned_file_count": 73,
   "finding_count": 0,
   "blocking_count": 0,
   "learned_rule_count": 3,
   "findings": [],
-  "message_ko": "Inquisitor 코드·TDD·규칙 정적 감사(full)를 통과했습니다. (검사 파일 71개, 차단 결함 0건)"
+  "message_ko": "Inquisitor 코드·TDD·규칙 정적 감사(full)를 통과했습니다. (검사 파일 73개, 차단 결함 0건)"
 }
