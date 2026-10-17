@@ -1,6 +1,6 @@
 {
   "schema_version": "0.7.0",
-  "generated_at": "2026-10-17T12:12:27.444887+00:00",
+  "generated_at": "2026-10-17T13:37:20.004516+00:00",
   "status": "PASS",
   "protagonist": {
     "callsign": "Hero",
@@ -58,7 +58,7 @@
       "title_ko": "치유사 · 실행 증거·시각 픽셀·보스 관문 검증 오퍼레이터"
     }
   ],
-  "stage_count": 2,
+  "stage_count": 3,
   "stages": [
     {
       "stage": "instruction-drift",
@@ -74,8 +74,19 @@
       "adaptive_nano_bypass": false,
       "blockers": [],
       "detail": "SDD 명세-작업-TDD 테스트 추적성 검증을 통과했습니다. (추적률 100.0%)"
+    },
+    {
+      "stage": "inquisitor-code-audit",
+      "owner": "Inquisitor (reviewer)",
+      "status": "PASS",
+      "audit_scope": "full",
+      "scanned_file_count": 73,
+      "blocking_count": 0,
+      "finding_count": 0,
+      "findings": [],
+      "detail": "Inquisitor 코드·TDD·규칙 정적 감사(full)를 통과했습니다. (검사 파일 73개, 차단 결함 0건)"
     }
   ],
-  "message_ko": "GuildMaster & Cleric 오토파일럿 보스 관문(team, 티어=standard) 전 단계(2개) 검증을 통과했습니다.",
-  "verdict_sha256": "f4c4ef77c2fb4edecdd3eff49aa0aebb0539017c1d3c154835272cb60a212d59"
+  "message_ko": "GuildMaster & Cleric 오토파일럿 보스 관문(team, 티어=standard) 전 단계(3개) 검증을 통과했습니다.",
+  "verdict_sha256": "4a9071efddde8fcf05db8b681a456734fdda66d99cb912798ca860e0fcfa5529"
 }

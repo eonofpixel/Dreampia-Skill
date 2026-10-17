@@ -122,8 +122,119 @@ def _is_test_or_check_file(rel: str, fpath: Path) -> bool:
 
 ensure_local_git_exclude = route_planner.ensure_local_git_exclude
 
-_TS_ANY_RE = re.compile(r"(:\s*any\b|<any>|\bas\s+any\b)")
-_TS_HOLLOW_TEST_RE = re.compile(r"expect\s*\(\s*true\s*\)\s*\.\s*toBe\s*\(\s*true\s*\)")
+_C_LEX_STANDARD_RE = re.compile(
+    r'("(?:\\[\s\S]|[^"\\\n])*"|\'(?:\\[\s\S]|[^\'\\\n])*\'|`(?:\\[\s\S]|[^`\\])*`)'
+    r"|(?://[^\n]*|/\*[\s\S]*?\*/)"
+)
+_C_LEX_RUST_RE = re.compile(
+    r'(r#*".*?"#*|"(?:\\[\s\S]|[^"\\])*"|\'(?:\\.|[^\'\\\n])\')'
+    r"|(?://[^\n]*|/\*[\s\S]*?\*/)",
+    re.DOTALL,
+)
+
+
+def _mask_c_comments(text: str, *, is_rust: bool = False) -> str:
+    """줄 번호와 컬럼 오프셋을 100% 보존하면서 C 계열(TS/JS/Rust/Go 등) 주석(//, /* */)만 공백으로 마스킹한다."""
+    lex_re = _C_LEX_RUST_RE if is_rust else _C_LEX_STANDARD_RE
+
+    def _repl(m: re.Match[str]) -> str:
+        if m.group(1) is not None:
+            return m.group(1)
+        s = m.group(0)
+        return "\n".join(" " * len(part) for part in s.split("\n")) if "\n" in s else " " * len(s)
+
+    return lex_re.sub(_repl, text)
+
+
+def _mask_c_comments_and_strings(text: str, *, is_rust: bool = False) -> str:
+    """줄 번호와 오프셋을 보존하면서 주석과 문자열 리터럴 내부 텍스트를 모두 공백으로 마스킹한 코드 스켈레톤을 반환한다."""
+    lex_re = _C_LEX_RUST_RE if is_rust else _C_LEX_STANDARD_RE
+
+    def _repl(m: re.Match[str]) -> str:
+        s = m.group(0)
+        if m.group(1) is not None:
+            if len(s) <= 2:
+                return s
+            inner = s[1:-1]
+            masked_inner = "\n".join(" " * len(part) for part in inner.split("\n")) if "\n" in inner else " " * len(inner)
+            return s[0] + masked_inner + s[-1]
+        return "\n".join(" " * len(part) for part in s.split("\n")) if "\n" in s else " " * len(s)
+
+    return lex_re.sub(_repl, text)
+
+
+def _find_matching_delimiter(skeleton: str, open_idx: int, open_ch: str = "{", close_ch: str = "}") -> int | None:
+    """코드 스켈레톤에서 C 레벨 str.find 점프로 여는 괄호(open_idx)와 짝이 맞는 닫는 괄호 위치를 반환한다 (불일치 시 Fail-Safe None)."""
+    n = len(skeleton)
+    if open_idx < 0 or open_idx >= n or skeleton[open_idx] != open_ch:
+        return None
+    depth = 1
+    pos = open_idx + 1
+    while depth > 0 and pos < n:
+        next_close = skeleton.find(close_ch, pos)
+        if next_close == -1:
+            return None
+        next_open = skeleton.find(open_ch, pos, next_close)
+        if next_open != -1:
+            depth += 1
+            pos = next_open + 1
+        else:
+            depth -= 1
+            if depth == 0:
+                return next_close
+            pos = next_close + 1
+    return None
+
+
+_JSX_BUTTON_START_RE = re.compile(r"<button\b", re.IGNORECASE)
+
+
+def _iter_jsx_button_attrs(comment_masked: str) -> list[tuple[int, str]]:
+    """JSX <button ...> 여는 태그에서 onClick={() => ...} 화살표의 '>'에 끊기지 않고 전체 속성 문자열과 시작 오프셋을 추출한다."""
+    results: list[tuple[int, str]] = []
+    n = len(comment_masked)
+    for m in _JSX_BUTTON_START_RE.finditer(comment_masked):
+        start_idx = m.start()
+        pos = m.end()
+        brace_depth = 0
+        quote_ch: str | None = None
+        while pos < n:
+            ch = comment_masked[pos]
+            if quote_ch is not None:
+                if ch == "\\" and pos + 1 < n:
+                    pos += 2
+                    continue
+                if ch == quote_ch:
+                    quote_ch = None
+            else:
+                if ch in ('"', "'", "`"):
+                    quote_ch = ch
+                elif ch == "{":
+                    brace_depth += 1
+                elif ch == "}":
+                    if brace_depth > 0:
+                        brace_depth -= 1
+                elif ch == ">" and brace_depth == 0:
+                    results.append((start_idx, comment_masked[m.end() : pos]))
+                    break
+            pos += 1
+    return results
+
+
+_TS_ANY_RE = re.compile(r"(:\s*any\b|<any>|\bas\s+any\b|:\s*Array<any>|:\s*Record<[^,>]+,\s*any>|\bany\[\])")
+_TS_HOLLOW_TEST_RE = re.compile(
+    r"(?:expect\s*\(\s*(?:true|1)\s*\)\s*\.\s*(?:toBe|toEqual|toStrictEqual)\s*\(\s*(?:true|1)\s*\)"
+    r"|expect\s*\(\s*false\s*\)\s*\.\s*(?:toBe|toEqual|toStrictEqual)\s*\(\s*false\s*\)"
+    r"|assert(?:\.ok|\.equal|\.strictEqual)?\s*\(\s*true(?:\s*,\s*true)?\s*\))"
+)
+_TS_TEST_CALL_RE = re.compile(r"\b(?:it|test)\s*\(")
+_TS_CALLBACK_MARKER_RE = re.compile(r"(?:=>|\bfunction\b)")
+_TS_REAL_ASSERT_RE = re.compile(
+    r"(?:\b(?:expect|expectTypeOf|assert|should)\b"
+    r"|\b(?:assert\w*|expect\w*|verify\w*|check\w*)\s*\("
+    r"|\.(?:toBe\w*|toEqual\w*|toStrictEqual|toHave\w*|toContain\w*|toMatch\w*|toThrow\w*|rejects|resolves)\s*\()"
+)
+_C_EMPTY_CATCH_RE = re.compile(r"\bcatch\b\s*(?:\([^)]*\))?\s*\{")
 _FORBIDDEN_ICON_RE = re.compile(
     r"""from\s+['"](@heroicons/[^'"]+|react-icons[^'"]*|@mui/icons-material[^'"]*|@fortawesome/[^'"]+)['"]"""
 )
@@ -860,9 +971,25 @@ def discover_project(
     }
 
 
-_RUST_HOLLOW_TEST_RE = re.compile(r"\bassert!\s*\(\s*true\s*\)")
+_RUST_HOLLOW_TEST_RE = re.compile(r"\b(?:assert!\s*\(\s*true\s*\)|assert_eq!\s*\(\s*true\s*,\s*true\s*\))")
 _RUST_UNIMPLEMENTED_RE = re.compile(r"\b(todo!|unimplemented!)\s*\(")
+_RUST_TEST_FN_RE = re.compile(
+    r"#\[(?:tokio::)?test[^\]]*\](?:\s*#\[[^\]]*\])*\s*(?:async\s+)?fn\s+([A-Za-z0-9_]+)\s*\([^)]*\)\s*(->\s*[^{]+)?\{"
+)
+_RUST_REAL_ASSERT_RE = re.compile(
+    r"(?:\b(?:assert|assert_eq|assert_ne|debug_assert|debug_assert_eq|debug_assert_ne|matches|panic)!\s*\("
+    r"|\b(?:assert\w*|expect\w*|verify\w*|check\w*)\s*\()"
+)
 _GO_ANY_RE = re.compile(r"\b(interface\s*\{\s*\})\b")
+_GO_HOLLOW_TEST_RE = re.compile(
+    r"\b(?:assert|require)\.(?:True|Equal)\s*\(\s*[A-Za-z0-9_]+\s*,\s*true(?:\s*,\s*true)?\s*\)"
+)
+_GO_TEST_FN_RE = re.compile(r"\bfunc\s+(Test[A-Za-z0-9_]*)\s*\(\s*[A-Za-z0-9_]+\s+\*testing\.T\s*\)\s*\{")
+_GO_REAL_ASSERT_RE = re.compile(
+    r"(?:\b(?:Error|Errorf|Fatal|Fatalf|Fail|FailNow|Run)\s*\("
+    r"|\b(?:assert|require)\.[A-Za-z0-9_]+\s*\("
+    r"|\b(?:assert\w*|expect\w*|verify\w*|check\w*)\s*\()"
+)
 
 
 def _should_auto_incremental_audit(
@@ -1035,9 +1162,13 @@ def audit_project_code(
                         )
 
         elif suffix in (".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"):
-            lines = text.splitlines()
-            for idx, line in enumerate(lines, start=1):
-                if suffix in (".ts", ".tsx") and _TS_ANY_RE.search(line):
+            comment_masked = _mask_c_comments(text)
+            code_skeleton = _mask_c_comments_and_strings(text)
+            skeleton_lines = code_skeleton.splitlines()
+            comment_masked_lines = comment_masked.splitlines()
+
+            for idx, skel_line in enumerate(skeleton_lines, start=1):
+                if suffix in (".ts", ".tsx") and _TS_ANY_RE.search(skel_line):
                     findings.append(
                         AuditFinding(
                             severity="HIGH",
@@ -1047,7 +1178,7 @@ def audit_project_code(
                             fix_ko="명시적 인터페이스(Props/Contract) 또는 구체적인 유니온/제네릭 타입으로 교체하십시오.",
                         )
                     )
-                if is_test_file and _TS_HOLLOW_TEST_RE.search(line):
+                if is_test_file and _TS_HOLLOW_TEST_RE.search(skel_line):
                     findings.append(
                         AuditFinding(
                             severity="HIGH",
@@ -1057,22 +1188,63 @@ def audit_project_code(
                             fix_ko="실제 컴포넌트/함수 동작을 검증하는 단언문으로 교체하십시오.",
                         )
                     )
-                if enforce_lucide and _FORBIDDEN_ICON_RE.search(line):
+
+            if enforce_lucide:
+                for idx, cm_line in enumerate(comment_masked_lines, start=1):
+                    if _FORBIDDEN_ICON_RE.search(cm_line):
+                        findings.append(
+                            AuditFinding(
+                                severity="MEDIUM",
+                                rule_id="forbidden-icon-library",
+                                evidence=f"{rel}:{idx}",
+                                issue_ko="허용되지 않은 외부 아이콘 라이브러리가 사용되었습니다.",
+                                fix_ko="아이콘 라이브러리 통일 규칙에 따라 'lucide-react'만 사용하십시오.",
+                            )
+                        )
+
+            if is_test_file:
+                for t_match in _TS_TEST_CALL_RE.finditer(code_skeleton):
+                    prefix_start = t_match.start()
+                    if prefix_start > 0 and code_skeleton[prefix_start - 1] in (".", "$", "_"):
+                        continue
+                    open_paren = t_match.end() - 1
+                    close_paren = _find_matching_delimiter(code_skeleton, open_paren, "(", ")")
+                    if close_paren is None:
+                        continue
+                    call_skel = code_skeleton[open_paren + 1 : close_paren]
+                    if not _TS_CALLBACK_MARKER_RE.search(call_skel):
+                        continue
+                    if not _TS_HOLLOW_TEST_RE.search(call_skel) and not _TS_REAL_ASSERT_RE.search(call_skel):
+                        line_no = code_skeleton[:prefix_start].count("\n") + 1
+                        findings.append(
+                            AuditFinding(
+                                severity="HIGH",
+                                rule_id="hollow-tdd-no-assertion",
+                                evidence=f"{rel}:{line_no}",
+                                issue_ko="TS/JS 테스트 블록에 실제 검증 단언문(expect/assert)이 없습니다.",
+                                fix_ko="정상·거부·경계 조건을 실제로 검증하는 expect() 또는 assert 단언문을 추가하십시오.",
+                            )
+                        )
+
+            for c_match in _C_EMPTY_CATCH_RE.finditer(code_skeleton):
+                open_brace = c_match.end() - 1
+                close_brace = _find_matching_delimiter(code_skeleton, open_brace, "{", "}")
+                if close_brace is not None and code_skeleton[open_brace + 1 : close_brace].strip() == "":
+                    line_no = code_skeleton[: c_match.start()].count("\n") + 1
                     findings.append(
                         AuditFinding(
-                            severity="MEDIUM",
-                            rule_id="forbidden-icon-library",
-                            evidence=f"{rel}:{idx}",
-                            issue_ko="허용되지 않은 외부 아이콘 라이브러리가 사용되었습니다.",
-                            fix_ko="아이콘 라이브러리 통일 규칙에 따라 'lucide-react'만 사용하십시오.",
+                            severity="HIGH",
+                            rule_id="slop-bare-except-pass",
+                            evidence=f"{rel}:{line_no}",
+                            issue_ko="예외를 포착한 뒤 아무 처리도 하지 않고 묵살하는 AI 슬롭 패턴(빈 catch 블록)이 감지되었습니다.",
+                            fix_ko="구체적인 예외 복구 로직, 에러 상태 갱신 또는 사용자 친화적인 한글 오류 처리를 작성하십시오.",
                         )
                     )
 
             if enforce_tailwind and suffix in (".tsx", ".jsx"):
-                for match in _BUTTON_TAG_RE.finditer(text):
-                    attrs = match.group(1)
+                for start_offset, attrs in _iter_jsx_button_attrs(comment_masked):
                     if "className" in attrs and "bg-transparent" not in attrs:
-                        line_no = text[: match.start()].count("\n") + 1
+                        line_no = comment_masked[:start_offset].count("\n") + 1
                         findings.append(
                             AuditFinding(
                                 severity="LOW",
@@ -1084,8 +1256,9 @@ def audit_project_code(
                         )
 
         elif suffix == ".rs":
-            for idx, line in enumerate(text.splitlines(), start=1):
-                if _RUST_HOLLOW_TEST_RE.search(line):
+            code_skeleton = _mask_c_comments_and_strings(text, is_rust=True)
+            for idx, skel_line in enumerate(code_skeleton.splitlines(), start=1):
+                if _RUST_HOLLOW_TEST_RE.search(skel_line):
                     findings.append(
                         AuditFinding(
                             severity="HIGH",
@@ -1095,7 +1268,7 @@ def audit_project_code(
                             fix_ko="assert_eq! 또는 실제 결과 검증 단언문으로 교체하십시오.",
                         )
                     )
-                if not is_test_file and _RUST_UNIMPLEMENTED_RE.search(line):
+                if not is_test_file and _RUST_UNIMPLEMENTED_RE.search(skel_line):
                     findings.append(
                         AuditFinding(
                             severity="HIGH",
@@ -1105,10 +1278,31 @@ def audit_project_code(
                             fix_ko="실제 비즈니스 로직과 Result 기반 에러 처리를 구현하십시오.",
                         )
                     )
+            for r_match in _RUST_TEST_FN_RE.finditer(code_skeleton):
+                if "should_panic" in r_match.group(0) or r_match.group(2) is not None:
+                    continue
+                open_brace = r_match.end() - 1
+                close_brace = _find_matching_delimiter(code_skeleton, open_brace, "{", "}")
+                if close_brace is None:
+                    continue
+                fn_body = code_skeleton[open_brace + 1 : close_brace]
+                if not _RUST_HOLLOW_TEST_RE.search(fn_body) and not _RUST_REAL_ASSERT_RE.search(fn_body):
+                    fn_name = r_match.group(1)
+                    line_no = code_skeleton[: r_match.start()].count("\n") + 1
+                    findings.append(
+                        AuditFinding(
+                            severity="HIGH",
+                            rule_id="hollow-tdd-no-assertion",
+                            evidence=f"{rel}:{line_no}",
+                            issue_ko=f"Rust 테스트 함수 '{fn_name}'에 실제 검증 단언문(assert!/assert_eq!)이 없습니다.",
+                            fix_ko="실제 실행 결과를 검증하는 assert_eq! 또는 단언 매크로를 추가하십시오.",
+                        )
+                    )
 
         elif suffix == ".go":
-            for idx, line in enumerate(text.splitlines(), start=1):
-                if not is_test_file and _GO_ANY_RE.search(line):
+            code_skeleton = _mask_c_comments_and_strings(text)
+            for idx, skel_line in enumerate(code_skeleton.splitlines(), start=1):
+                if not is_test_file and _GO_ANY_RE.search(skel_line):
                     findings.append(
                         AuditFinding(
                             severity="MEDIUM",
@@ -1118,12 +1312,42 @@ def audit_project_code(
                             fix_ko="구체적인 구조체(struct) 또는 명시적 인터페이스/제네릭 타입을 사용하십시오.",
                         )
                     )
+                if is_test_file and _GO_HOLLOW_TEST_RE.search(skel_line):
+                    findings.append(
+                        AuditFinding(
+                            severity="HIGH",
+                            rule_id="hollow-tdd-assert-true",
+                            evidence=f"{rel}:{idx}",
+                            issue_ko="Go 테스트 코드에 항상 참인 가짜 단언문이 감지되었습니다.",
+                            fix_ko="실제 결과값을 비교하는 t.Errorf/t.Fatalf 또는 assert.Equal로 교체하십시오.",
+                        )
+                    )
+            if is_test_file:
+                for g_match in _GO_TEST_FN_RE.finditer(code_skeleton):
+                    open_brace = g_match.end() - 1
+                    close_brace = _find_matching_delimiter(code_skeleton, open_brace, "{", "}")
+                    if close_brace is None:
+                        continue
+                    fn_body = code_skeleton[open_brace + 1 : close_brace]
+                    if not _GO_HOLLOW_TEST_RE.search(fn_body) and not _GO_REAL_ASSERT_RE.search(fn_body):
+                        fn_name = g_match.group(1)
+                        line_no = code_skeleton[: g_match.start()].count("\n") + 1
+                        findings.append(
+                            AuditFinding(
+                                severity="HIGH",
+                                rule_id="hollow-tdd-no-assertion",
+                                evidence=f"{rel}:{line_no}",
+                                issue_ko=f"Go 테스트 함수 '{fn_name}'에 실제 검증 단언문(t.Error/t.Fatal/assert)이 없습니다.",
+                                fix_ko="정상·오류 경계 조건을 검증하는 t.Fatalf 또는 단언문을 추가하십시오.",
+                            )
+                        )
 
         if not is_test_file:
+            search_target = _mask_c_comments(text, is_rust=(suffix == ".rs")) if suffix != ".py" else text
             for custom_rule, custom_re in compiled_custom_rules:
-                c_match = custom_re.search(text)
+                c_match = custom_re.search(search_target)
                 if c_match:
-                    line_no = text[: c_match.start()].count("\n") + 1
+                    line_no = search_target[: c_match.start()].count("\n") + 1
                     rule_desc = str(custom_rule.get("rule_ko") or "")
                     findings.append(
                         AuditFinding(
@@ -1920,7 +2144,16 @@ DEFAULT_METRIC_CLIMB_TSV_REL = "evidence/metric-climb-results.tsv"
 
 _PY_TOP_SYMBOL_RE = re.compile(r"^(?:async\s+def|def|class)\s+([A-Za-z][A-Za-z0-9_]*)\b", re.MULTILINE)
 _TS_EXPORT_SYMBOL_RE = re.compile(
-    r"\bexport\s+(?:async\s+)?(?:function|class|interface|type|const)\s+([A-Za-z_][A-Za-z0-9_]*)"
+    r"\bexport\s+(?:default\s+)?(?:async\s+)?(?:function|class|interface|type|const|let|var|enum)\s+([A-Za-z_][A-Za-z0-9_]*)"
+)
+_TS_EXPORT_LIST_RE = re.compile(r"\bexport\s+(?:type\s+)?\{([^}]+)\}")
+_TS_IMPORT_FROM_RE = re.compile(r"""\b(?:import|export)\b[^;]*?\bfrom\s+['"]([^'"]+)['"]""")
+_RUST_PUB_SYMBOL_RE = re.compile(
+    r"\bpub(?:\s*\([^)]*\))?\s+(?:async\s+)?(?:fn|struct|enum|trait|type|const|mod)\s+([A-Za-z_][A-Za-z0-9_]*)"
+)
+_GO_EXPORT_SYMBOL_RE = re.compile(
+    r"^(?:func(?:\s*\([^)]*\))?|type|var|const)\s+([A-Z][A-Za-z0-9_]*)\b",
+    re.MULTILINE,
 )
 _BOUNDARY_SIGNALS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("api-http", re.compile(r"\b(fetch|axios|urllib|http\.client|FastAPI|APIRouter|Response)\b")),
@@ -1931,8 +2164,8 @@ _BOUNDARY_SIGNALS: tuple[tuple[str, re.Pattern[str]], ...] = (
 )
 
 
-def _extract_defined_symbols(fpath: Path, text: str) -> list[str]:
-    """파일에서 정의된 공개 함수·클래스·인터페이스 심볼 목록을 추출한다."""
+def _extract_defined_symbols(fpath: Path, text: str, *, precomputed_skeleton: str | None = None) -> list[str]:
+    """파일에서 정의된 공개 함수·클래스·인터페이스·구조체 심볼 목록을 주석/문자열 오탐 없이 추출한다."""
     suffix = fpath.suffix.lower()
     symbols: list[str] = []
     if suffix == ".py":
@@ -1940,12 +2173,74 @@ def _extract_defined_symbols(fpath: Path, text: str) -> list[str]:
             sym = m.group(1)
             if sym not in symbols:
                 symbols.append(sym)
-    elif suffix in (".ts", ".tsx", ".js", ".jsx"):
-        for m in _TS_EXPORT_SYMBOL_RE.finditer(text):
+    elif suffix in (".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"):
+        skel = precomputed_skeleton if precomputed_skeleton is not None else _mask_c_comments_and_strings(text)
+        for m in _TS_EXPORT_SYMBOL_RE.finditer(skel):
+            sym = m.group(1)
+            if sym not in symbols:
+                symbols.append(sym)
+        for m_list in _TS_EXPORT_LIST_RE.finditer(skel):
+            for raw_item in m_list.group(1).split(","):
+                cleaned = raw_item.strip()
+                if not cleaned:
+                    continue
+                parts = [p.strip() for p in re.split(r"\bas\b", cleaned) if p.strip()]
+                candidate = parts[-1].lstrip("type ").strip() if parts else ""
+                if candidate and re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", candidate) and candidate not in symbols:
+                    symbols.append(candidate)
+    elif suffix == ".rs":
+        skel = (
+            precomputed_skeleton
+            if precomputed_skeleton is not None
+            else _mask_c_comments_and_strings(text, is_rust=True)
+        )
+        for m in _RUST_PUB_SYMBOL_RE.finditer(skel):
+            sym = m.group(1)
+            if sym not in symbols:
+                symbols.append(sym)
+    elif suffix == ".go":
+        skel = precomputed_skeleton if precomputed_skeleton is not None else _mask_c_comments_and_strings(text)
+        for m in _GO_EXPORT_SYMBOL_RE.finditer(skel):
             sym = m.group(1)
             if sym not in symbols:
                 symbols.append(sym)
     return symbols
+
+
+def _matches_ts_import_target(importer_rel: str, import_spec: str, target_rels: list[str]) -> list[str]:
+    """TS/JS import 경로(상대 경로 및 @/ 별칭)가 변경 대상 파일을 가리키는지 판별한다."""
+    spec_clean = re.sub(r"\.(?:ts|tsx|js|jsx|mjs|cjs)$", "", import_spec.strip())
+    if not spec_clean:
+        return []
+    importer_dir = PurePosixPath(importer_rel).parent
+    resolved_spec: str | None = None
+    if spec_clean.startswith("."):
+        parts: list[str] = list(importer_dir.parts) if str(importer_dir) != "." else []
+        for seg in PurePosixPath(spec_clean).parts:
+            if seg == ".":
+                continue
+            if seg == "..":
+                if parts:
+                    parts.pop()
+            else:
+                parts.append(seg)
+        resolved_spec = "/".join(parts)
+    elif spec_clean.startswith("@/") or spec_clean.startswith("~/"):
+        resolved_spec = spec_clean[2:]
+
+    matched_targets: list[str] = []
+    for t_rel in target_rels:
+        t_no_ext = re.sub(r"\.(?:ts|tsx|js|jsx|mjs|cjs)$", "", t_rel)
+        t_stem = PurePosixPath(t_no_ext).name
+        if resolved_spec is not None:
+            if (
+                t_no_ext == resolved_spec
+                or t_no_ext == f"src/{resolved_spec}"
+                or t_no_ext.endswith(f"/{resolved_spec}")
+                or (t_stem == "index" and str(PurePosixPath(t_no_ext).parent) == resolved_spec)
+            ):
+                matched_targets.append(f"module:{PurePosixPath(t_rel).stem}")
+    return matched_targets
 
 
 def analyze_blast_radius(
@@ -1960,7 +2255,9 @@ def analyze_blast_radius(
         raise ValueError("유효하지 않은 프로젝트 디렉터리입니다.")
     resolved = root.resolve()
     all_files = _iter_auditable_files(resolved)
-    code_files = [f for f in all_files if f.suffix.lower() in (".py", ".ts", ".tsx", ".js", ".jsx")]
+    code_files = [
+        f for f in all_files if f.suffix.lower() in (".py", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".rs", ".go")
+    ]
 
     normalized_targets: list[str] = [PurePosixPath(t).as_posix() for t in target_files if t.strip()]
     if not normalized_targets:
@@ -1972,17 +2269,28 @@ def analyze_blast_radius(
 
     file_paths: dict[str, Path] = {}
     file_texts: dict[str, str] = {}
+    file_skeletons: dict[str, str] = {}
     for fpath in code_files:
         rel = fpath.relative_to(resolved).as_posix()
+        suffix = fpath.suffix.lower()
+        txt = fpath.read_text(encoding="utf-8", errors="replace")
         file_paths[rel] = fpath
-        file_texts[rel] = fpath.read_text(encoding="utf-8", errors="replace")
+        file_texts[rel] = txt
+        file_skeletons[rel] = (
+            txt if suffix == ".py" else _mask_c_comments_and_strings(txt, is_rust=(suffix == ".rs"))
+        )
 
     exported_by_targets: dict[str, list[str]] = {}
     target_symbol_set: set[str] = set()
     for t_rel in normalized_targets:
         t_path = file_paths.get(t_rel)
         t_txt = file_texts.get(t_rel)
-        syms = _extract_defined_symbols(t_path, t_txt) if (t_path is not None and t_txt is not None) else []
+        t_skel = file_skeletons.get(t_rel)
+        syms = (
+            _extract_defined_symbols(t_path, t_txt, precomputed_skeleton=t_skel)
+            if (t_path is not None and t_txt is not None)
+            else []
+        )
         exported_by_targets[t_rel] = syms
         target_symbol_set.update(syms)
 
@@ -1996,42 +2304,62 @@ def analyze_blast_radius(
         else None
     )
 
-    if target_sym_re is not None:
-        for rel, txt in file_texts.items():
-            if rel in normalized_targets:
-                continue
-            matched_syms = sorted(set(target_sym_re.findall(txt)))
-            if matched_syms:
-                direct_rel_set.add(rel)
-                is_test = "test" in PurePosixPath(rel).name.lower() or "tests" in PurePosixPath(rel).parts
-                if is_test:
-                    linked_test_files.append(rel)
-                boundaries = [b_name for b_name, b_re in _BOUNDARY_SIGNALS if b_re.search(txt)]
-                direct_dependents.append(
-                    {
-                        "file": rel,
-                        "is_test": is_test,
-                        "matched_symbols": matched_syms,
-                        "boundaries_crossed": boundaries,
-                    }
-                )
+    for rel, txt in file_texts.items():
+        if rel in normalized_targets:
+            continue
+        skel = file_skeletons[rel]
+        matched_syms: list[str] = sorted(set(target_sym_re.findall(skel))) if target_sym_re is not None else []
+        suffix = file_paths[rel].suffix.lower()
+        if suffix in (".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"):
+            cm_txt = _mask_c_comments(txt)
+            for imp_m in _TS_IMPORT_FROM_RE.finditer(cm_txt):
+                for mod_hit in _matches_ts_import_target(rel, imp_m.group(1), normalized_targets):
+                    if mod_hit not in matched_syms:
+                        matched_syms.append(mod_hit)
+        if matched_syms:
+            direct_rel_set.add(rel)
+            is_test = _is_test_or_check_file(rel, file_paths[rel])
+            if is_test:
+                linked_test_files.append(rel)
+            boundaries = [b_name for b_name, b_re in _BOUNDARY_SIGNALS if b_re.search(skel)]
+            direct_dependents.append(
+                {
+                    "file": rel,
+                    "is_test": is_test,
+                    "matched_symbols": matched_syms,
+                    "boundaries_crossed": boundaries,
+                }
+            )
 
     hop1_symbols: set[str] = set()
     for d_rel in direct_rel_set:
         if d_rel not in linked_test_files:
             d_path = file_paths.get(d_rel)
             d_txt = file_texts.get(d_rel)
+            d_skel = file_skeletons.get(d_rel)
             if d_path is not None and d_txt is not None:
-                hop1_symbols.update(_extract_defined_symbols(d_path, d_txt))
+                hop1_symbols.update(_extract_defined_symbols(d_path, d_txt, precomputed_skeleton=d_skel))
 
     transitive_dependents: list[str] = []
-    if hop1_symbols:
-        hop1_sym_re = re.compile(r"\b(?:" + "|".join(re.escape(s) for s in sorted(hop1_symbols)) + r")\b")
-        for rel, txt in file_texts.items():
-            if rel in normalized_targets or rel in direct_rel_set:
-                continue
-            if hop1_sym_re.search(txt) is not None:
-                transitive_dependents.append(rel)
+    hop1_rel_list = sorted(d_rel for d_rel in direct_rel_set if d_rel not in linked_test_files)
+    hop1_sym_re = (
+        re.compile(r"\b(?:" + "|".join(re.escape(s) for s in sorted(hop1_symbols)) + r")\b")
+        if hop1_symbols
+        else None
+    )
+    for rel, txt in file_texts.items():
+        if rel in normalized_targets or rel in direct_rel_set:
+            continue
+        skel = file_skeletons[rel]
+        hit = hop1_sym_re is not None and hop1_sym_re.search(skel) is not None
+        if not hit and file_paths[rel].suffix.lower() in (".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs") and hop1_rel_list:
+            cm_txt = _mask_c_comments(txt)
+            for imp_m in _TS_IMPORT_FROM_RE.finditer(cm_txt):
+                if _matches_ts_import_target(rel, imp_m.group(1), hop1_rel_list):
+                    hit = True
+                    break
+        if hit:
+            transitive_dependents.append(rel)
 
     test_passed = False
     if test_command:

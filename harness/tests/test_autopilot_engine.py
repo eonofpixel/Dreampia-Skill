@@ -1054,8 +1054,141 @@ class AutopilotEngineTests(unittest.TestCase):
             self.assertEqual(status_proc.stdout.strip(), "")
             self.assertEqual(team_cli.main(["audit-code", "--project", str(root), "--all"]), 1)
 
+    def test_polyglot_lexical_scanner_and_brace_block_audit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            src = root / "src"
+            tests = root / "tests"
+            src.mkdir(parents=True, exist_ok=True)
+            tests.mkdir(parents=True, exist_ok=True)
+            (root / "package.json").write_text(
+                '{"dependencies": {"tailwindcss": "^3.4.0", "lucide-react": "^0.400.0"}}\n',
+                encoding="utf-8",
+            )
+
+            # 1. Comments & strings containing ': any', 'as any', 'todo!()', 'interface{}', and JSX arrow before className -> 0 false positives
+            (src / "clean_service.tsx").write_text(
+                "// 주의: 절대 : any 또는 as any를 사용하지 마십시오.\n"
+                "/* 블록 주석: import { FaBeer } from 'react-icons/fa'; <button className=\"bad\"> */\n"
+                "export interface CleanProps { label: string; }\n"
+                "export function CleanButton(props: CleanProps): JSX.Element {\n"
+                '  const msg = "안내 문구: : any 타입 및 expect(true).toBe(true) 금지";\n'
+                '  return <button onClick={() => console.log(msg)} className="px-3 bg-transparent hover:bg-slate-100">{props.label}</button>;\n'
+                "}\n",
+                encoding="utf-8",
+            )
+            (src / "clean_engine.rs").write_text(
+                "// 주석 내 todo!() 및 unimplemented!()는 무시되어야 함\n"
+                "pub fn compute_hash<'a>(input: &'a str) -> &'a str {\n"
+                '    let _note = "todo!(string literal)";\n'
+                "    input\n"
+                "}\n",
+                encoding="utf-8",
+            )
+            (src / "clean_worker.go").write_text(
+                "package worker\n"
+                "// interface{} 대신 제네릭 사용 권장\n"
+                "func ProcessJob(payload string) string {\n"
+                '    _ = "interface{} inside string"\n'
+                "    return payload\n"
+                "}\n",
+                encoding="utf-8",
+            )
+            (tests / "clean.test.ts").write_text(
+                "import { test, expect } from 'vitest';\n"
+                "test('valid assertion inside callback', () => {\n"
+                "  // expect(true).toBe(true) in comment is ignored\n"
+                "  const result = 2 + 3;\n"
+                "  expect(result).toBe(5);\n"
+                "});\n",
+                encoding="utf-8",
+            )
+
+            clean_report = autopilot_engine.audit_project_code(root)
+            self.assertEqual(clean_report["status"], "PASS", f"Unexpected findings: {clean_report['findings']}")
+            self.assertEqual(clean_report["finding_count"], 0)
+
+            # 2. Now inject assertion-free tests (TS, Rust, Go), empty catch block, and JSX arrow button missing bg-transparent
+            (tests / "hollow_polyglot.test.ts").write_text(
+                "import { it } from 'vitest';\n"
+                "it('does nothing without assertion', () => {\n"
+                "  const x = 10 * 2;\n"
+                "  console.log(x);\n"
+                "});\n",
+                encoding="utf-8",
+            )
+            (src / "slop_catch.ts").write_text(
+                "export function riskyCall(): void {\n"
+                "  try {\n"
+                "    JSON.parse('{}');\n"
+                "  } catch (err) {\n"
+                "    // 에러 묵살 주석만 존재\n"
+                "  }\n"
+                "}\n",
+                encoding="utf-8",
+            )
+            (src / "bad_arrow_btn.tsx").write_text(
+                "export function BadArrowBtn(): JSX.Element {\n"
+                '  return <button onClick={() => alert(1)} className="px-4 py-2">클릭</button>;\n'
+                "}\n",
+                encoding="utf-8",
+            )
+            (tests / "hollow_rust_test.rs").write_text(
+                "#[test]\n"
+                "fn test_without_any_macro() {\n"
+                "    let a = 1 + 2;\n"
+                "    let _b = a * 3;\n"
+                "}\n",
+                encoding="utf-8",
+            )
+            (tests / "hollow_go_test.go").write_text(
+                "package worker\n"
+                'import "testing"\n'
+                "func TestWithoutAssertion(t *testing.T) {\n"
+                "    res := ProcessJob(\"ok\")\n"
+                "    _ = res\n"
+                "}\n",
+                encoding="utf-8",
+            )
+
+            bad_report = autopilot_engine.audit_project_code(root)
+            self.assertEqual(bad_report["status"], "FAIL")
+            findings = bad_report["findings"]  # type: ignore[assignment]
+            evidences_by_rule: dict[str, list[str]] = {}
+            for item in findings:  # type: ignore[union-attr]
+                rid = str(item["rule_id"])
+                evidences_by_rule.setdefault(rid, []).append(str(item["evidence"]))
+
+            self.assertIn("hollow-tdd-no-assertion", evidences_by_rule)
+            hollow_evs = " ".join(evidences_by_rule["hollow-tdd-no-assertion"])
+            self.assertIn("hollow_polyglot.test.ts", hollow_evs)
+            self.assertIn("hollow_rust_test.rs", hollow_evs)
+            self.assertIn("hollow_go_test.go", hollow_evs)
+            self.assertIn("slop-bare-except-pass", evidences_by_rule)
+            self.assertTrue(any("slop_catch.ts" in ev for ev in evidences_by_rule["slop-bare-except-pass"]))
+            self.assertIn("button-bg-transparent-missing", evidences_by_rule)
+            self.assertTrue(any("bad_arrow_btn.tsx" in ev for ev in evidences_by_rule["button-bg-transparent-missing"]))
+
+            # 3. Verify multi-language blast-radius ignores comment mentions and tracks Rust/Go/TS exports & imports
+            (src / "comment_only_ref.rs").write_text(
+                "// compute_hash is mentioned only in a comment here\n"
+                "pub fn unrelated_fn() -> i32 { 42 }\n",
+                encoding="utf-8",
+            )
+            (src / "real_caller.rs").write_text(
+                "pub fn invoke() -> &'static str {\n"
+                '    compute_hash("real")\n'
+                "}\n",
+                encoding="utf-8",
+            )
+            blast_rs = autopilot_engine.analyze_blast_radius(root, target_files=["src/clean_engine.rs"])
+            dep_files = [d["file"] for d in blast_rs["direct_dependents"]]  # type: ignore[index,union-attr]
+            self.assertIn("src/real_caller.rs", dep_files)
+            self.assertNotIn("src/comment_only_ref.rs", dep_files)
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
