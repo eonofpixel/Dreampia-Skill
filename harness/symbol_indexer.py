@@ -181,27 +181,123 @@ _CFAMILY_DECL_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     (
         "function",
         re.compile(
-            rf"^[ \t]*(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:pub(?:\([^)]*\))?\s+)?(?:fn|function|func)\s+(?:\([^)]*\)\s*)?({_IDENT_PAT})\s*(?:<[^>]*>)?\s*\([^{{;]*\{{",
-            re.MULTILINE,
-        ),
-    ),
-    (
-        "function",
-        re.compile(
             rf"^[ \t]*(?:export\s+)?(?:const|let)\s+({_IDENT_PAT})\s*(?::[^=]+)?=\s*(?:async\s*)?\([^)]*\)\s*(?::[^=]+)?=>\s*\{{",
             re.MULTILINE,
         ),
     ),
 )
 
+_CFAMILY_CALLABLE_HEAD_RE = re.compile(
+    rf"^[ \t]*(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:pub(?:\([^)]*\))?\s+)?(?:fn|function|func)\s+(?:\([^)]*\)\s*)?({_IDENT_PAT})\s*",
+    re.MULTILINE,
+)
+
+_CFAMILY_METHOD_HEAD_RE = re.compile(
+    rf"^[ \t]*(?:(?:public|private|protected|static|readonly|override|async|get|set)\s+)+({_IDENT_PAT})\s*",
+    re.MULTILINE,
+)
+
 _CALL_IDENT_RE = re.compile(rf"\b({_IDENT_PAT})\s*\(")
 _CALL_STOPWORDS: frozenset[str] = frozenset(
-    {"if", "for", "while", "switch", "catch", "return", "sizeof", "typeof", "function", "fn", "func"}
+    {
+        "if",
+        "for",
+        "while",
+        "switch",
+        "catch",
+        "return",
+        "sizeof",
+        "typeof",
+        "function",
+        "fn",
+        "func",
+        "constructor",
+        "super",
+    }
 )
 
 
+def _find_callable_body_open_brace(skeleton: str, scan_pos: int) -> int | None:
+    """함수·메서드 이름 직후 위치에서 제네릭(<...>), 파라미터((...)), 반환 타입 어노테이션 내 객체 타입({...})을 건너뛰어 실제 본문 시작 '{' 인덱스를 찾는다."""
+    n = len(skeleton)
+    idx = scan_pos
+    while idx < n and skeleton[idx] in " \t\r\n":
+        idx += 1
+
+    # 1. 선택적 제네릭 타입 파라미터 <...> 건너뛰기
+    if idx < n and skeleton[idx] == "<":
+        close_gen = autopilot_engine._find_matching_delimiter(skeleton, idx, "<", ">")
+        if close_gen is None:
+            return None
+        idx = close_gen + 1
+        while idx < n and skeleton[idx] in " \t\r\n":
+            idx += 1
+
+    # 2. 필수 파라미터 목록 (...) 건너뛰기
+    if idx >= n or skeleton[idx] != "(":
+        return None
+    close_paren = autopilot_engine._find_matching_delimiter(skeleton, idx, "(", ")")
+    if close_paren is None:
+        return None
+    idx = close_paren + 1
+
+    # 3. 반환 타입 어노테이션(: ... 또는 -> ... 또는 where ...)을 지나 실제 본문 '{' 탐색
+    saw_colon = False
+    angle_depth = 0
+    paren_depth = 0
+    while idx < n:
+        ch = skeleton[idx]
+        if ch in " \t\r\n":
+            idx += 1
+            continue
+        if ch == ";" and angle_depth == 0 and paren_depth == 0:
+            return None
+        if ch == ":" and not saw_colon and angle_depth == 0 and paren_depth == 0:
+            saw_colon = True
+            idx += 1
+            continue
+        if ch == "<":
+            angle_depth += 1
+            idx += 1
+            continue
+        if ch == ">" and angle_depth > 0:
+            angle_depth -= 1
+            idx += 1
+            continue
+        if ch == "(":
+            paren_depth += 1
+            idx += 1
+            continue
+        if ch == ")" and paren_depth > 0:
+            paren_depth -= 1
+            idx += 1
+            continue
+        if ch == "{":
+            if saw_colon:
+                # 반환 타입 내부의 인라인 객체 타입인지, 실제 함수 본문 시작인지 판별
+                close_inline = autopilot_engine._find_matching_delimiter(skeleton, idx, "{", "}")
+                if close_inline is not None:
+                    rest = skeleton[close_inline + 1 :].lstrip(" \t\r\n")
+                    if rest.startswith(("{", "|", "&", "[", ">")):
+                        idx = close_inline + 1
+                        continue
+            return idx
+        idx += 1
+    return None
+
+
 class CFamilySymbolExtractor:
-    """주석·문자열 마스킹과 중괄호 밸런스 파서를 결합하여 TS/JS/Rust/Go 심볼 구간을 추출한다."""
+    """주석·문자열 마스킹과 밸런스 상태머신 파서를 결합하여 TS/JS/Rust/Go 클래스·메서드·함수 심볼 구간을 추출한다."""
+
+    def _extract_calls(self, body_skel: str, self_name: str) -> tuple[str, ...]:
+        calls: list[str] = []
+        for cm in _CALL_IDENT_RE.finditer(body_skel):
+            ident = cm.group(1)
+            if ident not in _CALL_STOPWORDS and ident != self_name and ident not in calls:
+                calls.append(ident)
+                if len(calls) >= 8:
+                    break
+        return tuple(calls)
 
     def extract_symbols(self, source_text: str, suffix: str) -> list[SymbolDescriptor]:
         """C-계열 언어 파일에서 선언부와 닫는 중괄호 라인 범위를 정확히 추출한다."""
@@ -211,6 +307,7 @@ class CFamilySymbolExtractor:
         symbols: list[SymbolDescriptor] = []
         seen_spans: set[tuple[str, int]] = set()
 
+        # 1. 고정 패턴(class, interface, struct, arrow function) 추출
         for kind, pattern in _CFAMILY_DECL_PATTERNS:
             for match in pattern.finditer(skeleton):
                 sym_name = match.group(1)
@@ -230,14 +327,6 @@ class CFamilySymbolExtractor:
                     sig_line = sig_line[:-1].strip()
 
                 body_skel = skeleton[open_brace + 1 : close_brace]
-                calls: list[str] = []
-                for cm in _CALL_IDENT_RE.finditer(body_skel):
-                    ident = cm.group(1)
-                    if ident not in _CALL_STOPWORDS and ident != sym_name and ident not in calls:
-                        calls.append(ident)
-                        if len(calls) >= 8:
-                            break
-
                 symbols.append(
                     SymbolDescriptor(
                         name=sym_name,
@@ -248,9 +337,80 @@ class CFamilySymbolExtractor:
                         end_line=end_line,
                         line_count=max(1, end_line - start_line + 1),
                         docstring_summary="",
-                        calls=tuple(calls),
+                        calls=self._extract_calls(body_skel, sym_name),
                     )
                 )
+
+                # 클래스 내부 메서드(method) 정밀 추출
+                if kind == "class":
+                    class_offset = open_brace + 1
+                    for m_match in _CFAMILY_METHOD_HEAD_RE.finditer(body_skel):
+                        m_name = m_match.group(1)
+                        if m_name in _CALL_STOPWORDS:
+                            continue
+                        abs_scan = class_offset + m_match.end()
+                        m_open = _find_callable_body_open_brace(skeleton, abs_scan)
+                        if m_open is None or m_open >= close_brace:
+                            continue
+                        m_close = autopilot_engine._find_matching_delimiter(skeleton, m_open, "{", "}")
+                        if m_close is None or m_close > close_brace:
+                            continue
+                        m_start = skeleton[: class_offset + m_match.start()].count("\n") + 1
+                        m_end = skeleton[:m_close].count("\n") + 1
+                        m_key = (f"{sym_name}.{m_name}", m_start)
+                        if m_key in seen_spans:
+                            continue
+                        seen_spans.add(m_key)
+                        m_sig = orig_lines[m_start - 1].strip() if m_start <= len(orig_lines) else m_name
+                        if m_sig.endswith("{"):
+                            m_sig = m_sig[:-1].strip()
+                        m_body = skeleton[m_open + 1 : m_close]
+                        symbols.append(
+                            SymbolDescriptor(
+                                name=m_name,
+                                qualified_name=f"{sym_name}.{m_name}",
+                                kind="method",
+                                signature=m_sig,
+                                start_line=m_start,
+                                end_line=m_end,
+                                line_count=max(1, m_end - m_start + 1),
+                                docstring_summary="",
+                                calls=self._extract_calls(m_body, m_name),
+                            )
+                        )
+
+        # 2. 중첩 제네릭·복합 반환타입을 포함한 일반 함수(function/fn/func) 밸런스 추출
+        for f_match in _CFAMILY_CALLABLE_HEAD_RE.finditer(skeleton):
+            sym_name = f_match.group(1)
+            start_line = skeleton[: f_match.start()].count("\n") + 1
+            key = (sym_name, start_line)
+            if key in seen_spans:
+                continue
+            open_brace = _find_callable_body_open_brace(skeleton, f_match.end())
+            if open_brace is None:
+                continue
+            close_brace = autopilot_engine._find_matching_delimiter(skeleton, open_brace, "{", "}")
+            if close_brace is None:
+                continue
+            end_line = skeleton[:close_brace].count("\n") + 1
+            seen_spans.add(key)
+            sig_line = orig_lines[start_line - 1].strip() if start_line <= len(orig_lines) else sym_name
+            if sig_line.endswith("{"):
+                sig_line = sig_line[:-1].strip()
+            body_skel = skeleton[open_brace + 1 : close_brace]
+            symbols.append(
+                SymbolDescriptor(
+                    name=sym_name,
+                    qualified_name=sym_name,
+                    kind="function",
+                    signature=sig_line,
+                    start_line=start_line,
+                    end_line=end_line,
+                    line_count=max(1, end_line - start_line + 1),
+                    docstring_summary="",
+                    calls=self._extract_calls(body_skel, sym_name),
+                )
+            )
 
         symbols.sort(key=lambda s: (s.start_line, s.end_line))
         return symbols

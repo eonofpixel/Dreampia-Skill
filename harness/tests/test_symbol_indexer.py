@@ -76,6 +76,39 @@ class TestSymbolIndexer(unittest.TestCase):
             self.assertEqual(slice_res["status"], "PASS")
             self.assertIn("clear(): void {}", str(slice_res["code_slice"]))
 
+    def test_typescript_complex_generics_object_return_types_and_class_methods(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            ts_code = (
+                "export class 레거시패킷분석기 {\n"
+                "  public async 패킷복호화(\n"
+                "    옵션: { 압축여부: boolean },\n"
+                "  ): Promise<{ 복호화본문: string; 성공: boolean }> {\n"
+                "    return { 복호화본문: String(옵션.압축여부), 성공: true };\n"
+                "  }\n"
+                "}\n\n"
+                "export async function 복합함수<T extends { id: string }>(\n"
+                "  입력: T,\n"
+                "): Promise<{ 결과: T }> {\n"
+                "  return { 결과: 입력 };\n"
+                "}\n"
+            )
+            (root / "parser.ts").write_text(ts_code, encoding="utf-8")
+            map_res = symbol_indexer.build_symbol_map(root, "parser.ts")
+            self.assertEqual(map_res["status"], "PASS")
+            self.assertEqual(map_res["total_symbols"], 3)
+
+            method_slice = symbol_indexer.extract_symbol_slice(
+                root, "parser.ts::레거시패킷분석기.패킷복호화", ""
+            )
+            self.assertEqual(method_slice["status"], "PASS")
+            self.assertIn("패킷복호화", str(method_slice["code_slice"]))
+
+            fn_slice = symbol_indexer.extract_symbol_slice(root, "parser.ts", "복합함수")
+            self.assertEqual(fn_slice["status"], "PASS")
+            self.assertIn("return { 결과: 입력 };", str(fn_slice["code_slice"]))
+
 
 if __name__ == "__main__":
     unittest.main()
+

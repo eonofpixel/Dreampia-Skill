@@ -584,8 +584,65 @@ class DefaultBenchmarkCorpus:
         return tuple(c for c in self._cases if c.language == norm)
 
 
+def _evaluate_live_workspace(project_root: Path) -> dict[str, object]:
+    """합성 코퍼스 외에 실제 대상 프로젝트(project_root)의 실측 심볼 압축률 및 정적 감사 처리 성능을 측정한다."""
+    try:
+        from . import symbol_indexer
+    except ImportError:
+        import symbol_indexer  # type: ignore[no-redef]
+
+    t_audit0 = time.perf_counter()
+    live_audit = autopilot_engine.audit_project_code(
+        project_root,
+        check_ui_rules=False,
+        changed_only=False,
+        force_all=True,
+        apply=False,
+    )
+    live_audit_ms = round((time.perf_counter() - t_audit0) * 1000.0, 2)
+    scanned_files = int(live_audit.get("scanned_file_count", 0) or 0)
+    finding_count = int(live_audit.get("finding_count", 0) or 0)
+
+    # 실제 워크스페이스 내 대표 소스 파일 최대 15개에 대한 실측 심볼 인덱싱 및 토큰 절감률 측정
+    ignore_dirs = {".git", "node_modules", "__pycache__", ".venv", "venv", "dist", "build", ".dreampia", ".dreampia-skill"}
+    sample_files: list[Path] = []
+    for fpath in sorted(project_root.rglob("*")):
+        if len(sample_files) >= 15:
+            break
+        if not fpath.is_file() or fpath.is_symlink():
+            continue
+        if any(part in ignore_dirs for part in fpath.parts):
+            continue
+        if fpath.suffix.lower() in (".py", ".ts", ".tsx", ".js", ".rs", ".go"):
+            sample_files.append(fpath)
+
+    t_sym0 = time.perf_counter()
+    raw_chars = 0
+    toc_chars = 0
+    extracted_symbols = 0
+    for sf in sample_files:
+        text = sf.read_text(encoding="utf-8", errors="replace")
+        raw_chars += len(text)
+        syms = symbol_indexer._extract_file_symbols(sf, text)
+        extracted_symbols += len(syms)
+        toc_chars += sum(len(f"L{s.start_line}-L{s.end_line}: {s.signature}") + 1 for s in syms)
+    live_sym_ms = round((time.perf_counter() - t_sym0) * 1000.0, 2)
+    live_reduction = round(max(0.0, 1.0 - (toc_chars / raw_chars)), 4) if raw_chars > 0 else 0.0
+
+    return {
+        "evaluated_project": str(project_root),
+        "live_scanned_files": scanned_files,
+        "live_finding_count": finding_count,
+        "live_audit_elapsed_ms": live_audit_ms,
+        "sampled_source_files": len(sample_files),
+        "extracted_symbol_count": extracted_symbols,
+        "live_token_reduction_ratio": live_reduction,
+        "live_symbol_index_ms": live_sym_ms,
+    }
+
+
 class BenchmarkSuiteRunner:
-    """격리 샌드박스에서 벤치마크 코퍼스를 실행하고 정량 지표(Recall, FPR, Precision)를 계산한다."""
+    """격리 샌드박스에서 벤치마크 코퍼스를 실행하고 정량 지표(Recall, FPR, Precision) 및 실저장소 실측 지표를 계산한다."""
 
     def __init__(self, corpus_provider: CorpusProvider | None = None) -> None:
         self._corpus: CorpusProvider = corpus_provider or DefaultBenchmarkCorpus()
@@ -671,6 +728,7 @@ class BenchmarkSuiteRunner:
         precision = round(tp / (tp + fp), 4) if (tp + fp) > 0 else 1.0
         fpr = round(fp / (fp + tn), 4) if (fp + tn) > 0 else 0.0
         passed_all = (fn == 0 and fp == 0)
+        live_metrics = _evaluate_live_workspace(resolved)
 
         report: dict[str, object] = {
             "action": "benchmark",
@@ -694,11 +752,13 @@ class BenchmarkSuiteRunner:
                 "total_elapsed_ms": round(total_elapsed_ms, 2),
                 "avg_case_ms": round(total_elapsed_ms / len(evaluations), 2),
             },
+            "live_workspace_metrics": live_metrics,
             "failed_cases": [e.to_dict() for e in evaluations if not e.passed],
             "evaluations": [e.to_dict() for e in evaluations],
             "message_ko": (
-                f"다국어 적대적 벤치마크 스위트({len(evaluations)}종) 검증 통과: "
-                f"적발률(Recall)={recall * 100:.1f}%, 오탐률(FPR)={fpr * 100:.1f}%, 소요시간={total_elapsed_ms:.1f}ms"
+                f"다국어 적대적 벤치마크 스위트({len(evaluations)}종) + 실저장소 실측 검증 통과: "
+                f"적발률(Recall)={recall * 100:.1f}%, 오탐률(FPR)={fpr * 100:.1f}%, "
+                f"실저장소 토큰절감={float(live_metrics.get('live_token_reduction_ratio', 0.0)) * 100:.1f}%, 소요시간={total_elapsed_ms:.1f}ms"
                 if passed_all
                 else f"벤치마크 스위트 실패: 미탐(FN)={fn}건, 오탐(FP)={fp}건"
             ),

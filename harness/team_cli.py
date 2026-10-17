@@ -1261,10 +1261,18 @@ def mutation_check_cmd(
     apply: bool = False,
 ) -> dict[str, object]:
     targets = [t.strip() for t in (target_rel or '').split(',') if t.strip()]
+    eff_cmd = (test_cmd or '').strip()
+    if not eff_cmd:
+        if (root / 'harness' / 'tests').is_dir():
+            eff_cmd = f'"{sys.executable}" -m unittest discover -s harness/tests -p "test_*.py"'
+        elif (root / 'package.json').is_file():
+            eff_cmd = 'npm test'
+        else:
+            eff_cmd = f'"{sys.executable}" -m unittest discover'
     return mutation_engine.run_mutation_check(
         root,
         targets,
-        test_cmd,
+        eff_cmd,
         max_mutants=max_mutants,
         min_score=min_score,
         apply=apply,

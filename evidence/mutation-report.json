@@ -1,14 +1,18 @@
 {
   "action": "mutation-check",
   "schema_version": "0.7.5",
-  "generated_at": "2026-10-17T15:13:33.476840+00:00",
+  "generated_at": "2026-10-17T16:55:59.222858+00:00",
   "status": "PASS",
   "applied": true,
   "report_path": "evidence/mutation-report.json",
   "target_files": [
     "harness/symbol_indexer.py"
   ],
-  "test_command": "python -m unittest harness.tests.test_symbol_indexer",
+  "test_command": "\"C:\\Users\\creat\\AppData\\Local\\Programs\\Python\\Python310\\python.exe\" -m unittest discover -s harness/tests -p \"test_*.py\"",
+  "effective_test_command": "\"C:\\Users\\creat\\AppData\\Local\\Programs\\Python\\Python310\\python.exe\" -m unittest harness/tests/test_symbol_indexer.py",
+  "targeted_test_files": [
+    "harness/tests/test_symbol_indexer.py"
+  ],
   "total_mutants": 10,
   "killed_count": 10,
   "timeout_count": 0,
@@ -26,7 +30,7 @@
       "status": "KILLED",
       "original_snippet": "if len(calls) >= max_calls:",
       "mutated_snippet": "if len(calls) < max_calls:",
-      "elapsed_ms": 202.48
+      "elapsed_ms": 198.42
     },
     {
       "mutant_id": "MUT-002",
@@ -37,7 +41,7 @@
       "status": "KILLED",
       "original_snippet": "idx = max(0, node.lineno - 1)",
       "mutated_snippet": "idx = max(0, node.lineno + 1)",
-      "elapsed_ms": 190.4
+      "elapsed_ms": 202.4
     },
     {
       "mutant_id": "MUT-003",
@@ -48,7 +52,7 @@
       "status": "KILLED",
       "original_snippet": "sig = lines[start_l - 1].strip().rstrip(\":\") if start_l <= len(lines) else f\"class {node.name}\"",
       "mutated_snippet": "sig = lines[start_l - 1].strip().rstrip(\":\") if start_l > len(lines) else f\"class {node.name}\"",
-      "elapsed_ms": 189.96
+      "elapsed_ms": 203.99
     },
     {
       "mutant_id": "MUT-004",
@@ -59,7 +63,7 @@
       "status": "KILLED",
       "original_snippet": "sig = lines[start_l - 1].strip().rstrip(\":\") if start_l <= len(lines) else f\"class {node.name}\"",
       "mutated_snippet": "sig = lines[start_l + 1].strip().rstrip(\":\") if start_l <= len(lines) else f\"class {node.name}\"",
-      "elapsed_ms": 199.13
+      "elapsed_ms": 197.03
     },
     {
       "mutant_id": "MUT-005",
@@ -70,7 +74,7 @@
       "status": "KILLED",
       "original_snippet": "line_count=max(1, end_l - start_l + 1),",
       "mutated_snippet": "line_count=max(1, end_l - start_l - 1),",
-      "elapsed_ms": 189.06
+      "elapsed_ms": 211.65
     },
     {
       "mutant_id": "MUT-006",
@@ -81,7 +85,7 @@
       "status": "KILLED",
       "original_snippet": "line_count=max(1, end_l - start_l + 1),",
       "mutated_snippet": "line_count=max(1, end_l + start_l + 1),",
-      "elapsed_ms": 195.19
+      "elapsed_ms": 211.0
     },
     {
       "mutant_id": "MUT-007",
@@ -92,7 +96,7 @@
       "status": "KILLED",
       "original_snippet": "line_count=max(1, m_end - m_start + 1),",
       "mutated_snippet": "line_count=max(1, m_end - m_start - 1),",
-      "elapsed_ms": 188.68
+      "elapsed_ms": 195.0
     },
     {
       "mutant_id": "MUT-008",
@@ -103,7 +107,7 @@
       "status": "KILLED",
       "original_snippet": "line_count=max(1, m_end - m_start + 1),",
       "mutated_snippet": "line_count=max(1, m_end + m_start + 1),",
-      "elapsed_ms": 189.82
+      "elapsed_ms": 203.47
     },
     {
       "mutant_id": "MUT-009",
@@ -114,7 +118,7 @@
       "status": "KILLED",
       "original_snippet": "line_count=max(1, f_end - f_start + 1),",
       "mutated_snippet": "line_count=max(1, f_end - f_start - 1),",
-      "elapsed_ms": 194.67
+      "elapsed_ms": 205.46
     },
     {
       "mutant_id": "MUT-010",
@@ -125,9 +129,9 @@
       "status": "KILLED",
       "original_snippet": "line_count=max(1, f_end - f_start + 1),",
       "mutated_snippet": "line_count=max(1, f_end + f_start + 1),",
-      "elapsed_ms": 197.46
+      "elapsed_ms": 207.3
     }
   ],
   "message_ko": "뮤테이션 테스팅 통과: 변이 방어율(Mutation Score)=100.0% (사살 10/10건, 생존 0건)",
-  "report_sha256": "df931df47f215386a5fb53d5d7b85b0d809a1bb212aa2d1669dcf587d12facaf"
+  "report_sha256": "fb1eca9c2b28f89f9c2473670f6c5c860382cbb052c6135aaba04f8220424fed"
 }

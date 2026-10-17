@@ -299,6 +299,36 @@ def _execute_test_cmd(sandbox_root: Path, test_command: str, timeout_sec: float)
     return proc.returncode, elapsed_ms
 
 
+def _resolve_smart_test_command(
+    project_root: Path,
+    target_files: list[str],
+    test_command: str,
+) -> tuple[str, list[str]]:
+    """전체 테스트 스위트 대신 변이 대상 모듈을 직접 검증하는 테스트 파일만 선별하여 실행 속도를 최적화한다."""
+    cmd_norm = test_command.strip()
+    if "unittest discover" not in cmd_norm:
+        return cmd_norm, []
+
+    matched_tests: list[str] = []
+    for rel_raw in target_files:
+        stem = Path(rel_raw).stem
+        if not stem:
+            continue
+        for candidate in sorted(project_root.rglob(f"test_{stem}.py")):
+            if candidate.is_file() and not candidate.is_symlink():
+                rel_c = PurePosixPath(candidate.relative_to(project_root).as_posix()).as_posix()
+                if rel_c not in matched_tests:
+                    matched_tests.append(rel_c)
+
+    if not matched_tests:
+        return cmd_norm, []
+
+    raw_args = shlex.split(cmd_norm, posix=(os.name != "nt"))
+    py_exe = raw_args[0] if raw_args else "python"
+    targeted_cmd = f"{py_exe} -m unittest " + " ".join(matched_tests)
+    return targeted_cmd, matched_tests
+
+
 class SandboxMutationRunner:
     """임시 샌드박스에서 변이를 하나씩 주입하며 테스트 스위트의 실제 방어력(Mutation Score)을 검증한다."""
 
@@ -358,6 +388,9 @@ class SandboxMutationRunner:
         if not test_command.strip():
             raise ValueError("뮤테이션 검증을 실행할 테스트 명령(test_command)을 지정하십시오.")
 
+        effective_cmd, matched_test_files = _resolve_smart_test_command(
+            resolved, target_files, test_command
+        )
         mutants = self.collect_mutants_for_files(resolved, target_files, max_mutants=max_mutants)
         trials: list[MutantTrialResult] = []
 
@@ -366,7 +399,7 @@ class SandboxMutationRunner:
             _copy_project_to_sandbox(resolved, sandbox_root)
 
             try:
-                base_rc, base_ms = _execute_test_cmd(sandbox_root, test_command, timeout_sec)
+                base_rc, base_ms = _execute_test_cmd(sandbox_root, effective_cmd, timeout_sec)
             except subprocess.TimeoutExpired:
                 base_rc, base_ms = -1, timeout_sec * 1000.0
 
@@ -386,7 +419,7 @@ class SandboxMutationRunner:
                 try:
                     sandbox_file.write_text(site.mutated_source, encoding="utf-8")
                     try:
-                        rc, elapsed_ms = _execute_test_cmd(sandbox_root, test_command, timeout_sec)
+                        rc, elapsed_ms = _execute_test_cmd(sandbox_root, effective_cmd, timeout_sec)
                         status = "KILLED" if rc != 0 else "SURVIVED"
                     except subprocess.TimeoutExpired:
                         status = "TIMEOUT"
@@ -424,6 +457,8 @@ class SandboxMutationRunner:
             "report_path": DEFAULT_MUTATION_REPORT_REL if apply else None,
             "target_files": target_files,
             "test_command": test_command,
+            "effective_test_command": effective_cmd,
+            "targeted_test_files": matched_test_files,
             "total_mutants": total,
             "killed_count": killed,
             "timeout_count": timed_out,
