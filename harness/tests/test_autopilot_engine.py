@@ -909,12 +909,13 @@ class AutopilotEngineTests(unittest.TestCase):
             )
             (root / "AGENTS.md").write_text("# Agents Guide (see CLAUDE.md)\n", encoding="utf-8")
 
-            # Pillar 5: Hybrid native / polyglot layout (native/windows/package.json, CMakeLists.txt, Makefile, .csproj, Package.swift, tools/*.mjs)
+            # Pillar 5: Hybrid native / polyglot layout (trc-02.html, native/windows/package.json, CMakeLists.txt, Makefile with wasm, .csproj, Package.swift, tools/*.mjs, tools/*-check.py)
+            (root / "trc-02.html").write_text("<!doctype html><html><body>TRC</body></html>\n", encoding="utf-8")
             (root / "CMakeLists.txt").write_text("cmake_minimum_required(VERSION 3.20)\nproject(TrcAudioEngine)\n", encoding="utf-8")
             native_dir = root / "native"
             native_win_dir = native_dir / "windows"
             native_win_dir.mkdir(parents=True, exist_ok=True)
-            (native_dir / "Makefile").write_text("all:\n\t@echo build\n", encoding="utf-8")
+            (native_dir / "Makefile").write_text("all:\n\temcc core.cpp -o core.wasm\n", encoding="utf-8")
             (native_dir / "AudioHost.csproj").write_text("<Project Sdk=\"Microsoft.NET.Sdk\"></Project>\n", encoding="utf-8")
             (root / "Package.swift").write_text("// swift-tools-version:5.9\n", encoding="utf-8")
             (native_win_dir / "package.json").write_text(
@@ -927,9 +928,11 @@ class AutopilotEngineTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            (native_win_dir / "ai-control-test.mjs").write_text("console.log('ai-control-ok');\n", encoding="utf-8")
             tools_dir = root / "tools"
             tools_dir.mkdir(parents=True, exist_ok=True)
             (tools_dir / "run-tests.mjs").write_text("export function runSuite() { return true; }\n", encoding="utf-8")
+            (tools_dir / "acestep-check.py").write_text("def helper_without_return_annotation(x):\n    return x + 1\n", encoding="utf-8")
 
             # Legacy file with `: any` committed in brownfield Git repo
             src_dir = root / "src"
@@ -977,26 +980,55 @@ class AutopilotEngineTests(unittest.TestCase):
             self.assertEqual(inc_audit["audit_scope"], "changed_only")
             self.assertEqual(inc_audit["scanned_file_count"], 1)
 
-            gate_res = autopilot_engine.evaluate_autopilot_gate(root)
-            self.assertEqual(gate_res["status"], "PASS")
-            self.assertEqual(gate_res["audit_scope"], "changed_only")
+            # Multi-command verify-gate test (chained &&, ;, and list)
+            import sys
 
-            # When --all (force_all=True) is requested, legacy_mixer.ts with `any` is scanned and fails
+            py_exe = sys.executable.replace("\\", "/")
+            multi_gate = autopilot_engine.evaluate_autopilot_gate(
+                root,
+                verify_cmd=[
+                    f'"{py_exe}" -c "import sys; sys.exit(0)" && "{py_exe}" -c "print(123)"',
+                    f'"{py_exe}" -c "print(456)"',
+                ],
+            )
+            self.assertEqual(multi_gate["status"], "PASS")
+            self.assertEqual(len(multi_gate["verify_commands"]), 3)  # type: ignore[arg-type]
+            verify_stages = [s for s in multi_gate["stages"] if s["stage"] == "verify-gate"]  # type: ignore[union-attr]
+            self.assertEqual(len(verify_stages), 1)
+            self.assertEqual(verify_stages[0]["command_count"], 3)
+            self.assertEqual(verify_stages[0]["passed_count"], 3)
+
+            # Failing verify-cmd blocks autopilot-gate
+            fail_gate = autopilot_engine.evaluate_autopilot_gate(
+                root,
+                verify_cmd=f'"{py_exe}" -c "import sys; sys.exit(0)" && "{py_exe}" -c "import sys; sys.exit(2)"',
+            )
+            self.assertEqual(fail_gate["status"], "FAIL")
+
+            # When --all (force_all=True) is requested, legacy_mixer.ts with `any` is scanned and fails,
+            # while tools/acestep-check.py does NOT trigger missing-return-type
             all_audit = autopilot_engine.audit_project_code(root, force_all=True)
             self.assertEqual(all_audit["status"], "FAIL")
             self.assertEqual(all_audit["audit_scope"], "full")
+            acestep_findings = [f for f in all_audit["findings"] if "acestep-check.py" in str(f.get("evidence"))]  # type: ignore[union-attr]
+            self.assertEqual(acestep_findings, [])
 
             # Commit solo_button.tsx so working tree is clean before testing Pillar 5 & Pillar 6
             subprocess.run(["git", "add", "."], cwd=str(root), capture_output=True, check=False)
             subprocess.run(["git", "commit", "-m", "add clean solo button"], cwd=str(root), capture_output=True, check=False)
 
-            # Verify Pillar 5 & Pillar 6: discover_project detects hybrid stacks/subpackages and keeps git status --porcelain 100% clean via .git/info/exclude
+            # Verify Pillar 5 & Pillar 6: discover_project detects hybrid stacks/subpackages (including html, wasm, electron, subpackage test runners) and keeps git status --porcelain 100% clean via .git/info/exclude
             disc_res = autopilot_engine.discover_project(root, apply=True)
             self.assertEqual(disc_res["status"], "PASS")
+            self.assertIn("html", disc_res["stacks"])  # type: ignore[operator]
+            self.assertIn("wasm", disc_res["stacks"])  # type: ignore[operator]
+            self.assertIn("electron", disc_res["stacks"])  # type: ignore[operator]
             self.assertIn("cpp", disc_res["stacks"])  # type: ignore[operator]
             self.assertIn("csharp", disc_res["stacks"])  # type: ignore[operator]
             self.assertIn("swift", disc_res["stacks"])  # type: ignore[operator]
+            self.assertIn("trc-02.html", disc_res["manifests_found"])  # type: ignore[operator]
             self.assertIn("native/windows/package.json", disc_res["manifests_found"])  # type: ignore[operator]
+            self.assertIn("node native/windows/ai-control-test.mjs", disc_res["test_runners"])  # type: ignore[operator]
             self.assertTrue((root / ".dreampia/memory/discovered-project.json").is_file())
 
             # Also create .dreampia-workflow/ and .harness/ state files and verify git status --porcelain is empty

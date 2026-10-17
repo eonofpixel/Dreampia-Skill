@@ -82,10 +82,43 @@ _AUDIT_EXTENSIONS: frozenset[str] = frozenset(
         ".cpp",
         ".hpp",
         ".c",
+        ".h",
+        ".mm",
+        ".m",
         ".cs",
         ".swift",
     }
 )
+
+
+def _is_test_or_check_file(rel: str, fpath: Path) -> bool:
+    """파일 경로 및 파일명을 기반으로 테스트·검증 스크립트 여부를 판별한다."""
+    name_low = fpath.name.lower()
+    parts = PurePosixPath(rel).parts
+    return (
+        fpath.name.startswith("test_")
+        or fpath.name.endswith(("_test.py", "_test.go", "_test.rs", "Test.java", "Test.kt", "Tests.cs", "Tests.swift"))
+        or name_low.endswith(
+            (
+                "-test.py",
+                "-check.py",
+                "_check.py",
+                "-test.mjs",
+                "-test.js",
+                "-test.cjs",
+                "-test.ts",
+                "-check.mjs",
+                "-check.js",
+                "-check.cjs",
+                "-check.ts",
+            )
+        )
+        or name_low in ("test.py", "test.js", "test.mjs", "test.cjs", "test.ts")
+        or ".test." in name_low
+        or ".spec." in name_low
+        or "tests" in parts
+    )
+
 
 ensure_local_git_exclude = route_planner.ensure_local_git_exclude
 
@@ -535,6 +568,9 @@ def discover_project(
                 add_unique(workspace_packages, rel_dir)
             add_unique(languages, "cpp")
             add_unique(frameworks, "cmake")
+            cmake_text = cmake_path.read_text(encoding="utf-8", errors="replace").lower()
+            if any(tok in cmake_text for tok in ("wasm", "emscripten", "emcc", "em++")):
+                add_unique(frameworks, "wasm")
             recommended_commands.setdefault("build", "cmake --build build")
             recommended_commands.setdefault("test", "ctest --test-dir build --output-on-failure")
             add_unique(test_runners, "ctest --test-dir build --output-on-failure")
@@ -545,6 +581,9 @@ def discover_project(
             if rel_dir:
                 add_unique(workspace_packages, rel_dir)
             add_unique(languages, "cpp")
+            makefile_text = makefile_path.read_text(encoding="utf-8", errors="replace").lower()
+            if any(tok in makefile_text for tok in ("wasm", "emscripten", "emcc", "em++")):
+                add_unique(frameworks, "wasm")
             make_cmd = f"make -C {rel_dir}" if rel_dir else "make"
             recommended_commands.setdefault("build", make_cmd)
 
@@ -559,8 +598,13 @@ def discover_project(
             add_unique(test_runners, "swift test")
 
         try:
+            html_entries_added = 0
             for cs_file in sorted(cand_dir.iterdir()):
-                if cs_file.is_file() and not cs_file.is_symlink() and cs_file.suffix.lower() in (".sln", ".csproj"):
+                if not cs_file.is_file() or cs_file.is_symlink():
+                    continue
+                cs_suffix = cs_file.suffix.lower()
+                cs_name_low = cs_file.name.lower()
+                if cs_suffix in (".sln", ".csproj"):
                     add_unique(manifests_found, _rel_file(cs_file.name))
                     if rel_dir:
                         add_unique(workspace_packages, rel_dir)
@@ -568,6 +612,23 @@ def discover_project(
                     recommended_commands.setdefault("test", "dotnet test")
                     recommended_commands.setdefault("build", "dotnet build")
                     add_unique(test_runners, "dotnet test")
+                elif cand_dir == resolved and cs_suffix == ".html" and html_entries_added < 5:
+                    add_unique(languages, "html")
+                    add_unique(manifests_found, _rel_file(cs_file.name))
+                    html_entries_added += 1
+                elif cs_suffix in (".wasm", ".wat"):
+                    add_unique(frameworks, "wasm")
+                elif (
+                    rel_dir
+                    and rel_dir != "tools"
+                    and cs_suffix in (".mjs", ".cjs", ".js")
+                    and (
+                        cs_name_low.endswith(("-test.mjs", "-test.js", "-test.cjs", "-check.mjs", "-check.js", "-check.cjs"))
+                        or cs_name_low in ("test.mjs", "test.js", "test.cjs")
+                        or ".test." in cs_name_low
+                    )
+                ):
+                    add_unique(test_runners, f"node {_rel_file(cs_file.name)}")
         except OSError:
             pass
 
@@ -660,21 +721,14 @@ def discover_project(
             add_unique(languages, "rust")
         elif suffix in (".java", ".kt"):
             add_unique(languages, "kotlin" if suffix == ".kt" else "java")
-        elif suffix in (".cpp", ".hpp", ".c"):
+        elif suffix in (".cpp", ".hpp", ".c", ".h", ".mm", ".m"):
             add_unique(languages, "cpp")
         elif suffix == ".cs":
             add_unique(languages, "csharp")
         elif suffix == ".swift":
             add_unique(languages, "swift")
 
-        is_test = (
-            fpath.name.startswith("test_")
-            or fpath.name.endswith(("_test.py", "_test.go", "_test.rs", "Test.java", "Test.kt", "Tests.cs", "Tests.swift"))
-            or ".test." in fpath.name
-            or ".spec." in fpath.name
-            or "tests" in PurePosixPath(rel).parts
-        )
-        if is_test:
+        if _is_test_or_check_file(rel, fpath):
             test_files.append(rel)
         else:
             source_files.append(rel)
@@ -876,13 +930,7 @@ def audit_project_code(
             continue
         scanned_files.append(rel)
         text = fpath.read_text(encoding="utf-8", errors="replace")
-        is_test_file = (
-            fpath.name.startswith("test_")
-            or fpath.name.endswith(("_test.py", "_test.go", "_test.rs", "Tests.cs", "Tests.swift"))
-            or ".test." in fpath.name
-            or ".spec." in fpath.name
-            or "tests" in PurePosixPath(rel).parts
-        )
+        is_test_file = _is_test_or_check_file(rel, fpath)
 
         if suffix == ".py":
             try:
@@ -1363,6 +1411,205 @@ def compile_context_pack(
     }
 
 
+def _split_chained_commands(raw: str) -> list[str]:
+    """따옴표 내부는 보호하면서 '&&', ';', 줄바꿈 구분자로 체이닝된 다중 검증 명령어를 안전하게 분리한다."""
+    text = raw.strip()
+    if not text:
+        return []
+    if text.startswith("[") and text.endswith("]"):
+        try:
+            loaded = json.loads(text)
+            if isinstance(loaded, list):
+                expanded: list[str] = []
+                for item in loaded:
+                    if isinstance(item, str):
+                        expanded.extend(_split_chained_commands(item))
+                return expanded
+        except ValueError:
+            pass
+
+    parts: list[str] = []
+    buf: list[str] = []
+    in_single = False
+    in_double = False
+    escaped = False
+    idx = 0
+    length = len(text)
+    while idx < length:
+        ch = text[idx]
+        if escaped:
+            buf.append(ch)
+            escaped = False
+            idx += 1
+            continue
+        if ch == "\\" and (in_single or in_double):
+            buf.append(ch)
+            escaped = True
+            idx += 1
+            continue
+        if ch == "'" and not in_double:
+            in_single = not in_single
+            buf.append(ch)
+            idx += 1
+            continue
+        if ch == '"' and not in_single:
+            in_double = not in_double
+            buf.append(ch)
+            idx += 1
+            continue
+        if not in_single and not in_double:
+            if ch == "&" and idx + 1 < length and text[idx + 1] == "&":
+                seg = "".join(buf).strip()
+                if seg:
+                    parts.append(seg)
+                buf = []
+                idx += 2
+                continue
+            if ch in (";", "\n", "\r"):
+                seg = "".join(buf).strip()
+                if seg:
+                    parts.append(seg)
+                buf = []
+                idx += 1
+                continue
+        buf.append(ch)
+        idx += 1
+
+    tail = "".join(buf).strip()
+    if tail:
+        parts.append(tail)
+    return parts
+
+
+def normalize_verify_commands(
+    raw_commands: str | list[str] | tuple[str, ...] | None,
+    *,
+    root: Path | None = None,
+) -> list[str]:
+    """단일 문자열, 체이닝 문자열('&&', ';'), JSON 배열, 또는 문자열 시퀀스로 전달된 검증 명령어를 정규화한다."""
+    normalized: list[str] = []
+
+    def _add_cmd(cmd_str: str) -> None:
+        for sub in _split_chained_commands(cmd_str):
+            if sub and sub not in normalized:
+                normalized.append(sub)
+
+    if isinstance(raw_commands, str):
+        _add_cmd(raw_commands)
+    elif isinstance(raw_commands, (list, tuple)):
+        for item in raw_commands:
+            if isinstance(item, str):
+                _add_cmd(item)
+
+    if not normalized and root is not None:
+        rules_rel = _resolve_project_rules_rel(root.resolve())
+        rules_file = root.resolve() / rules_rel
+        if rules_file.is_file() and not rules_file.is_symlink():
+            try:
+                loaded_cfg = json.loads(rules_file.read_text(encoding="utf-8"))
+                if isinstance(loaded_cfg, dict):
+                    saved_cmds = loaded_cfg.get("verify_commands")
+                    if isinstance(saved_cmds, str):
+                        _add_cmd(saved_cmds)
+                    elif isinstance(saved_cmds, list):
+                        for item in saved_cmds:
+                            if isinstance(item, str):
+                                _add_cmd(item)
+            except ValueError:
+                pass
+
+    return normalized
+
+
+def run_verify_commands(
+    root: Path,
+    commands: list[str] | tuple[str, ...],
+    *,
+    timeout_sec: int = 120,
+) -> dict[str, object]:
+    """Tank 다중 검증 명령 실행기: 전달된 검증 명령 배열을 순차 실행하고 개별 종료 코드·소요 시간·표준 출력을 기록한다."""
+    import shlex
+    import shutil
+    import subprocess
+    import time
+
+    resolved = root.resolve()
+    cmd_list = normalize_verify_commands(list(commands))
+    results: list[dict[str, object]] = []
+    passed_count = 0
+
+    for cmd_str in cmd_list:
+        t0 = time.monotonic()
+        try:
+            raw_tokens = shlex.split(cmd_str, posix=(os.name != "nt"))
+            argv = [tok.strip("\"'") if os.name == "nt" else tok for tok in raw_tokens if tok.strip()]
+        except ValueError:
+            argv = [tok for tok in cmd_str.split() if tok]
+
+        if not argv:
+            continue
+
+        exe_cand = argv[0]
+        local_cand = resolved / exe_cand
+        if local_cand.is_file():
+            resolved_exe = str(local_cand)
+        else:
+            resolved_exe = shutil.which(exe_cand) or exe_cand
+
+        try:
+            proc = subprocess.run(
+                [resolved_exe, *argv[1:]],
+                cwd=str(resolved),
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=timeout_sec,
+                check=False,
+            )
+            rc = proc.returncode
+            out_tail = "\n".join((proc.stdout or "").strip().splitlines()[-20:])
+            err_tail = "\n".join((proc.stderr or "").strip().splitlines()[-20:])
+        except subprocess.TimeoutExpired:
+            rc = 124
+            out_tail = ""
+            err_tail = f"검증 명령 실행 제한 시간({timeout_sec}초)을 초과했습니다."
+        except OSError as exc:
+            rc = 127
+            out_tail = ""
+            err_tail = f"검증 명령 실행 실패: {exc}"
+
+        elapsed_ms = int((time.monotonic() - t0) * 1000)
+        ok = rc == 0
+        if ok:
+            passed_count += 1
+        results.append(
+            {
+                "command": cmd_str,
+                "status": "PASS" if ok else "FAIL",
+                "returncode": rc,
+                "duration_ms": elapsed_ms,
+                "stdout_tail": out_tail,
+                "stderr_tail": err_tail,
+            }
+        )
+
+    all_ok = len(results) > 0 and passed_count == len(results)
+    return {
+        "status": "PASS" if all_ok else "FAIL",
+        "command_count": len(results),
+        "passed_count": passed_count,
+        "failed_count": len(results) - passed_count,
+        "commands": [str(r["command"]) for r in results],
+        "results": results,
+        "message_ko": (
+            f"다중 검증 명령 게이트({passed_count}/{len(results)}개 명령)를 모두 통과했습니다."
+            if all_ok
+            else f"다중 검증 명령 게이트 실패: 전체 {len(results)}개 중 {len(results) - passed_count}개 명령이 실패했습니다."
+        ),
+    }
+
+
 def run_autopilot_gate(
     root: Path,
     goal: str = "",
@@ -1371,16 +1618,18 @@ def run_autopilot_gate(
     changed_only: bool | None = None,
     force_all: bool = False,
     base_ref: str = "HEAD",
+    verify_cmd: str | list[str] | tuple[str, ...] | None = None,
     apply: bool = False,
     max_iterations: int | None = None,
 ) -> dict[str, object]:
-    """Morpheus & Tank 단일 오토파일럿 통합 게이트: 프로파일 및 작업 티어(rigor_tier)에 맞춰 지침·SDD·코드감사·클린룸·Golden I/O를 원자적으로 연쇄 검증하며, 브라운필드 Git 저장소에서는 변경 파일 증분 감사를 기본 수행한다."""
+    """Morpheus & Tank 단일 오토파일럿 통합 게이트: 프로파일 및 작업 티어(rigor_tier)에 맞춰 지침·SDD·코드감사·다중검증명령·클린룸·Golden I/O를 원자적으로 연쇄 검증하며, 브라운필드 Git 저장소에서는 변경 파일 증분 감사를 기본 수행한다."""
     if root.is_symlink() or not root.is_dir():
         raise ValueError("유효하지 않은 프로젝트 디렉터리입니다.")
     resolved = root.resolve()
     eff_goal = goal.strip() or "프로젝트 기능 구현 및 품질 게이트 통합 검증"
     decision = route_planner.plan_route(eff_goal, root=resolved)
     eff_changed_only, _ = _should_auto_incremental_audit(resolved, changed_only, force_all, base_ref)
+    eff_verify_cmds = normalize_verify_commands(verify_cmd, root=resolved)
 
     budget = max(1, min(5, max_iterations if max_iterations is not None else (3 if decision.continuous_loop else 1)))
     loop_history: list[dict[str, object]] = []
@@ -1463,7 +1712,23 @@ def run_autopilot_gate(
                 }
             )
 
-        # Stage 4: Cleanroom Reconstruction & Golden I/O (when cleanroom profile or ledger exists)
+        # Stage 4: Custom Verification Commands Gate (single, chained '&&'/';', or array)
+        if eff_verify_cmds and not allow_doc_only:
+            verify_res = run_verify_commands(resolved, eff_verify_cmds)
+            stages.append(
+                {
+                    "stage": "verify-gate",
+                    "owner": "Tank (verifier)",
+                    "status": verify_res["status"],
+                    "command_count": verify_res["command_count"],
+                    "passed_count": verify_res["passed_count"],
+                    "commands": verify_res["commands"],
+                    "results": verify_res["results"],
+                    "detail": verify_res["message_ko"],
+                }
+            )
+
+        # Stage 5: Cleanroom Reconstruction & Golden I/O (when cleanroom profile or ledger exists)
         rec_ledger_file = resolved / "evidence/reconstruction-ledger.json"
         if decision.cleanroom_isolation or rec_ledger_file.is_file():
             if (resolved / "contaminated-zone").is_dir():
@@ -1495,7 +1760,7 @@ def run_autopilot_gate(
                     }
                 )
 
-        # Stage 5: Visual Acceptance (when visual-manifest.json exists)
+        # Stage 6: Visual Acceptance (when visual-manifest.json exists)
         vis_manifest = resolved / "visual-manifest.json"
         if vis_manifest.is_file():
             vis_res = visual_acceptance.verify_visual_acceptance(vis_manifest, root=resolved)
@@ -1544,6 +1809,7 @@ def run_autopilot_gate(
         "profile": decision.profile,
         "rigor_tier": decision.rigor_tier,
         "audit_scope": "changed_only" if eff_changed_only else "full",
+        "verify_commands": eff_verify_cmds,
         "execution_mode": decision.execution_mode,
         "continuous_loop": decision.continuous_loop,
         "loop_iterations": loop_history,

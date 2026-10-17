@@ -216,7 +216,7 @@ MCP_TOOLS: tuple[McpToolDefinition, ...] = (
     ),
     McpToolDefinition(
         name="dreampia_autopilot_gate",
-        description="Morpheus & Tank 통합 자율 완주 게이트: 지침 동기화, SDD+TDD 추적성(Adaptive Nano 티어 지원), Trinity 코드 감사(증분 감사 지원), 클린룸/Golden I/O/시각 수용 검증을 단일 파이프라인으로 실행하고 변조 방지 판정서(evidence/autopilot-verdict.json)를 발급합니다.",
+        description="Morpheus & Tank 통합 자율 완주 게이트: 지침 동기화, SDD+TDD 추적성(Adaptive Nano 티어 지원), Trinity 코드 감사(증분 감사 지원), 다중 검증 명령(verify_cmd/verify_commands), 클린룸/Golden I/O/시각 수용 검증을 단일 파이프라인으로 실행하고 변조 방지 판정서(evidence/autopilot-verdict.json)를 발급합니다.",
         input_schema={
             "type": "object",
             "properties": {
@@ -225,6 +225,12 @@ MCP_TOOLS: tuple[McpToolDefinition, ...] = (
                 "allow_doc_only": {"type": "boolean", "description": "문서 전용 단계에서 실제 테스트 코드 파일 필수 검사를 생략할지 여부"},
                 "changed_only": {"type": "boolean", "description": "true 지정 시 코드 감사를 Git 변경 파일로만 한정"},
                 "base_ref": {"type": "string", "description": "changed_only 기준 Git 참조 (기본값 HEAD)"},
+                "verify_cmd": {"type": "string", "description": "실행할 검증 명령 문자열 ('&&' 또는 ';' 체이닝 및 JSON 배열 문자열 지원)"},
+                "verify_commands": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "순차 실행할 다중 검증 명령 배열 (예: ['node tools/inventory-check.mjs', 'node native/windows/ai-control-test.mjs'])",
+                },
                 "apply": {"type": "boolean", "description": "기본값 true (evidence/autopilot-verdict.json 저장)"},
             },
         },
@@ -636,6 +642,12 @@ def execute_mcp_tool(default_root: Path, tool_name: str, arguments: dict[str, ob
         force_all_flag = bool(arguments.get("all", False))
         changed_only_flag = False if force_all_flag else (raw_co if isinstance(raw_co, bool) else None)
         base_ref_arg = str(arguments.get("base_ref") or "HEAD").strip()
+        raw_vcmd = arguments.get("verify_commands") or arguments.get("verify_cmd")
+        verify_cmd_arg: str | list[str] | None = None
+        if isinstance(raw_vcmd, str) and raw_vcmd.strip():
+            verify_cmd_arg = raw_vcmd.strip()
+        elif isinstance(raw_vcmd, list):
+            verify_cmd_arg = [str(x).strip() for x in raw_vcmd if str(x).strip()]
         apply_flag = bool(arguments.get("apply", True))
         return team_cli.autopilot_gate_check(
             root,
@@ -644,6 +656,7 @@ def execute_mcp_tool(default_root: Path, tool_name: str, arguments: dict[str, ob
             changed_only=changed_only_flag,
             force_all=force_all_flag,
             base_ref=base_ref_arg,
+            verify_cmd=verify_cmd_arg,
             apply=apply_flag,
         )
 

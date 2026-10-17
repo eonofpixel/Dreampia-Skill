@@ -1100,6 +1100,7 @@ def autopilot_gate_check(
     changed_only: bool | None = None,
     force_all: bool = False,
     base_ref: str = 'HEAD',
+    verify_cmd: str | list[str] | tuple[str, ...] | None = None,
 ) -> dict[str, object]:
     return autopilot_engine.run_autopilot_gate(
         root,
@@ -1108,6 +1109,7 @@ def autopilot_gate_check(
         changed_only=changed_only,
         force_all=force_all,
         base_ref=base_ref,
+        verify_cmd=verify_cmd,
         apply=apply,
     )
 
@@ -1802,9 +1804,10 @@ def manage_project_config(
     req_pattern: str | None = None,
     task_pattern: str | None = None,
     test_pattern: str | None = None,
+    verify_cmd: str | list[str] | tuple[str, ...] | None = None,
     apply: bool = False,
 ) -> dict[str, object]:
-    """프로젝트별 설정(UI 규칙 강제 여부, 브리핑 출력 여부, SDD ID 정규식, 상태 폴더)을 조회하거나 안전하게 변경한다."""
+    """프로젝트별 설정(UI 규칙 강제 여부, 브리핑 출력 여부, SDD ID 정규식, 기본 다중 검증 명령, 상태 폴더)을 조회하거나 안전하게 변경한다."""
     resolved_state_dir = state_dir.strip().strip('/\\') if state_dir else route_planner.resolve_skill_state_dir(root)
     if resolved_state_dir not in ('.dreampia', '.dreampia-skill'):
         raise InstallError('state_dir must be .dreampia or .dreampia-skill')
@@ -1860,12 +1863,18 @@ def manage_project_config(
         current_cfg['sdd'] = sdd_sec
         changed = True
 
+    if verify_cmd is not None:
+        parsed_verify = autopilot_engine.normalize_verify_commands(verify_cmd)
+        current_cfg['verify_commands'] = parsed_verify
+        changed = True
+
     if apply and changed:
         write_bytes(root, cfg_rel, canonical(current_cfg))
 
     eff_ui = route_planner.is_ui_rule_enforced(root) if not (changed and not apply) else bool(current_cfg.get('enforce_ui_rules', route_planner.is_ui_rule_enforced(root)))
     eff_briefing = route_planner.is_briefing_enabled(root) if not (changed and not apply) else bool(current_cfg.get('enforce_briefing', True))
     eff_sdd = sdd_engine.resolve_sdd_id_patterns(root) if not (changed and not apply) else current_cfg.get('sdd', sdd_engine.resolve_sdd_id_patterns(root))
+    eff_verify_cmds = current_cfg.get('verify_commands', [])
     return {
         'action': 'config',
         'status': 'PASS',
@@ -1876,6 +1885,7 @@ def manage_project_config(
         'ui_rules_enforced': eff_ui,
         'briefing_enabled': eff_briefing,
         'sdd_id_patterns': eff_sdd,
+        'verify_commands': eff_verify_cmds,
         'config': current_cfg,
         'message_ko': (
             f'프로젝트 설정이 {cfg_rel}에 저장되었습니다.'
@@ -2103,6 +2113,15 @@ def project_root(value, allow_package: bool = False, allow_home: bool = False) -
     return root
 
 
+def _safe_print_json(data: object) -> None:
+    text = json.dumps(data, ensure_ascii=False, indent=2)
+    try:
+        print(text)
+    except UnicodeEncodeError:
+        enc = getattr(sys.stdout, 'encoding', None) or 'utf-8'
+        print(text.encode(enc, errors='replace').decode(enc, errors='replace'))
+
+
 def main(argv=None) -> int:
     args=list(sys.argv[1:] if argv is None else argv)
     if args and args[0]=='harness':
@@ -2152,6 +2171,7 @@ def main(argv=None) -> int:
     p.add_argument('--target',default=None,help='project-relative artifact or directory path for reconstruct-inspect or blast-radius/metric-climb')
     p.add_argument('--source',default=None,help='project-relative source artifact or directory path for reconstruct-ledger/spec/compare')
     p.add_argument('--ledger',default=None,help='project-relative ledger path for reconstruct-verify, sdd-check, or golden-io')
+    p.add_argument('--verify-cmd',dest='verify_cmd',action='append',default=None,help='verification command(s) for autopilot-gate or config (supports multiple --verify-cmd flags, && or ; chaining, or JSON array)')
     p.add_argument('--cmd',default='',help='benchmark command string for metric-climb')
     p.add_argument('--metric-regex',default=r'metric:\s*([0-9]+(?:\.[0-9]+)?)',help='regex capturing numeric metric for metric-climb')
     p.add_argument('--direction',choices=('minimize','maximize'),default='minimize',help='metric optimization direction for metric-climb')
@@ -2167,32 +2187,32 @@ def main(argv=None) -> int:
     try:
         if a.action=='version':
             out=get_version_info(check_remote=a.check_remote)
-            print(json.dumps(out,ensure_ascii=False,indent=2))
+            _safe_print_json(out)
             return 0
         if a.action in ('release','bump-version'):
             target_ver = a.to_version or a.target or a.goal
             if not target_ver:
                 raise InstallError('release requires --to <X.Y.Z>')
             out=release_version(target_ver,notes_ko=a.notes,apply=a.apply)
-            print(json.dumps(out,ensure_ascii=False,indent=2))
+            _safe_print_json(out)
             return 0
         if a.action in ('setup','install-global'):
             proj_root=project_root(a.project,allow_package=True) if a.project else None
             out=setup_global(apply=a.apply,project_dir=proj_root)
-            print(json.dumps(out,ensure_ascii=False,indent=2))
+            _safe_print_json(out)
             return 0
         if a.action=='self-update' or (a.action=='update' and (a.global_scope or not a.project)):
             proj_root=project_root(a.project,allow_package=True) if a.project else None
             out=self_update(apply=a.apply,project_dir=proj_root)
-            print(json.dumps(out,ensure_ascii=False,indent=2))
+            _safe_print_json(out)
             return 0
         if a.action=='uninstall-global' or (a.action=='uninstall' and a.global_scope):
             out=uninstall_global(apply=a.apply)
-            print(json.dumps(out,ensure_ascii=False,indent=2))
+            _safe_print_json(out)
             return 0
         if a.action=='reconstruct-doctor':
             out=reconstruct_doctor_check(install_tool=a.install_tool or a.target,apply=a.apply)
-            print(json.dumps(out,ensure_ascii=False,indent=2))
+            _safe_print_json(out)
             return 0 if out.get('status')=='PASS' else 1
         if not a.project and a.action in ('status','doctor','config','clean','discover','onboard'):
             default_dir = pathlib.Path.cwd()
@@ -2212,7 +2232,7 @@ def main(argv=None) -> int:
         if a.action=='status':out=project_status(root)
         elif a.action in ('discover','onboard'):out=discover_project_check(root,bootstrap_sdd=a.bootstrap_sdd,apply=a.apply)
         elif a.action=='doctor':out=doctor(root,include_global=(a.global_scope or implicit_global),check_remote=a.check_remote)
-        elif a.action=='config':out=manage_project_config(root,ui_rules=a.ui_rules,briefing=a.briefing,state_dir=a.state_dir,req_pattern=a.req_pattern,task_pattern=a.task_pattern,test_pattern=a.test_pattern,apply=a.apply)
+        elif a.action=='config':out=manage_project_config(root,ui_rules=a.ui_rules,briefing=a.briefing,state_dir=a.state_dir,req_pattern=a.req_pattern,task_pattern=a.task_pattern,test_pattern=a.test_pattern,verify_cmd=a.verify_cmd,apply=a.apply)
         elif a.action=='clean':out=clean_workspace(root,clean_evidence=a.clean_evidence,apply=a.apply)
         elif a.action=='rollback':out=rollback(root,a.apply)
         elif a.action=='scaffold':out=project_scaffold(root,a.type,a.apply)
@@ -2245,11 +2265,11 @@ def main(argv=None) -> int:
         elif a.action=='audit-code':out=audit_code_check(root,check_ui_rules=(False if a.no_ui_rules else None),changed_only=(False if a.all_files else (True if a.changed_only else None)),force_all=a.all_files,base_ref=a.base_ref,apply=a.apply)
         elif a.action=='context-pack':out=context_pack_check(root,a.goal,a.apply)
         elif a.action=='golden-io':out=golden_io_check(root,a.ledger)
-        elif a.action=='autopilot-gate':out=autopilot_gate_check(root,a.goal,a.allow_doc_only,a.apply,changed_only=(False if a.all_files else (True if a.changed_only else None)),force_all=a.all_files,base_ref=a.base_ref)
+        elif a.action=='autopilot-gate':out=autopilot_gate_check(root,a.goal,a.allow_doc_only,a.apply,changed_only=(False if a.all_files else (True if a.changed_only else None)),force_all=a.all_files,base_ref=a.base_ref,verify_cmd=a.verify_cmd)
         elif a.action=='blast-radius':out=blast_radius_check(root,a.target or '',a.apply)
         elif a.action=='metric-climb':out=metric_climb_check(root,a.cmd,a.metric_regex,a.direction,a.target or '',a.immutable,a.trials,a.confidence,a.goal or 'candidate-experiment',a.apply)
         else:out=install(root,a.action,a.apply)
-        print(json.dumps(out,ensure_ascii=False,indent=2))
+        _safe_print_json(out)
         return 0 if a.action not in ('doctor','verify','app-check','ui-check','route-plan','expand-prompt','next-actions','interview-compile','learn-rule','visual-check','instruction-check','router-dispatch','squad-worktree','reconstruct-inspect','reconstruct-ledger','reconstruct-spec','reconstruct-verify','reconstruct-compare','sdd-ledger','sdd-check','spec-check','audit-code','context-pack','golden-io','autopilot-gate','blast-radius','metric-climb') or out.get('healthy') or out.get('status')=='PASS' else 1
     except (ValueError,TypeError,KeyError,OSError,RuntimeError) as e:
         print(json.dumps({'error':{'code':getattr(e,'code','INSTALL_INPUT_INVALID'),'type':type(e).__name__}},ensure_ascii=False));return 2
