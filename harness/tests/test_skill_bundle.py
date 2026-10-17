@@ -4,7 +4,7 @@ import skill_bundle,team_cli as team
 
 class SkillBundleTests(unittest.TestCase):
     def setUp(self):
-        self.tmp=tempfile.TemporaryDirectory();self.base=pathlib.Path(self.tmp.name);self.source=self.base/'source';shutil.copytree(team.PACKAGE,self.source,ignore=shutil.ignore_patterns('evidence','__pycache__'));self.skill=self.source/'ai-dev-execution';self.project=self.base/'project';self.project.mkdir()
+        self.tmp=tempfile.TemporaryDirectory();self.base=pathlib.Path(self.tmp.name);self.source=self.base/'source';shutil.copytree(team.PACKAGE,self.source,ignore=shutil.ignore_patterns('.git','evidence','__pycache__'));self.skill=self.source/'ai-dev-execution';self.project=self.base/'project';self.project.mkdir()
     def tearDown(self):self.tmp.cleanup()
     def reject(self):
         with self.assertRaises(team.InstallError):team.install(self.project,'init',True,self.source)

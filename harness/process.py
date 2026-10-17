@@ -27,6 +27,8 @@ _SYMLINK_MAGIC = b"!<dreampia-win-symlink>\x00"
 _WIN_LOCK_HANDLES: dict[int, int] = {}
 _WIN_MODES: dict[str, int] = {}
 _WIN_MODES_FILE = pathlib.Path(tempfile.gettempdir()) / ".dreampia_win_modes.json"
+sys.modules.setdefault("process", sys.modules[__name__])
+sys.modules.setdefault("harness.process", sys.modules[__name__])
 
 if os.name == "nt":
     import ctypes.wintypes as _wt

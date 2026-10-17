@@ -158,7 +158,7 @@ class TeamInstallerTests(unittest.TestCase):
         self.assertEqual(p.read_text(),'USER CHANGE');self.assertFalse(team.doctor(self.root)['healthy'])
     def test_update_and_rollback_restores_exact_files(self):
         self.init();before=(self.root/'.dreampia/WORK_CONTRACT.ko.md').read_bytes();old=team.load_manifest(self.root)
-        source=pathlib.Path(self.tmp.name)/'source';shutil.copytree(team.PACKAGE,source,ignore=shutil.ignore_patterns('evidence','__pycache__'))
+        source=pathlib.Path(self.tmp.name)/'source';shutil.copytree(team.PACKAGE,source,ignore=shutil.ignore_patterns('.git','evidence','__pycache__'))
         (source/'team/WORK_CONTRACT.ko.md').write_text('NEW CONTRACT')
         self.assertTrue(team.install(self.root,'update',False,source)['changes']);team.install(self.root,'update',True,source)
         self.assertEqual((self.root/'.dreampia/WORK_CONTRACT.ko.md').read_text(),'NEW CONTRACT')

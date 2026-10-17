@@ -196,29 +196,233 @@ def resolve_skill_state_dir(root: Path | None = None) -> str:
     return ".dreampia"
 
 
-def is_ui_rule_enforced(root: Path | None = None) -> bool:
-    """프로젝트 설정(.dreampia/project.json 또는 memory/project-rules.json)에서 기본 UI 규칙(bg-transparent, lucide-react) 강제 여부를 확인한다."""
+_DEFAULT_GIT_EXCLUDE_PATTERNS: tuple[str, ...] = (
+    ".dreampia-workflow/",
+    ".harness/",
+    ".dreampia/",
+    ".dreampia-skill/",
+    ".dreampia-install/",
+)
+
+_REPO_RULE_FILENAMES: tuple[str, ...] = (
+    "CLAUDE.md",
+    "AGENTS.md",
+    "GEMINI.md",
+    ".cursorrules",
+)
+
+_TAILWIND_CONFIG_GLOBS: tuple[str, ...] = (
+    "tailwind.config.js",
+    "tailwind.config.ts",
+    "tailwind.config.mjs",
+    "tailwind.config.cjs",
+)
+
+_SUBPACKAGE_PARENTS: tuple[str, ...] = (
+    "native",
+    "client",
+    "server",
+    "frontend",
+    "backend",
+    "src",
+    "packages",
+    "apps",
+    "services",
+    "crates",
+)
+
+
+def ensure_local_git_exclude(root: Path | None = None) -> bool:
+    """외부/오픈소스 저장소의 .gitignore를 오염시키지 않고 .git/info/exclude에 스킬 상태 폴더(.dreampia-workflow/, .harness/ 등)를 중복 없이 자동 등록한다."""
+    if root is None or root.is_symlink() or not root.is_dir():
+        return False
+    resolved = root.resolve()
+    git_dir = resolved / ".git"
+    if not git_dir.is_dir() or git_dir.is_symlink():
+        return False
+    exclude_path = git_dir / "info" / "exclude"
+    try:
+        exclude_path.parent.mkdir(parents=True, exist_ok=True)
+        existing_exclude = exclude_path.read_text(encoding="utf-8", errors="replace") if exclude_path.is_file() else ""
+    except OSError:
+        return False
+
+    gitignore_path = resolved / ".gitignore"
+    existing_gitignore = ""
+    if gitignore_path.is_file() and not gitignore_path.is_symlink():
+        try:
+            existing_gitignore = gitignore_path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            existing_gitignore = ""
+
+    existing_tokens: set[str] = set()
+    for line in (existing_exclude + "\n" + existing_gitignore).splitlines():
+        cleaned = line.strip()
+        if cleaned and not cleaned.startswith("#"):
+            existing_tokens.add(cleaned)
+            existing_tokens.add(cleaned.rstrip("/"))
+            existing_tokens.add(cleaned.lstrip("/"))
+            existing_tokens.add(cleaned.strip("/"))
+
+    missing: list[str] = []
+    for pat in _DEFAULT_GIT_EXCLUDE_PATTERNS:
+        bare = pat.strip("/")
+        if pat not in existing_tokens and bare not in existing_tokens:
+            missing.append(pat)
+
+    if missing:
+        prefix = "" if (not existing_exclude or existing_exclude.endswith("\n")) else "\n"
+        addition = prefix + "# Dreampia-Skill local zero-footprint state exclusions\n" + "\n".join(missing) + "\n"
+        try:
+            exclude_path.write_text(existing_exclude + addition, encoding="utf-8")
+        except OSError:
+            return False
+    return True
+
+
+def detect_repo_rule_files(root: Path | None = None) -> list[str]:
+    """저장소 루트에 존재하는 프로젝트 고유 에이전트 규칙 문서(CLAUDE.md, AGENTS.md, GEMINI.md, .cursorrules) 목록을 반환한다."""
+    if root is None or root.is_symlink() or not root.is_dir():
+        return []
+    resolved = root.resolve()
+    found: list[str] = []
+    for fname in _REPO_RULE_FILENAMES:
+        cand = resolved / fname
+        if cand.is_file() and not cand.is_symlink():
+            found.append(fname)
+    return found
+
+
+def resolve_language_policy(root: Path | None = None) -> dict[str, object]:
+    """대화 언어(chat_language='ko')와 코드/식별자/주석 언어 정책(code_identifier_policy='repo-convention') 및 로컬 규칙 문서 우선권을 반환한다."""
+    rule_files = detect_repo_rule_files(root)
+    return {
+        "chat_language": "ko",
+        "code_identifier_policy": "repo-convention",
+        "repo_rule_files": rule_files,
+        "repo_local_rules_take_precedence": len(rule_files) > 0,
+    }
+
+
+def detect_ui_rule_capabilities(root: Path | None = None) -> dict[str, object]:
+    """루트 및 하위 package.json / tailwind.config.*와 프로젝트 설정을 검사하여 has_tailwind, has_lucide_react 및 세부 강제 플래그를 반환한다."""
     import json as _json
 
     if root is None or root.is_symlink() or not root.is_dir():
-        return True
+        return {
+            "mode": "auto",
+            "explicit_override": None,
+            "has_tailwind": True,
+            "has_lucide_react": True,
+            "enforce_tailwind": True,
+            "enforce_lucide_react": True,
+            "enforce_ui_rules": True,
+        }
+
     resolved = root.resolve()
     state_dir = resolve_skill_state_dir(resolved)
+    explicit_override: bool | None = None
     candidates = (
+        resolved / state_dir / "memory" / "project-rules.json",
+        resolved / ".dreampia-skill" / "memory" / "project-rules.json",
+        resolved / ".dreampia" / "memory" / "project-rules.json",
         resolved / state_dir / "project.json",
         resolved / ".dreampia" / "project.json",
-        resolved / state_dir / "memory" / "project-rules.json",
-        resolved / ".dreampia" / "memory" / "project-rules.json",
     )
     for cfg_path in candidates:
         if cfg_path.is_file() and not cfg_path.is_symlink():
             try:
                 data = _json.loads(cfg_path.read_text(encoding="utf-8"))
-                if isinstance(data, dict) and data.get("enforce_ui_rules") is False:
-                    return False
+                if isinstance(data, dict):
+                    ui_mode = str(data.get("ui_rules_mode") or "").strip().lower()
+                    if ui_mode == "on":
+                        explicit_override = True
+                        break
+                    if ui_mode == "off":
+                        explicit_override = False
+                        break
+                    if isinstance(data.get("enforce_ui_rules"), bool):
+                        explicit_override = bool(data["enforce_ui_rules"])
+                        break
+                    ui_sec = data.get("ui_rules")
+                    if isinstance(ui_sec, dict) and isinstance(ui_sec.get("enforce_default_ui_rules"), bool):
+                        explicit_override = bool(ui_sec["enforce_default_ui_rules"])
+                        break
             except (OSError, ValueError, TypeError):
                 pass
-    return True
+
+    has_tailwind = any((resolved / tw).is_file() for tw in _TAILWIND_CONFIG_GLOBS)
+    has_lucide_react = False
+
+    pkg_candidates: list[Path] = [resolved / "package.json"]
+    for parent_name in _SUBPACKAGE_PARENTS:
+        parent_dir = resolved / parent_name
+        if parent_dir.is_dir() and not parent_dir.is_symlink():
+            p1 = parent_dir / "package.json"
+            if p1.is_file():
+                pkg_candidates.append(p1)
+            for tw in _TAILWIND_CONFIG_GLOBS:
+                if (parent_dir / tw).is_file():
+                    has_tailwind = True
+            try:
+                for child in sorted(parent_dir.iterdir()):
+                    if child.is_dir() and not child.is_symlink() and not child.name.startswith("."):
+                        p2 = child / "package.json"
+                        if p2.is_file():
+                            pkg_candidates.append(p2)
+                        for tw in _TAILWIND_CONFIG_GLOBS:
+                            if (child / tw).is_file():
+                                has_tailwind = True
+            except OSError:
+                pass
+
+    for pkg_path in pkg_candidates:
+        if not pkg_path.is_file() or pkg_path.is_symlink():
+            continue
+        try:
+            pkg_data = _json.loads(pkg_path.read_text(encoding="utf-8", errors="replace"))
+        except (OSError, ValueError, TypeError):
+            continue
+        if not isinstance(pkg_data, dict):
+            continue
+        deps: dict[str, object] = {}
+        for dep_key in ("dependencies", "devDependencies", "peerDependencies"):
+            sub = pkg_data.get(dep_key)
+            if isinstance(sub, dict):
+                deps.update(sub)
+        if any(k == "tailwindcss" or k.startswith("@tailwindcss/") for k in deps):
+            has_tailwind = True
+        if "lucide-react" in deps:
+            has_lucide_react = True
+
+    if explicit_override is True:
+        enforce_tailwind = True
+        enforce_lucide = True
+        mode = "on"
+    elif explicit_override is False:
+        enforce_tailwind = False
+        enforce_lucide = False
+        mode = "off"
+    else:
+        enforce_tailwind = has_tailwind
+        enforce_lucide = has_lucide_react
+        mode = "auto"
+
+    return {
+        "mode": mode,
+        "explicit_override": explicit_override,
+        "has_tailwind": has_tailwind,
+        "has_lucide_react": has_lucide_react,
+        "enforce_tailwind": enforce_tailwind,
+        "enforce_lucide_react": enforce_lucide,
+        "enforce_ui_rules": bool(enforce_tailwind or enforce_lucide),
+    }
+
+
+def is_ui_rule_enforced(root: Path | None = None) -> bool:
+    """프로젝트 설정 또는 실제 의존성(has_tailwind / has_lucide_react)을 기반으로 UI 규칙 강제 여부를 반환한다."""
+    caps = detect_ui_rule_capabilities(root)
+    return bool(caps["enforce_ui_rules"])
 
 
 def is_briefing_enabled(root: Path | None) -> bool:
@@ -307,6 +511,31 @@ class RiskClassification:
         }
 
 
+NANO_CHANGE_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"\b(typo|hotfix|minor\s+fix|one[\s-]line|tiny\s+fix|nano)\b", re.IGNORECASE),
+    re.compile(r"오타|핫픽스|단순\s*수정|사소한\s*수정|한\s*줄|1줄|주석\s*수정|문구\s*수정"),
+)
+
+
+def resolve_rigor_tier(
+    goal: str,
+    profile: str,
+    risk_level: str,
+    shorthands: tuple[str, ...] = (),
+) -> str:
+    """작업 규모와 위험도에 따라 3단 탄력 게이트 티어(nano, standard, full)를 결정한다."""
+    if (
+        profile in ("controlled", "cleanroom")
+        or risk_level == "high"
+        or any(s in shorthands for s in ("ulw", "re", "sdd", "loop", "interrogate"))
+    ):
+        return "full"
+    normalized = unicodedata.normalize("NFKC", goal or "")
+    if "btw" in shorthands or profile == "quick" or any(p.search(normalized) is not None for p in NANO_CHANGE_PATTERNS):
+        return "nano"
+    return "standard"
+
+
 @dataclass(frozen=True)
 class RouteDecision:
     goal_kind: str
@@ -322,12 +551,14 @@ class RouteDecision:
     magic_shorthands: tuple[str, ...] = ()
     execution_mode: str = "standard"
     continuous_loop: bool = False
+    rigor_tier: str = "standard"
 
     def to_dict(self) -> dict[str, object]:
         return {
             "commander": AGENT_CALLSIGNS["router"],
             "goal_kind": self.goal_kind,
             "profile": self.profile,
+            "rigor_tier": self.rigor_tier,
             "risk_level": self.risk_level,
             "risk_reasons": list(self.risk_reasons),
             "roles": list(self.roles),
@@ -664,6 +895,7 @@ def inspect_repo_status(root: Path) -> tuple[bool, bool]:
 def _apply_shorthand_overrides(
     base: RouteDecision,
     shorthands: tuple[str, ...],
+    goal: str = "",
 ) -> RouteDecision:
     """감지된 매직 단축어(ulw, loop, btw, sdd, tdd, re, audit, ui)를 RouteDecision에 반영한다."""
     if not shorthands or base.goal_kind == "unsupported":
@@ -684,6 +916,7 @@ def _apply_shorthand_overrides(
             magic_shorthands=shorthands,
             execution_mode="side-query",
             continuous_loop=False,
+            rigor_tier="nano",
         )
 
     roles_list = list(base.roles)
@@ -806,6 +1039,7 @@ def _apply_shorthand_overrides(
         for g in ("before-dev-start", "audit-code", "before-claim-complete"):
             ensure_gate(g)
 
+    tier = resolve_rigor_tier(goal, profile, base.risk_level, shorthands)
     return RouteDecision(
         goal_kind=base.goal_kind,
         profile=profile,
@@ -820,6 +1054,7 @@ def _apply_shorthand_overrides(
         magic_shorthands=shorthands,
         execution_mode=exec_mode,
         continuous_loop=continuous,
+        rigor_tier=tier,
     )
 
 
@@ -859,6 +1094,7 @@ def plan_route(
             cleanroom_isolation=False,
             reason="unsupported-or-unsafe-goal",
             message_ko=goal_cls.message_ko,
+            rigor_tier="full",
         )
 
     if risk_cls.cleanroom_required:
@@ -873,8 +1109,9 @@ def plan_route(
             cleanroom_isolation=True,
             reason="cleanroom-isolation-required",
             message_ko="역공학/오염 격리 대상이므로 분석가(Keymaker/analyst)와 구현자(Neo/executor) 번들을 분리하는 cleanroom 프로파일을 적용합니다.",
+            rigor_tier="full",
         )
-        return _apply_shorthand_overrides(base_dec, shorthands)
+        return _apply_shorthand_overrides(base_dec, shorthands, goal)
 
     if goal_cls.goal_kind == "operate" or risk_cls.risk_level == "high":
         base_dec = RouteDecision(
@@ -888,8 +1125,9 @@ def plan_route(
             cleanroom_isolation=False,
             reason="high-risk-or-operational-goal",
             message_ko="고위험 또는 운영 작업이므로 쓰기 경계 강제와 전체 검증 게이트를 포함한 controlled 프로파일을 적용합니다.",
+            rigor_tier="full",
         )
-        return _apply_shorthand_overrides(base_dec, shorthands)
+        return _apply_shorthand_overrides(base_dec, shorthands, goal)
 
     if goal_cls.goal_kind in ("explain", "review"):
         base_dec = RouteDecision(
@@ -903,13 +1141,15 @@ def plan_route(
             cleanroom_isolation=False,
             reason=f"{goal_cls.goal_kind}-goal",
             message_ko="읽기 전용 분석/리뷰 작업이므로 빠른 quick 프로파일을 적용합니다.",
+            rigor_tier="nano",
         )
-        return _apply_shorthand_overrides(base_dec, shorthands)
+        return _apply_shorthand_overrides(base_dec, shorthands, goal)
 
     if goal_cls.goal_kind == "test":
+        eff_prof = "quick" if risk_cls.risk_level == "low" else "team"
         base_dec = RouteDecision(
             goal_kind="test",
-            profile="quick" if risk_cls.risk_level == "low" else "team",
+            profile=eff_prof,
             risk_level=risk_cls.risk_level,
             risk_reasons=risk_cls.reasons,
             roles=("verifier",) if risk_cls.risk_level == "low" else ("executor", "verifier"),
@@ -918,8 +1158,9 @@ def plan_route(
             cleanroom_isolation=False,
             reason="verification-goal",
             message_ko="검증 및 테스트 실행 작업이므로 증거 기반 완료 게이트를 적용합니다.",
+            rigor_tier=resolve_rigor_tier(goal, eff_prof, risk_cls.risk_level, shorthands),
         )
-        return _apply_shorthand_overrides(base_dec, shorthands)
+        return _apply_shorthand_overrides(base_dec, shorthands, goal)
 
     base_dec = RouteDecision(
         goal_kind="change",
@@ -932,8 +1173,9 @@ def plan_route(
         cleanroom_isolation=False,
         reason="bounded-change-goal",
         message_ko="일반 기능 구현/수정 작업이므로 역할이 분리된 team 프로파일과 소유 경로 쓰기 경계를 적용합니다.",
+        rigor_tier=resolve_rigor_tier(goal, "team", risk_cls.risk_level, shorthands),
     )
-    return _apply_shorthand_overrides(base_dec, shorthands)
+    return _apply_shorthand_overrides(base_dec, shorthands, goal)
 
 
 @dataclass(frozen=True)
@@ -954,6 +1196,11 @@ class PromptExpansionBrief:
     ambiguity_level: str = "low"
     clarifying_questions_ko: tuple[str, ...] = ()
     recommended_next_actions_ko: tuple[dict[str, str], ...] = ()
+    chat_language: str = "ko"
+    code_identifier_policy: str = "repo-convention"
+    repo_rule_files: tuple[str, ...] = ()
+    has_tailwind: bool = False
+    has_lucide_react: bool = False
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -963,6 +1210,12 @@ class PromptExpansionBrief:
             "profile": self.profile,
             "execution_mode": self.execution_mode,
             "ambiguity_level": self.ambiguity_level,
+            "chat_language": self.chat_language,
+            "code_identifier_policy": self.code_identifier_policy,
+            "repo_rule_files": list(self.repo_rule_files),
+            "repo_local_rules_take_precedence": len(self.repo_rule_files) > 0,
+            "has_tailwind": self.has_tailwind,
+            "has_lucide_react": self.has_lucide_react,
             "expanded_prompt_ko": self.expanded_prompt_ko,
             "injected_constraints_ko": list(self.injected_constraints_ko),
             "edge_cases_to_check_ko": list(self.edge_cases_to_check_ko),
@@ -1477,7 +1730,14 @@ def expand_prompt_brief(
     clean_topic = _extract_clean_topic_ko(subject)
     shorthands = eff_decision.magic_shorthands
     has_ui = "ui" in shorthands or _matches(UI_DOMAIN_PATTERNS, normalized)
-    ui_rule_enforced = is_ui_rule_enforced(root)
+    ui_caps = detect_ui_rule_capabilities(root)
+    has_tailwind = bool(ui_caps["has_tailwind"])
+    has_lucide_react = bool(ui_caps["has_lucide_react"])
+    enforce_tailwind = bool(ui_caps["enforce_tailwind"])
+    enforce_lucide = bool(ui_caps["enforce_lucide_react"])
+    ui_rule_enforced = bool(ui_caps["enforce_ui_rules"])
+    lang_policy = resolve_language_policy(root)
+    repo_rule_files = tuple(str(x) for x in lang_policy["repo_rule_files"])  # type: ignore[union-attr]
     has_sec = "security-sensitive" in eff_decision.risk_reasons or _matches(SECURITY_PATTERNS, normalized)
     has_cleanroom = eff_decision.cleanroom_isolation or "re" in shorthands
     has_climb = "climb" in shorthands
@@ -1533,9 +1793,17 @@ def expand_prompt_brief(
             domain_clause = (
                 "채점 기준 파일을 건드리지 않고 실제 성능 수치가 개선된 변경만 남기며,"
             )
-        elif has_ui and ui_rule_enforced:
+        elif has_ui and enforce_tailwind and enforce_lucide:
             domain_clause = (
                 "버튼 기본 스타일(bg-transparent + hover/focus)과 lucide-react 아이콘 규격을 준수하고 중복 클릭·로딩·오류 상태를 매끄럽게 처리하며,"
+            )
+        elif has_ui and enforce_tailwind:
+            domain_clause = (
+                "버튼 기본 스타일(bg-transparent + hover/focus)을 준수하고 중복 클릭·로딩·오류 상태를 매끄럽게 처리하며,"
+            )
+        elif has_ui and enforce_lucide:
+            domain_clause = (
+                "lucide-react 아이콘 규격을 준수하고 중복 클릭·로딩·오류 상태를 매끄럽게 처리하며,"
             )
         elif has_ui:
             domain_clause = (
@@ -1549,9 +1817,13 @@ def expand_prompt_brief(
 
         constraints.append("SOLID 5원칙(단일책임·개방폐쇄·리스코프치환·인터페이스분리·의존성역전) 필수 적용")
         constraints.append("타입 안전성 보장: any 타입 금지, 모든 함수 반환 타입 및 Props/데이터 인터페이스 명시")
-        constraints.append("한글 우선 정책: 사용자 친화적 한글 에러 메시지 작성 및 빈 예외 무시(except: pass) 금지")
-        if has_ui and ui_rule_enforced:
+        constraints.append("한글 우선 정책(대화 언어: ko, 코드 식별자: repo-convention): 사용자 친화적 한글 에러 메시지 작성 및 빈 예외 무시(except: pass) 금지")
+        if has_ui and enforce_tailwind and enforce_lucide:
             constraints.append("UI 규격 강제: 버튼 기본 bg-transparent + hover/focus 상태 포함, 아이콘은 lucide-react 통일")
+        elif has_ui and enforce_tailwind:
+            constraints.append("UI 규격 강제: 버튼 기본 bg-transparent + hover/focus 상태 포함")
+        elif has_ui and enforce_lucide:
+            constraints.append("UI 규격 강제: 아이콘 라이브러리는 lucide-react 통일")
         elif has_ui:
             constraints.append("UI 규격: 프로젝트 고유 디자인 시스템(목업·토큰 정본) 준수 및 중복 클릭 방지")
         if has_sec:
@@ -1574,6 +1846,14 @@ def expand_prompt_brief(
         criteria.append("Trinity 정적 코드 감사(audit-code: 가짜 테스트·any·반환타입·슬롭·UI 규칙) 위반 0건")
         if eff_decision.required_gates:
             criteria.append(f"필수 품질 게이트({', '.join(eff_decision.required_gates)}) 전원 PASS 판정")
+
+    if repo_rule_files:
+        precedence_clause = (
+            f"저장소 루트의 기존 규칙 문서({', '.join(repo_rule_files)})에 명시된 아키텍처·네이밍·코드/주석 언어 규칙이 "
+            "스킬의 기본 스타일 규칙보다 우선한다(Repo-Local Rules Take Precedence)"
+        )
+        constraints.insert(0, precedence_clause)
+        expanded = f"{expanded} ({precedence_clause})"
 
     next_actions_payload = recommend_next_actions(root=root, goal=normalized, decision=eff_decision)
     proj_state = next_actions_payload.get("project_state", {})
@@ -1599,6 +1879,8 @@ def expand_prompt_brief(
 
     squad_str = _format_squad_pipeline_ko(eff_decision.roles)
     auto_care_tags: list[str] = ["SOLID/타입 안전성", "예외/경계값 방어", "실제 테스트 검증"]
+    if repo_rule_files:
+        auto_care_tags.insert(0, f"저장소 로컬 규칙 우선({', '.join(repo_rule_files)})")
     if has_ui and ui_rule_enforced:
         auto_care_tags.insert(1, "UI 규격(투명 버튼/lucide 아이콘/연타 방지)")
     elif has_ui:
@@ -1616,6 +1898,10 @@ def expand_prompt_brief(
         f"- 자동 챙김 항목: {', '.join(auto_care_tags)}",
         f"- 담당 스쿼드: {squad_str}",
     ]
+    if repo_rule_files:
+        echo_lines.append(
+            f"- 로컬 규칙 우선권: 저장소 루트의 기존 규칙 문서({', '.join(repo_rule_files)})가 기본 스타일 규칙보다 우선합니다(Repo-Local Rules Take Precedence)."
+        )
     if eff_decision.execution_mode == "prompt-sharpen" or ambiguity_level == "high":
         questions_md = "\n".join(f"  {idx}. {q}" for idx, q in enumerate(clarifying_questions, start=1))
         echo_lines.append("- Oracle(오라클) 사전 인터뷰 핵심 질문:")
@@ -1645,7 +1931,39 @@ def expand_prompt_brief(
         ambiguity_level=ambiguity_level,
         clarifying_questions_ko=clarifying_questions,
         recommended_next_actions_ko=next_actions_tuple,
+        chat_language=str(lang_policy["chat_language"]),
+        code_identifier_policy=str(lang_policy["code_identifier_policy"]),
+        repo_rule_files=repo_rule_files,
+        has_tailwind=has_tailwind,
+        has_lucide_react=has_lucide_react,
     )
+
+
+expand_prompt = expand_prompt_brief
+
+
+def build_execution_manifest(
+    goal: str,
+    *,
+    root: Path | None = None,
+) -> dict[str, object]:
+    """목표와 프로젝트 디렉터리를 기반으로 라우팅 결정, 프롬프트 고도화 브리핑, 언어 정책 및 UI 의존성 감지 결과를 통합 매니페스트로 반환한다."""
+    decision = plan_route(goal, root=root)
+    brief = expand_prompt_brief(goal, root=root, decision=decision)
+    ui_caps = detect_ui_rule_capabilities(root)
+    lang_policy = resolve_language_policy(root)
+    return {
+        **decision.to_dict(),
+        "prompt_expansion": brief.to_dict(),
+        "ui_capabilities": ui_caps,
+        "language_policy": lang_policy,
+        "repo_rule_files": list(brief.repo_rule_files),
+        "chat_language": brief.chat_language,
+        "code_identifier_policy": brief.code_identifier_policy,
+        "has_tailwind": brief.has_tailwind,
+        "has_lucide_react": brief.has_lucide_react,
+    }
+
 
 
 

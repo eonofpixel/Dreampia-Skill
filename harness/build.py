@@ -1,6 +1,6 @@
 """Build/install a stdlib zipapp; no network, pip or environment mutation."""
 import argparse,json,pathlib,shutil,tempfile,zipapp,hashlib
-VERSION='0.6.2'
+VERSION='0.7.0'
 def build(destination) -> dict[str, str]:
     src=pathlib.Path(__file__).resolve().parent;out=pathlib.Path(destination).resolve()
     out.parent.mkdir(parents=True,exist_ok=True)

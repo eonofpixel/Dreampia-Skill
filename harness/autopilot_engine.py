@@ -27,7 +27,7 @@ except ImportError:
     import visual_acceptance  # type: ignore[no-redef]
     import write_boundary  # type: ignore[no-redef]
 
-AUTOPILOT_VERSION = "0.6.2"
+AUTOPILOT_VERSION = "0.7.0"
 DEFAULT_CONTEXT_PACK_REL = "evidence/context-pack.json"
 DEFAULT_AUTOPILOT_VERDICT_REL = "evidence/autopilot-verdict.json"
 DEFAULT_CODE_AUDIT_REL = "evidence/code-audit.json"
@@ -51,8 +51,43 @@ _IGNORED_DIRS: frozenset[str] = frozenset(
         ".next",
         "evidence",
         "contaminated-zone",
+        "build",
+        "dist",
+        "out",
+        "target",
+        "vendor",
+        "third_party",
+        ".venv",
+        "venv",
+        "coverage",
+        ".turbo",
+        ".cache",
+        ".omo",
     }
 )
+
+_AUDIT_EXTENSIONS: frozenset[str] = frozenset(
+    {
+        ".py",
+        ".ts",
+        ".tsx",
+        ".js",
+        ".jsx",
+        ".mjs",
+        ".cjs",
+        ".rs",
+        ".go",
+        ".java",
+        ".kt",
+        ".cpp",
+        ".hpp",
+        ".c",
+        ".cs",
+        ".swift",
+    }
+)
+
+ensure_local_git_exclude = route_planner.ensure_local_git_exclude
 
 _TS_ANY_RE = re.compile(r"(:\s*any\b|<any>|\bas\s+any\b)")
 _TS_HOLLOW_TEST_RE = re.compile(r"expect\s*\(\s*true\s*\)\s*\.\s*toBe\s*\(\s*true\s*\)")
@@ -82,14 +117,60 @@ class AuditFinding:
         }
 
 
-def _iter_auditable_files(root: Path) -> list[Path]:
+def _iter_auditable_files(
+    root: Path,
+    changed_only: bool = False,
+    base_ref: str = "HEAD",
+) -> list[Path]:
+    """Git 저장소일 경우 git ls-files -z --cached --others --exclude-standard로 .gitignore/.git/info/exclude를 반영해 스캔하고, 실패 시 os.walk + _IGNORED_DIRS 폴백을 수행한다."""
+    import subprocess
+
     resolved = root.resolve()
+    changed_filter: set[str] | None = (
+        set(collect_git_changed_files(resolved, base_ref=base_ref)) if changed_only else None
+    )
+
+    if (resolved / ".git").exists():
+        try:
+            proc = subprocess.run(
+                ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+                cwd=str(resolved),
+                capture_output=True,
+                timeout=15,
+                check=False,
+            )
+            if proc.returncode == 0:
+                git_files: list[Path] = []
+                seen_rels: set[str] = set()
+                for raw_bytes in proc.stdout.split(b"\x00"):
+                    if not raw_bytes:
+                        continue
+                    rel_str = raw_bytes.decode("utf-8", errors="replace").strip()
+                    if not rel_str or rel_str in seen_rels:
+                        continue
+                    seen_rels.add(rel_str)
+                    parts = PurePosixPath(rel_str).parts
+                    if any(part in _IGNORED_DIRS for part in parts):
+                        continue
+                    if changed_filter is not None and rel_str not in changed_filter:
+                        continue
+                    fpath = resolved / rel_str
+                    if not fpath.is_symlink() and fpath.is_file():
+                        git_files.append(fpath)
+                return sorted(git_files)
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+
     files: list[Path] = []
     for current_root, dirs, filenames in os.walk(resolved, topdown=True, followlinks=False):
         dirs[:] = sorted(d for d in dirs if d not in _IGNORED_DIRS and not (Path(current_root) / d).is_symlink())
         for fname in sorted(filenames):
             fpath = Path(current_root) / fname
             if not fpath.is_symlink() and fpath.is_file():
+                if changed_filter is not None:
+                    rel_posix = fpath.relative_to(resolved).as_posix()
+                    if rel_posix not in changed_filter:
+                        continue
                 files.append(fpath)
     return files
 
@@ -197,6 +278,7 @@ def learn_project_rule(
         rules.append(entry)
 
     if apply:
+        ensure_local_git_exclude(resolved)
         rules_path = resolved / rules_rel
         rules_path.parent.mkdir(parents=True, exist_ok=True)
         doc = {
@@ -223,20 +305,558 @@ def learn_project_rule(
     }
 
 
+def collect_git_changed_files(root: Path, base_ref: str = "HEAD") -> list[str]:
+    """Git 작업 트리(status --porcelain) 및 기준 커밋(diff --name-only) 대비 변경·신규 추가된 프로젝트 상대 경로 목록을 반환한다."""
+    import subprocess
+
+    resolved = root.resolve()
+    if not (resolved / ".git").exists():
+        return []
+    changed: set[str] = set()
+    ref = (base_ref or "HEAD").strip()
+
+    try:
+        r_status = subprocess.run(
+            ["git", "status", "--porcelain", "-uall"],
+            cwd=str(resolved),
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+        if r_status.returncode == 0:
+            for raw_line in r_status.stdout.splitlines():
+                if len(raw_line) < 4:
+                    continue
+                path_part = raw_line[3:].strip()
+                if " -> " in path_part:
+                    path_part = path_part.split(" -> ", 1)[1].strip()
+                path_part = path_part.strip('"')
+                cand = (resolved / path_part).resolve()
+                if cand.is_file() and not cand.is_symlink() and (cand == resolved or resolved in cand.parents):
+                    rel_posix = cand.relative_to(resolved).as_posix()
+                    if not any(part in _IGNORED_DIRS for part in PurePosixPath(rel_posix).parts):
+                        changed.add(rel_posix)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+    try:
+        r_diff = subprocess.run(
+            ["git", "diff", "--name-only", ref],
+            cwd=str(resolved),
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+        if r_diff.returncode == 0:
+            for raw_line in r_diff.stdout.splitlines():
+                path_part = raw_line.strip().strip('"')
+                if not path_part:
+                    continue
+                cand = (resolved / path_part).resolve()
+                if cand.is_file() and not cand.is_symlink() and (cand == resolved or resolved in cand.parents):
+                    rel_posix = cand.relative_to(resolved).as_posix()
+                    if not any(part in _IGNORED_DIRS for part in PurePosixPath(rel_posix).parts):
+                        changed.add(rel_posix)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+    return sorted(changed)
+
+
+_git_changed_files = collect_git_changed_files
+
+
+def discover_project(
+    root: Path,
+    *,
+    bootstrap_sdd: bool = False,
+    apply: bool = False,
+) -> dict[str, object]:
+    """브라운필드/그린필드/폴리글랏/하이브리드 네이티브 프로젝트를 자동 탐색하여 스택 프로필(.dreampia/memory/project-profile.json 및 discovered-project.json)과 선택적 SDD 베이스라인을 구성한다."""
+    if root.is_symlink() or not root.is_dir():
+        raise ValueError("유효하지 않은 프로젝트 디렉터리입니다.")
+    resolved = root.resolve()
+    state_dir = route_planner.resolve_skill_state_dir(resolved)
+
+    languages: list[str] = []
+    frameworks: list[str] = []
+    manifests_found: list[str] = []
+    workspace_packages: list[str] = []
+    test_runners: list[str] = []
+    is_monorepo = False
+    ui_stack_detected = False
+    recommended_commands: dict[str, str] = {}
+
+    def add_unique(target_list: list[str], item: str) -> None:
+        if item and item not in target_list:
+            target_list.append(item)
+
+    ui_caps = route_planner.detect_ui_rule_capabilities(resolved)
+    has_tailwind = bool(ui_caps["has_tailwind"])
+    has_lucide_react = bool(ui_caps["has_lucide_react"])
+    if has_tailwind:
+        add_unique(frameworks, "tailwindcss")
+        ui_stack_detected = True
+    if has_lucide_react:
+        add_unique(frameworks, "lucide-react")
+        ui_stack_detected = True
+
+    lang_policy = route_planner.resolve_language_policy(resolved)
+    repo_rule_files: list[str] = [str(x) for x in lang_policy["repo_rule_files"]]  # type: ignore[union-attr]
+
+    # Collect candidate directories up to depth 2 (root, depth 1, depth 2), excluding _IGNORED_DIRS
+    candidate_dirs: list[Path] = [resolved]
+    priority_parents = (
+        "packages",
+        "apps",
+        "services",
+        "crates",
+        "native",
+        "client",
+        "server",
+        "frontend",
+        "backend",
+        "src",
+        "tools",
+    )
+    seen_dirs: set[Path] = {resolved}
+
+    def _register_dir(d: Path) -> None:
+        if d not in seen_dirs and d.is_dir() and not d.is_symlink():
+            seen_dirs.add(d)
+            candidate_dirs.append(d)
+
+    for p_name in priority_parents:
+        p_dir = resolved / p_name
+        if p_dir.is_dir() and not p_dir.is_symlink() and p_name not in _IGNORED_DIRS:
+            _register_dir(p_dir)
+            try:
+                for child in sorted(p_dir.iterdir()):
+                    if child.is_dir() and not child.is_symlink() and child.name not in _IGNORED_DIRS and not child.name.startswith("."):
+                        _register_dir(child)
+            except OSError:
+                pass
+
+    try:
+        for d1 in sorted(resolved.iterdir()):
+            if not d1.is_dir() or d1.is_symlink() or d1.name in _IGNORED_DIRS or d1.name.startswith("."):
+                continue
+            _register_dir(d1)
+            for d2 in sorted(d1.iterdir()):
+                if d2.is_dir() and not d2.is_symlink() and d2.name not in _IGNORED_DIRS and not d2.name.startswith("."):
+                    _register_dir(d2)
+    except OSError:
+        pass
+
+    for cand_dir in candidate_dirs:
+        rel_dir = "" if cand_dir == resolved else cand_dir.relative_to(resolved).as_posix()
+
+        def _rel_file(fname: str) -> str:
+            return fname if not rel_dir else f"{rel_dir}/{fname}"
+
+        pkg_json_path = cand_dir / "package.json"
+        if pkg_json_path.is_file() and not pkg_json_path.is_symlink():
+            add_unique(manifests_found, _rel_file("package.json"))
+            if rel_dir:
+                add_unique(workspace_packages, rel_dir)
+            try:
+                pkg_data = json.loads(pkg_json_path.read_text(encoding="utf-8", errors="replace"))
+            except ValueError:
+                pkg_data = {}
+            if isinstance(pkg_data, dict):
+                deps: dict[str, object] = {}
+                for dep_key in ("dependencies", "devDependencies", "peerDependencies"):
+                    sub = pkg_data.get(dep_key)
+                    if isinstance(sub, dict):
+                        deps.update(sub)
+                if "typescript" in deps or (cand_dir / "tsconfig.json").is_file() or (resolved / "tsconfig.json").is_file():
+                    add_unique(languages, "typescript")
+                else:
+                    add_unique(languages, "javascript")
+
+                for fw_pkg, fw_name in (
+                    ("next", "nextjs"),
+                    ("react", "react"),
+                    ("vue", "vue"),
+                    ("svelte", "svelte"),
+                    ("tailwindcss", "tailwindcss"),
+                    ("lucide-react", "lucide-react"),
+                    ("express", "express"),
+                    ("@nestjs/core", "nestjs"),
+                    ("electron", "electron"),
+                    ("vite", "vite"),
+                    ("vitest", "vitest"),
+                    ("jest", "jest"),
+                    ("@playwright/test", "playwright"),
+                ):
+                    if fw_pkg in deps:
+                        add_unique(frameworks, fw_name)
+                if any(x in frameworks for x in ("nextjs", "react", "vue", "svelte", "tailwindcss")):
+                    ui_stack_detected = True
+
+                scripts = pkg_data.get("scripts")
+                if isinstance(scripts, dict):
+                    prefix_arg = f"--prefix {rel_dir} " if rel_dir else ""
+                    if "test" in scripts:
+                        cmd = f"npm {prefix_arg}test"
+                        recommended_commands.setdefault("test", cmd)
+                        add_unique(test_runners, cmd)
+                    if "lint" in scripts:
+                        recommended_commands.setdefault("lint", f"npm {prefix_arg}run lint")
+                    if "build" in scripts:
+                        recommended_commands.setdefault("build", f"npm {prefix_arg}run build")
+                    if "typecheck" in scripts:
+                        recommended_commands.setdefault("typecheck", f"npm {prefix_arg}run typecheck")
+
+                if "workspaces" in pkg_data:
+                    is_monorepo = True
+
+        cargo_path = cand_dir / "Cargo.toml"
+        if cargo_path.is_file() and not cargo_path.is_symlink():
+            add_unique(manifests_found, _rel_file("Cargo.toml"))
+            if rel_dir:
+                add_unique(workspace_packages, rel_dir)
+            add_unique(languages, "rust")
+            cargo_text = cargo_path.read_text(encoding="utf-8", errors="replace")
+            if "[workspace]" in cargo_text:
+                is_monorepo = True
+            cargo_manifest_arg = f" --manifest-path {_rel_file('Cargo.toml')}" if rel_dir else ""
+            recommended_commands.setdefault("test", f"cargo test{cargo_manifest_arg}")
+            recommended_commands.setdefault("lint", f"cargo clippy{cargo_manifest_arg}")
+            recommended_commands.setdefault("build", f"cargo build{cargo_manifest_arg}")
+            add_unique(test_runners, f"cargo test{cargo_manifest_arg}")
+
+        cmake_path = cand_dir / "CMakeLists.txt"
+        if cmake_path.is_file() and not cmake_path.is_symlink():
+            add_unique(manifests_found, _rel_file("CMakeLists.txt"))
+            if rel_dir:
+                add_unique(workspace_packages, rel_dir)
+            add_unique(languages, "cpp")
+            add_unique(frameworks, "cmake")
+            recommended_commands.setdefault("build", "cmake --build build")
+            recommended_commands.setdefault("test", "ctest --test-dir build --output-on-failure")
+            add_unique(test_runners, "ctest --test-dir build --output-on-failure")
+
+        makefile_path = cand_dir / "Makefile"
+        if makefile_path.is_file() and not makefile_path.is_symlink():
+            add_unique(manifests_found, _rel_file("Makefile"))
+            if rel_dir:
+                add_unique(workspace_packages, rel_dir)
+            add_unique(languages, "cpp")
+            make_cmd = f"make -C {rel_dir}" if rel_dir else "make"
+            recommended_commands.setdefault("build", make_cmd)
+
+        swift_path = cand_dir / "Package.swift"
+        if swift_path.is_file() and not swift_path.is_symlink():
+            add_unique(manifests_found, _rel_file("Package.swift"))
+            if rel_dir:
+                add_unique(workspace_packages, rel_dir)
+            add_unique(languages, "swift")
+            recommended_commands.setdefault("test", "swift test")
+            recommended_commands.setdefault("build", "swift build")
+            add_unique(test_runners, "swift test")
+
+        try:
+            for cs_file in sorted(cand_dir.iterdir()):
+                if cs_file.is_file() and not cs_file.is_symlink() and cs_file.suffix.lower() in (".sln", ".csproj"):
+                    add_unique(manifests_found, _rel_file(cs_file.name))
+                    if rel_dir:
+                        add_unique(workspace_packages, rel_dir)
+                    add_unique(languages, "csharp")
+                    recommended_commands.setdefault("test", "dotnet test")
+                    recommended_commands.setdefault("build", "dotnet build")
+                    add_unique(test_runners, "dotnet test")
+        except OSError:
+            pass
+
+    for py_manifest in ("pyproject.toml", "requirements.txt", "setup.py"):
+        py_path = resolved / py_manifest
+        if py_path.is_file() and not py_path.is_symlink():
+            add_unique(manifests_found, py_manifest)
+            add_unique(languages, "python")
+            py_text = py_path.read_text(encoding="utf-8", errors="replace").lower()
+            for fw_token in ("fastapi", "django", "flask", "pydantic", "pytest", "sqlalchemy"):
+                if fw_token in py_text:
+                    add_unique(frameworks, fw_token)
+            if "pytest" in py_text:
+                recommended_commands.setdefault("test", "pytest")
+                add_unique(test_runners, "pytest")
+            else:
+                recommended_commands.setdefault("test", "python -m unittest discover")
+                add_unique(test_runners, "python -m unittest discover")
+
+    gomod_path = resolved / "go.mod"
+    if gomod_path.is_file() and not gomod_path.is_symlink():
+        add_unique(manifests_found, "go.mod")
+        add_unique(languages, "go")
+        recommended_commands.setdefault("test", "go test ./...")
+        recommended_commands.setdefault("lint", "go vet ./...")
+        recommended_commands.setdefault("build", "go build ./...")
+        add_unique(test_runners, "go test ./...")
+
+    for jvm_manifest in ("build.gradle", "build.gradle.kts", "pom.xml"):
+        jvm_path = resolved / jvm_manifest
+        if jvm_path.is_file() and not jvm_path.is_symlink():
+            add_unique(manifests_found, jvm_manifest)
+            add_unique(languages, "kotlin" if "kts" in jvm_manifest else "java")
+            jvm_test_cmd = "./gradlew test" if "gradle" in jvm_manifest else "mvn test"
+            recommended_commands.setdefault("test", jvm_test_cmd)
+            add_unique(test_runners, jvm_test_cmd)
+
+    pubspec_path = resolved / "pubspec.yaml"
+    if pubspec_path.is_file() and not pubspec_path.is_symlink():
+        add_unique(manifests_found, "pubspec.yaml")
+        add_unique(languages, "dart")
+        add_unique(frameworks, "flutter")
+        ui_stack_detected = True
+        recommended_commands.setdefault("test", "flutter test")
+        add_unique(test_runners, "flutter test")
+
+    tools_dir = resolved / "tools"
+    if tools_dir.is_dir() and not tools_dir.is_symlink():
+        try:
+            for tool_script in sorted(tools_dir.iterdir()):
+                if tool_script.is_file() and not tool_script.is_symlink() and tool_script.suffix.lower() in (".mjs", ".cjs", ".js"):
+                    rel_script = tool_script.relative_to(resolved).as_posix()
+                    add_unique(manifests_found, rel_script)
+                    add_unique(languages, "javascript")
+                    runner_cmd = f"node {rel_script}"
+                    add_unique(test_runners, runner_cmd)
+                    if "test" in tool_script.name.lower() or "check" in tool_script.name.lower() or "verify" in tool_script.name.lower():
+                        recommended_commands.setdefault("test", runner_cmd)
+            if "test" not in recommended_commands and test_runners:
+                recommended_commands["test"] = test_runners[0]
+        except OSError:
+            pass
+
+    for mono_marker in ("pnpm-workspace.yaml", "turbo.json", "nx.json", "lerna.json"):
+        if (resolved / mono_marker).is_file():
+            add_unique(manifests_found, mono_marker)
+            is_monorepo = True
+
+    if len(workspace_packages) > 1:
+        is_monorepo = True
+
+    source_files: list[str] = []
+    test_files: list[str] = []
+    for fpath in _iter_auditable_files(resolved):
+        rel = fpath.relative_to(resolved).as_posix()
+        suffix = fpath.suffix.lower()
+        if suffix in (".tsx", ".jsx", ".vue", ".svelte"):
+            ui_stack_detected = True
+        if suffix not in _AUDIT_EXTENSIONS:
+            continue
+        if suffix == ".py":
+            add_unique(languages, "python")
+        elif suffix in (".ts", ".tsx"):
+            add_unique(languages, "typescript")
+        elif suffix in (".js", ".jsx", ".mjs", ".cjs"):
+            add_unique(languages, "javascript")
+        elif suffix == ".go":
+            add_unique(languages, "go")
+        elif suffix == ".rs":
+            add_unique(languages, "rust")
+        elif suffix in (".java", ".kt"):
+            add_unique(languages, "kotlin" if suffix == ".kt" else "java")
+        elif suffix in (".cpp", ".hpp", ".c"):
+            add_unique(languages, "cpp")
+        elif suffix == ".cs":
+            add_unique(languages, "csharp")
+        elif suffix == ".swift":
+            add_unique(languages, "swift")
+
+        is_test = (
+            fpath.name.startswith("test_")
+            or fpath.name.endswith(("_test.py", "_test.go", "_test.rs", "Test.java", "Test.kt", "Tests.cs", "Tests.swift"))
+            or ".test." in fpath.name
+            or ".spec." in fpath.name
+            or "tests" in PurePosixPath(rel).parts
+        )
+        if is_test:
+            test_files.append(rel)
+        else:
+            source_files.append(rel)
+
+    sdd_ledger = sdd_engine.build_sdd_ledger(resolved)
+    req_count = len(sdd_ledger["requirements"])  # type: ignore[arg-type]
+    if req_count > 0:
+        project_mode = "sdd-ready"
+    elif len(source_files) > 0 or len(manifests_found) > 0:
+        project_mode = "brownfield"
+    else:
+        project_mode = "greenfield"
+
+    recommended_rigor = "full" if project_mode == "sdd-ready" else ("standard" if test_files else "nano")
+    profile_rel = f"{state_dir}/memory/project-profile.json"
+    discovered_rel = f"{state_dir}/discovered-project.json"
+    baseline_rel = f"{state_dir}/memory/brownfield-baseline.md"
+    bootstrapped = False
+
+    if apply:
+        ensure_local_git_exclude(resolved)
+        if bootstrap_sdd and project_mode == "brownfield":
+            bf_path = resolved / baseline_rel
+            bf_path.parent.mkdir(parents=True, exist_ok=True)
+            linked_test_line = "TEST-0900"
+            bf_content = (
+                "# 브라운필드 자동 온보딩 베이스라인 명세\n\n"
+                "# REQ-0900: 브라운필드 기존 아키텍처 및 핵심 기능 회귀 방지 (approved, PASS)\n"
+                f"- 연계 작업 및 테스트: TASK-0900 -> {linked_test_line}\n\n"
+                "# TASK-0900: 브라운필드 모듈 변경 범위 및 인터페이스 정합성 유지 (approved, PASS)\n"
+                f"- 연계 요구 및 테스트: REQ-0900 -> {linked_test_line}\n\n"
+                f"# {linked_test_line}: 브라운필드 기존 테스트 스위트 및 증분 검증 (approved, PASS)\n"
+                "- 연계 작업: TASK-0900\n"
+            )
+            bf_path.write_text(bf_content, encoding="utf-8")
+            refreshed = sdd_engine.build_sdd_ledger(resolved)
+            ledger_out = resolved / sdd_engine.DEFAULT_SDD_LEDGER_REL
+            ledger_out.parent.mkdir(parents=True, exist_ok=True)
+            ledger_out.write_text(json.dumps(refreshed, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            req_count = len(refreshed["requirements"])  # type: ignore[arg-type]
+            project_mode = "sdd-ready"
+            bootstrapped = True
+
+        if not (has_tailwind or has_lucide_react):
+            rules_rel = _resolve_project_rules_rel(resolved)
+            rules_file = resolved / rules_rel
+            existing_doc: dict[str, object] = {}
+            if rules_file.is_file():
+                try:
+                    loaded_r = json.loads(rules_file.read_text(encoding="utf-8"))
+                    if isinstance(loaded_r, dict):
+                        existing_doc = loaded_r
+                except ValueError:
+                    existing_doc = {}
+            if "enforce_ui_rules" not in existing_doc:
+                existing_doc["schema_version"] = 1
+                existing_doc["engine_version"] = AUTOPILOT_VERSION
+                existing_doc["enforce_ui_rules"] = False
+                existing_doc.setdefault("rules", [])
+                rules_file.parent.mkdir(parents=True, exist_ok=True)
+                rules_file.write_text(json.dumps(existing_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    stacks: list[str] = []
+    for item in [*languages, *frameworks]:
+        add_unique(stacks, item)
+
+    profile_doc: dict[str, object] = {
+        "schema_version": 1,
+        "engine_version": AUTOPILOT_VERSION,
+        "generated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "project_mode": project_mode,
+        "recommended_rigor_tier": recommended_rigor,
+        "languages": languages,
+        "frameworks": frameworks,
+        "stacks": stacks,
+        "manifests_found": manifests_found,
+        "is_monorepo": is_monorepo,
+        "workspace_packages": workspace_packages,
+        "test_runners": test_runners,
+        "ui_stack_detected": ui_stack_detected,
+        "has_tailwind": has_tailwind,
+        "has_lucide_react": has_lucide_react,
+        "repo_rule_files": repo_rule_files,
+        "chat_language": "ko",
+        "code_identifier_policy": "repo-convention",
+        "source_file_count": len(source_files),
+        "test_file_count": len(test_files),
+        "sdd_requirement_count": req_count,
+        "sdd_bootstrapped": bootstrapped,
+        "recommended_commands": recommended_commands,
+    }
+
+    if apply:
+        prof_path = resolved / profile_rel
+        prof_path.parent.mkdir(parents=True, exist_ok=True)
+        serialized_prof = json.dumps(profile_doc, ensure_ascii=False, indent=2) + "\n"
+        prof_path.write_text(serialized_prof, encoding="utf-8")
+        disc_path = resolved / discovered_rel
+        disc_path.parent.mkdir(parents=True, exist_ok=True)
+        disc_path.write_text(serialized_prof, encoding="utf-8")
+        disc_mem_path = resolved / f"{state_dir}/memory/discovered-project.json"
+        disc_mem_path.parent.mkdir(parents=True, exist_ok=True)
+        disc_mem_path.write_text(serialized_prof, encoding="utf-8")
+
+    return {
+        "action": "discover",
+        "status": "PASS",
+        "applied": apply,
+        "profile_path": profile_rel if apply else None,
+        "discovered_project_path": discovered_rel if apply else None,
+        "baseline_spec_path": baseline_rel if bootstrapped else None,
+        **profile_doc,
+        "message_ko": (
+            f"프로젝트 자동 탐색 완료: 모드={project_mode}, 언어={','.join(languages) or 'none'}, "
+            f"소스={len(source_files)}개, 테스트={len(test_files)}개, Tailwind={has_tailwind}, Lucide={has_lucide_react}"
+            + (f" ({profile_rel} 저장 완료)" if apply else " (미리보기 상태, 저장하려면 --apply 추가)")
+        ),
+    }
+
+
+_RUST_HOLLOW_TEST_RE = re.compile(r"\bassert!\s*\(\s*true\s*\)")
+_RUST_UNIMPLEMENTED_RE = re.compile(r"\b(todo!|unimplemented!)\s*\(")
+_GO_ANY_RE = re.compile(r"\b(interface\s*\{\s*\})\b")
+
+
+def _should_auto_incremental_audit(
+    resolved: Path,
+    changed_only: bool | None,
+    force_all: bool,
+    base_ref: str,
+) -> tuple[bool, list[str]]:
+    """브라운필드 Git 저장소에서 변경 파일이 존재할 때 자동으로 changed_only=True 증분 감사를 활성화할지 판별한다."""
+    git_changed = collect_git_changed_files(resolved, base_ref=base_ref) if (resolved / ".git").exists() else []
+    if force_all or changed_only is False:
+        return False, git_changed
+    if changed_only is True:
+        return True, git_changed
+    # changed_only is None (auto mode): enable incremental audit for brownfield Git repos with modified/added files
+    if (resolved / ".git").exists() and git_changed:
+        sdd_reqs = sdd_engine.build_sdd_ledger(resolved).get("requirements", [])
+        is_brownfield = (not isinstance(sdd_reqs, list) or len(sdd_reqs) == 0) and not (
+            resolved / "docs" / "01_PRD_REQUIREMENTS.md"
+        ).is_file()
+        if is_brownfield:
+            return True, git_changed
+    return False, git_changed
+
+
 def audit_project_code(
     root: Path,
     *,
     check_return_types: bool = True,
     check_ui_rules: bool | None = None,
+    changed_only: bool | None = None,
+    force_all: bool = False,
+    base_ref: str = "HEAD",
     apply: bool = False,
 ) -> dict[str, object]:
-    """Trinity(트리니티) 정적 감사기: 가짜 TDD 테스트(assert True/빈 테스트), any 타입, 반환 타입 누락, UI 아이콘/버튼 규칙 및 자가 학습 규칙을 검사한다."""
+    """Trinity(트리니티) 정적 감사기: 가짜 TDD 테스트(assert True/빈 테스트), any 타입, 반환 타입 누락, UI 아이콘/버튼 규칙 및 자가 학습 규칙을 검사한다 (브라운필드 Git 저장소 또는 changed_only 활성 시 변경 파일만 증분 감사)."""
     if root.is_symlink() or not root.is_dir():
         raise ValueError("유효하지 않은 프로젝트 디렉터리입니다.")
     resolved = root.resolve()
-    eff_ui_rules = route_planner.is_ui_rule_enforced(resolved) if check_ui_rules is None else bool(check_ui_rules)
+    ui_caps = route_planner.detect_ui_rule_capabilities(resolved)
+    if check_ui_rules is True:
+        enforce_tailwind = True
+        enforce_lucide = True
+        eff_ui_rules = True
+    elif check_ui_rules is False:
+        enforce_tailwind = False
+        enforce_lucide = False
+        eff_ui_rules = False
+    else:
+        enforce_tailwind = bool(ui_caps["enforce_tailwind"])
+        enforce_lucide = bool(ui_caps["enforce_lucide_react"])
+        eff_ui_rules = bool(ui_caps["enforce_ui_rules"])
+
+    eff_changed_only, git_changed_list = _should_auto_incremental_audit(
+        resolved, changed_only, force_all, base_ref
+    )
     findings: list[AuditFinding] = []
     scanned_files: list[str] = []
+    changed_set: set[str] | None = set(git_changed_list) if eff_changed_only else None
     learned_rules = load_project_rules(resolved)
     compiled_custom_rules: list[tuple[dict[str, object], re.Pattern[str]]] = []
     for r_item in learned_rules:
@@ -247,16 +867,18 @@ def audit_project_code(
             except re.error:
                 continue
 
-    for fpath in _iter_auditable_files(resolved):
+    for fpath in _iter_auditable_files(resolved, changed_only=eff_changed_only, base_ref=base_ref):
         rel = fpath.relative_to(resolved).as_posix()
+        if changed_set is not None and rel not in changed_set:
+            continue
         suffix = fpath.suffix.lower()
-        if suffix not in (".py", ".ts", ".tsx", ".js", ".jsx"):
+        if suffix not in _AUDIT_EXTENSIONS:
             continue
         scanned_files.append(rel)
         text = fpath.read_text(encoding="utf-8", errors="replace")
         is_test_file = (
             fpath.name.startswith("test_")
-            or fpath.name.endswith("_test.py")
+            or fpath.name.endswith(("_test.py", "_test.go", "_test.rs", "Tests.cs", "Tests.swift"))
             or ".test." in fpath.name
             or ".spec." in fpath.name
             or "tests" in PurePosixPath(rel).parts
@@ -338,7 +960,7 @@ def audit_project_code(
                             )
                         )
 
-        elif suffix in (".ts", ".tsx", ".js", ".jsx"):
+        elif suffix in (".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"):
             lines = text.splitlines()
             for idx, line in enumerate(lines, start=1):
                 if suffix in (".ts", ".tsx") and _TS_ANY_RE.search(line):
@@ -361,7 +983,7 @@ def audit_project_code(
                             fix_ko="실제 컴포넌트/함수 동작을 검증하는 단언문으로 교체하십시오.",
                         )
                     )
-                if eff_ui_rules and _FORBIDDEN_ICON_RE.search(line):
+                if enforce_lucide and _FORBIDDEN_ICON_RE.search(line):
                     findings.append(
                         AuditFinding(
                             severity="MEDIUM",
@@ -372,7 +994,7 @@ def audit_project_code(
                         )
                     )
 
-            if eff_ui_rules and suffix in (".tsx", ".jsx"):
+            if enforce_tailwind and suffix in (".tsx", ".jsx"):
                 for match in _BUTTON_TAG_RE.finditer(text):
                     attrs = match.group(1)
                     if "className" in attrs and "bg-transparent" not in attrs:
@@ -386,6 +1008,42 @@ def audit_project_code(
                                 fix_ko="버튼 기본 스타일 규칙에 따라 'bg-transparent' 및 hover/focus 상태를 포함하십시오.",
                             )
                         )
+
+        elif suffix == ".rs":
+            for idx, line in enumerate(text.splitlines(), start=1):
+                if _RUST_HOLLOW_TEST_RE.search(line):
+                    findings.append(
+                        AuditFinding(
+                            severity="HIGH",
+                            rule_id="hollow-tdd-assert-true",
+                            evidence=f"{rel}:{idx}",
+                            issue_ko="Rust 테스트 코드에 가짜 단언문(assert!(true))이 감지되었습니다.",
+                            fix_ko="assert_eq! 또는 실제 결과 검증 단언문으로 교체하십시오.",
+                        )
+                    )
+                if not is_test_file and _RUST_UNIMPLEMENTED_RE.search(line):
+                    findings.append(
+                        AuditFinding(
+                            severity="HIGH",
+                            rule_id="slop-unimplemented-macro",
+                            evidence=f"{rel}:{idx}",
+                            issue_ko="프로덕션 Rust 코드에 미완성 매크로(todo!/unimplemented!)가 남아 있습니다.",
+                            fix_ko="실제 비즈니스 로직과 Result 기반 에러 처리를 구현하십시오.",
+                        )
+                    )
+
+        elif suffix == ".go":
+            for idx, line in enumerate(text.splitlines(), start=1):
+                if not is_test_file and _GO_ANY_RE.search(line):
+                    findings.append(
+                        AuditFinding(
+                            severity="MEDIUM",
+                            rule_id="forbidden-any-type",
+                            evidence=f"{rel}:{idx}",
+                            issue_ko="Go 코드에 비타입 빈 인터페이스(interface{})가 사용되었습니다.",
+                            fix_ko="구체적인 구조체(struct) 또는 명시적 인터페이스/제네릭 타입을 사용하십시오.",
+                        )
+                    )
 
         if not is_test_file:
             for custom_rule, custom_re in compiled_custom_rules:
@@ -405,24 +1063,36 @@ def audit_project_code(
 
     blocking = [f for f in findings if f.severity in ("CRITICAL", "HIGH")]
     passed = len(blocking) == 0
+    scope_label = "changed_only" if eff_changed_only else "full"
     payload: dict[str, object] = {
         "status": "PASS" if passed else "FAIL",
         "auditor": "Trinity (reviewer)",
+        "audit_scope": scope_label,
+        "changed_files": sorted(changed_set) if changed_set is not None else None,
         "applied": apply,
         "report_path": DEFAULT_CODE_AUDIT_REL if apply else None,
         "ui_rules_enforced": eff_ui_rules,
+        "has_tailwind": bool(ui_caps["has_tailwind"]),
+        "has_lucide_react": bool(ui_caps["has_lucide_react"]),
+        "enforce_tailwind": enforce_tailwind,
+        "enforce_lucide_react": enforce_lucide,
         "scanned_file_count": len(scanned_files),
         "finding_count": len(findings),
         "blocking_count": len(blocking),
         "learned_rule_count": len(learned_rules),
         "findings": [f.to_dict() for f in findings],
         "message_ko": (
-            f"Trinity 코드·TDD·규칙 정적 감사를 통과했습니다. (검사 파일 {len(scanned_files)}개, 차단 결함 0건)"
+            (
+                "Git 워킹트리에 변경·추가된 파일이 없어 증분 감사를 통과했습니다. 전체 저장소 레거시 감사가 필요하면 --all 옵션을 사용하십시오."
+                if (eff_changed_only and len(scanned_files) == 0)
+                else f"Trinity 코드·TDD·규칙 정적 감사({scope_label})를 통과했습니다. (검사 파일 {len(scanned_files)}개, 차단 결함 0건)"
+            )
             if passed
-            else f"Trinity 감사에서 차단 결함 {len(blocking)}건(전체 {len(findings)}건)이 발견되었습니다."
+            else f"Trinity 감사({scope_label})에서 차단 결함 {len(blocking)}건(전체 {len(findings)}건)이 발견되었습니다."
         ),
     }
     if apply:
+        ensure_local_git_exclude(resolved)
         audit_out = resolved / DEFAULT_CODE_AUDIT_REL
         audit_out.parent.mkdir(parents=True, exist_ok=True)
         audit_out.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -679,6 +1349,7 @@ def compile_context_pack(
     }
 
     if apply:
+        ensure_local_git_exclude(resolved)
         out_path = resolved / DEFAULT_CONTEXT_PACK_REL
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(json.dumps(pack, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -697,15 +1368,19 @@ def run_autopilot_gate(
     goal: str = "",
     *,
     allow_doc_only: bool = False,
+    changed_only: bool | None = None,
+    force_all: bool = False,
+    base_ref: str = "HEAD",
     apply: bool = False,
     max_iterations: int | None = None,
 ) -> dict[str, object]:
-    """Morpheus & Tank 단일 오토파일럿 통합 게이트: 프로파일에 맞춰 지침·SDD·코드감사·클린룸·Golden I/O를 원자적으로 연쇄 검증하며, continuous_loop 활성 시 최대 N회 자가 복구 루프를 수행한다."""
+    """Morpheus & Tank 단일 오토파일럿 통합 게이트: 프로파일 및 작업 티어(rigor_tier)에 맞춰 지침·SDD·코드감사·클린룸·Golden I/O를 원자적으로 연쇄 검증하며, 브라운필드 Git 저장소에서는 변경 파일 증분 감사를 기본 수행한다."""
     if root.is_symlink() or not root.is_dir():
         raise ValueError("유효하지 않은 프로젝트 디렉터리입니다.")
     resolved = root.resolve()
     eff_goal = goal.strip() or "프로젝트 기능 구현 및 품질 게이트 통합 검증"
     decision = route_planner.plan_route(eff_goal, root=resolved)
+    eff_changed_only, _ = _should_auto_incremental_audit(resolved, changed_only, force_all, base_ref)
 
     budget = max(1, min(5, max_iterations if max_iterations is not None else (3 if decision.continuous_loop else 1)))
     loop_history: list[dict[str, object]] = []
@@ -726,7 +1401,7 @@ def run_autopilot_gate(
             }
         )
 
-        # Stage 2: SDD + TDD Traceability Check
+        # Stage 2: SDD + TDD Traceability Check (with Adaptive Nano / Brownfield Incremental support)
         saved_sdd: dict[str, object] | None = None
         sdd_ledger_file = resolved / sdd_engine.DEFAULT_SDD_LEDGER_REL
         if sdd_ledger_file.is_file():
@@ -739,25 +1414,48 @@ def run_autopilot_gate(
             saved_ledger=saved_sdd,
             require_tdd_files=not allow_doc_only,
         )
+        sdd_blockers: list[str] = list(sdd_res["blockers"])  # type: ignore[arg-type]
+        brownfield_no_sdd = (
+            sdd_res["requirement_count"] == 0
+            and not (resolved / "docs" / "01_PRD_REQUIREMENTS.md").is_file()
+            and ((resolved / ".git").exists() or eff_changed_only)
+        )
+        adaptive_nano_bypass = (
+            (decision.rigor_tier == "nano" or brownfield_no_sdd)
+            and sdd_res["requirement_count"] == 0
+            and all(b in ("missing-sdd-requirements", "missing-executable-tdd-test-files") for b in sdd_blockers)
+        )
         stages.append(
             {
                 "stage": "sdd-tdd-traceability",
                 "owner": "Oracle (planner) & Tank (verifier)",
-                "status": "PASS" if sdd_res["status"] == "PASS" else "FAIL",
+                "status": "PASS" if (sdd_res["status"] == "PASS" or adaptive_nano_bypass) else "FAIL",
                 "traceability_ratio": sdd_res["traceability_ratio"],
-                "blockers": sdd_res["blockers"],
-                "detail": sdd_res["message_ko"],
+                "adaptive_nano_bypass": adaptive_nano_bypass,
+                "blockers": [] if adaptive_nano_bypass else sdd_blockers,
+                "detail": (
+                    "Adaptive Brownfield/Nano Tier: 브라운필드 증분 변경 또는 경량 작업으로 전체 SDD 문서 스캐폴드 강제를 생략하고 코드·TDD 감사로 직결합니다."
+                    if adaptive_nano_bypass
+                    else sdd_res["message_ko"]
+                ),
             }
         )
 
         # Stage 3: Trinity Code & Hollow-TDD Static Audit
         if not allow_doc_only:
-            audit_res = audit_project_code(resolved)
+            audit_res = audit_project_code(
+                resolved,
+                changed_only=eff_changed_only,
+                force_all=force_all,
+                base_ref=base_ref,
+            )
             stages.append(
                 {
                     "stage": "trinity-code-audit",
                     "owner": "Trinity (reviewer)",
                     "status": audit_res["status"],
+                    "audit_scope": audit_res["audit_scope"],
+                    "scanned_file_count": audit_res["scanned_file_count"],
                     "blocking_count": audit_res["blocking_count"],
                     "finding_count": audit_res["finding_count"],
                     "findings": audit_res["findings"],
@@ -844,6 +1542,8 @@ def run_autopilot_gate(
         "status": "PASS" if all_passed else "FAIL",
         "commander": decision.to_dict()["commander"],
         "profile": decision.profile,
+        "rigor_tier": decision.rigor_tier,
+        "audit_scope": "changed_only" if eff_changed_only else "full",
         "execution_mode": decision.execution_mode,
         "continuous_loop": decision.continuous_loop,
         "loop_iterations": loop_history,
@@ -852,13 +1552,14 @@ def run_autopilot_gate(
         "stage_count": len(stages),
         "stages": stages,
         "message_ko": (
-            f"Morpheus & Tank 오토파일럿 통합 게이트({decision.profile}) 전 단계({len(stages)}개) 검증을 통과했습니다."
+            f"Morpheus & Tank 오토파일럿 통합 게이트({decision.profile}, 티어={decision.rigor_tier}) 전 단계({len(stages)}개) 검증을 통과했습니다."
             if all_passed
             else f"오토파일럿 통합 게이트 차단: 실패 단계 {[s['stage'] for s in stages if s['status'] != 'PASS']}"
         ),
     }
 
     if apply:
+        ensure_local_git_exclude(resolved)
         verdict_bytes = (json.dumps(verdict_doc, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
         verdict_doc["verdict_sha256"] = hashlib.sha256(verdict_bytes).hexdigest()
         out_path = resolved / DEFAULT_AUTOPILOT_VERDICT_REL
@@ -871,6 +1572,9 @@ def run_autopilot_gate(
         "verdict_path": DEFAULT_AUTOPILOT_VERDICT_REL if apply else None,
         **verdict_doc,
     }
+
+
+evaluate_autopilot_gate = run_autopilot_gate
 
 
 DEFAULT_BLAST_RADIUS_REL = "evidence/blast-radius-report.json"

@@ -249,7 +249,7 @@
   ],
   "delta_modified_ids": [],
   "evidence_files": {
-    "evidence/autopilot-verdict.json": "1b517795bb724ae5dc2e7044e05a42c4e41fab18e31c736608c7679b44f3acc6",
+    "evidence/autopilot-verdict.json": "587c7a7b5c0a604731cfb7a5b0677785683341f1fe9cb3048dbfb9cf0da8de39",
     "evidence/blast-radius-report.json": "48cea6b91cd8b1df94ffb33d1d96ce3200783df1fb13643d1e8eca4cccdf76b5",
     "evidence/code-audit.json": "687093c8283b68d8750724f13dfca63fb3afc1f519a993d095dc00f8859b436e",
     "evidence/context-pack.json": "0eaa36e65f1d84c531ccf31064bb68b33e20e987a5bcf145200b6c3b43675dee",
@@ -257,7 +257,7 @@
     "evidence/metric-climb-ledger.json": "671e558ac02d89b2569b72f2c7a384bd42f7052df3564c2610f8315fc726bfc4",
     "evidence/verification.json": "40fe6dc2077dfb19a1439631f1627a9acd6cbcb98bf2504636178fa34ffd9566"
   },
-  "generated_at": "2026-10-16T18:05:19.435325+00:00",
+  "generated_at": "2026-10-17T08:28:30.535142+00:00",
   "requirements": [
     {
       "id": "PRD-R001",
@@ -634,7 +634,7 @@
       "verdict": "PASS"
     }
   ],
-  "schema_version": "0.6.2",
+  "schema_version": "0.7.0",
   "squad_owners": {
     "evidence_verifier": "Tank (verifier)",
     "spec_author": "Oracle (planner) & Architect (architect)",
@@ -658,8 +658,8 @@
         "FILE:harness/tests/test_autopilot_engine.py"
       ],
       "source_path": "ai-dev-execution/references/cleanroom-governance.md",
-      "spec_sha256": "58af3da8115b7dc4274fd7787de3b787df948a8cdb10b5a9d3bdb8b2499ddbc5",
-      "statement": "1. **SDD+TDD 계층 추적 (`sdd-ledger` / `sdd-check`)**: `PRD-R* / REQ-* / SPEC-* → API-* / UX-S* → TASK-* / T* → TEST-*` 4단계 계층 BFS 추적(테스트 파일 내 `T1207`/`TASK-*` 직접 인용 포함), 고아 요구사항 차단, 명세 해시(`spec_sha256`) 기반 Spec Drift(`STALE`) 감지.",
+      "spec_sha256": "f53e0a80d77167a70752a1e6abf5b634f04822180bb59260ca445f4e886660bf",
+      "statement": "1. **SDD+TDD 계층 추적 (`sdd-ledger` / `sdd-check`)**: `PRD-R* / REQ-* / SPEC-* → API-* / UX-S* → TASK-* / T* → TEST-*` 4단계 계층 BFS 추적(테스트 파일 내 `T1207`/`TASK-*` 직접 인용 및 브라운필드 `brownfield-baseline.md` 포함), 고아 요구사항 차단, 명세 해시(`spec_sha256`) 기반 Spec",
       "status": "approved",
       "test_files": [
         "harness/tests/test_autopilot_engine.py"

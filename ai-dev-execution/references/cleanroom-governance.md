@@ -73,9 +73,10 @@ python -m harness.team_cli reconstruct-compare --project /path/to/project --sour
 
 ## 5. 유니버설 멀티 에이전트 라우터 및 MCP 서버 (`router-*` / `mcp-serve`)
 
-1. 11종 에이전트 호스트(`codex`, `claude`, `gemini`, `opencode`, `dsh`, `qwen`, `aider`, `goose`, `hermes`, `pi`, `local`)에 대한 자동 탐색(`router-discover`), 스킬/플러그인 일괄 배치(`router-materialize`), 실시간 비대화형 CLI 실행 어댑터(`router-dispatch`), 그리고 STDIO JSON-RPC 2.0 MCP 서버(`mcp-serve`, 29종 도구)를 기본 제공한다.
+1. 11종 에이전트 호스트(`codex`, `claude`, `gemini`, `opencode`, `dsh`, `qwen`, `aider`, `goose`, `hermes`, `pi`, `local`)에 대한 자동 탐색(`router-discover`), 스킬/플러그인 일괄 배치(`router-materialize`), 실시간 비대화형 CLI 실행 어댑터(`router-dispatch`), 그리고 STDIO JSON-RPC 2.0 MCP 서버(`mcp-serve`, 30종 도구)를 기본 제공한다.
 
 ```bash
+python -m harness.team_cli discover --project /path/to/project --bootstrap-sdd --apply
 python -m harness.team_cli router-discover --project /path/to/project
 python -m harness.team_cli router-materialize --project /path/to/project --harness all --apply
 python -m harness.team_cli mcp-serve --project /path/to/project
@@ -83,11 +84,11 @@ python -m harness.team_cli mcp-serve --project /path/to/project
 
 ## 6. SDD+TDD 추적, 코드 감사, Golden I/O 및 오토파일럿 통합 게이트
 
-1. **SDD+TDD 계층 추적 (`sdd-ledger` / `sdd-check`)**: `PRD-R* / REQ-* / SPEC-* → API-* / UX-S* → TASK-* / T* → TEST-*` 4단계 계층 BFS 추적(테스트 파일 내 `T1207`/`TASK-*` 직접 인용 포함), 고아 요구사항 차단, 명세 해시(`spec_sha256`) 기반 Spec Drift(`STALE`) 감지.
-2. **Trinity AST 코드·가짜 TDD 감사 (`audit-code`)**: 가짜 단언문(`assert True`, `expect(true).toBe(true)`, 무단언 테스트), `any` 타입 사용, 반환 타입 누락, 선택적 UI 규칙(`--no-ui-rules` 또는 `enforce_ui_rules: false`로 해제 가능)을 정적 차단하고 `--apply` 시 `evidence/code-audit.json`을 저장.
+1. **SDD+TDD 계층 추적 (`sdd-ledger` / `sdd-check`)**: `PRD-R* / REQ-* / SPEC-* → API-* / UX-S* → TASK-* / T* → TEST-*` 4단계 계층 BFS 추적(테스트 파일 내 `T1207`/`TASK-*` 직접 인용 및 브라운필드 `brownfield-baseline.md` 포함), 고아 요구사항 차단, 명세 해시(`spec_sha256`) 기반 Spec Drift(`STALE`) 감지.
+2. **Trinity AST 코드·가짜 TDD 감사 (`audit-code`)**: 가짜 단언문(`assert True`, `expect(true).toBe(true)`, `assert!(true)`, 무단언 테스트), `any` 타입 사용, 반환 타입 누락, 선택적 UI 규칙(`--no-ui-rules` 또는 `enforce_ui_rules: false`로 해제 가능), Git 변경분 증분 감사(`--changed-only`)를 정적 차단하고 `--apply` 시 `evidence/code-audit.json`을 저장.
 3. **장기 실행 문맥 압축 (`context-pack`)**: 활성 요구사항, 미완료 작업, `ADR-*`/`RISK-*` 불변 조건을 `evidence/context-pack.json`으로 컴파일하여 세션 문맥 망각(Context Rot) 방지.
 4. **클린룸 블랙박스 동치성 (`golden-io`)**: `approved-spec/golden-io.json` 입출력 벡터와 `implementation/` 모듈의 실행 결과를 AST 정적 안전 검증 후 대조 검증.
-5. **단일 자율 완주 게이트 (`autopilot-gate`)**: 지침 드리프트, SDD+TDD 추적성, Trinity 코드 감사, 클린룸 커버리지, Golden I/O, 시각 수용 검증을 원자적으로 실행하고 `evidence/autopilot-verdict.json`을 발급.
+5. **단일 자율 완주 게이트 (`autopilot-gate`)**: 작업 규모별 3단 탄력 티어(`nano` / `standard` / `full`) 및 증분 감사(`--changed-only`)를 지원하며, 지침 드리프트, SDD+TDD 추적성, Trinity 코드 감사, 클린룸 커버리지, Golden I/O, 시각 수용 검증을 원자적으로 실행하고 `evidence/autopilot-verdict.json`을 발급.
 
 ```bash
 python -m harness.team_cli sdd-ledger --project /path/to/project --apply

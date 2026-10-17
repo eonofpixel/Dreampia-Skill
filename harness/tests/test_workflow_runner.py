@@ -6,6 +6,11 @@ import sys
 import tempfile
 import unittest
 
+try:
+    from harness import process as _proc
+except ImportError:
+    import process as _proc  # type: ignore[no-redef]
+
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 
 

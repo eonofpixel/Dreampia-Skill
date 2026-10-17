@@ -37,8 +37,8 @@ except ImportError:
     import skill_bundle  # type: ignore[no-redef]
     import write_boundary  # type: ignore[no-redef]
 
-ROUTER_VERSION = "0.6.2"
-SUPPORTED_ROUTER_VERSIONS: tuple[str, ...] = ("0.6.2", "0.6.0", "1.0.0")
+ROUTER_VERSION = "0.7.0"
+SUPPORTED_ROUTER_VERSIONS: tuple[str, ...] = ("0.7.0", "0.6.0", "1.0.0")
 DREAMPIA_PLUGIN_SCHEMA = "https://dreampia.dev/schemas/v1/plugin-manifest.json"
 DEFAULT_AUTHORIZED_MODEL = "dreampia-default"
 DEFAULT_REASONING_EFFORT = "medium"
@@ -644,6 +644,7 @@ def materialize_harness(
 
     ledger_rel = f"{ROUTER_STATE_DIR}/materialized-ledger.json"
     if apply:
+        route_planner.ensure_local_git_exclude(resolved_root)
         ledger_path = _safe_join(resolved_root, ledger_rel)
         ledger_path.parent.mkdir(parents=True, exist_ok=True)
         ledger_doc = {
@@ -1434,6 +1435,7 @@ def plan_or_manage_squad_worktrees(
 
     manifest_rel = f"{worktree_base_rel}/manifest.json"
     if apply:
+        route_planner.ensure_local_git_exclude(resolved)
         worktree_base.mkdir(parents=True, exist_ok=True)
         manifest_doc = {
             "schema_version": 1,

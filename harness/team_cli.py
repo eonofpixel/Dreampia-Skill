@@ -19,7 +19,7 @@ try:
 except ImportError:
     import autopilot_engine, process as _proc, reconstruct_engine, route_planner, sdd_engine, skill_bundle, universal_router, visual_acceptance, write_boundary
 
-VERSION='0.6.2'
+VERSION='0.7.0'
 PACKAGE=pathlib.Path(__file__).resolve().parents[1]
 META='.dreampia-install'
 SKILL='.agents/skills/ai-dev-execution/'
@@ -73,6 +73,8 @@ def write_bytes(root,name,data) -> None:
     if data is None:
         if p.exists():p.unlink()
         return
+    if isinstance(name,str) and name.startswith(('.dreampia-workflow/','.harness/','.dreampia/','.dreampia-skill/','.dreampia-install/')):
+        route_planner.ensure_local_git_exclude(pathlib.Path(root))
     p.parent.mkdir(parents=True,exist_ok=True)
     tmp=p.with_name(p.name+'.'+uuid.uuid4().hex+'.tmp')
     try:
@@ -1046,13 +1048,36 @@ def sdd_verify_check(
     return {'action': 'sdd-check', **res}
 
 
+def discover_project_check(
+    root: pathlib.Path,
+    *,
+    bootstrap_sdd: bool = False,
+    apply: bool = False,
+) -> dict[str, object]:
+    return autopilot_engine.discover_project(
+        root,
+        bootstrap_sdd=bootstrap_sdd,
+        apply=apply,
+    )
+
+
 def audit_code_check(
     root: pathlib.Path,
     *,
     check_ui_rules: bool | None = None,
+    changed_only: bool | None = None,
+    force_all: bool = False,
+    base_ref: str = 'HEAD',
     apply: bool = False,
 ) -> dict[str, object]:
-    res = autopilot_engine.audit_project_code(root, check_ui_rules=check_ui_rules, apply=apply)
+    res = autopilot_engine.audit_project_code(
+        root,
+        check_ui_rules=check_ui_rules,
+        changed_only=changed_only,
+        force_all=force_all,
+        base_ref=base_ref,
+        apply=apply,
+    )
     return {'action': 'audit-code', **res}
 
 
@@ -1071,11 +1096,18 @@ def autopilot_gate_check(
     goal: str = '',
     allow_doc_only: bool = False,
     apply: bool = False,
+    *,
+    changed_only: bool | None = None,
+    force_all: bool = False,
+    base_ref: str = 'HEAD',
 ) -> dict[str, object]:
     return autopilot_engine.run_autopilot_gate(
         root,
         goal,
         allow_doc_only=allow_doc_only,
+        changed_only=changed_only,
+        force_all=force_all,
+        base_ref=base_ref,
         apply=apply,
     )
 
@@ -1548,15 +1580,19 @@ def manage_project_config(
     changed = False
     if ui_rules is not None and ui_rules.strip():
         norm = ui_rules.strip().lower()
-        if norm not in ('on', 'off', 'true', 'false'):
-            raise InstallError('ui_rules must be on or off')
-        enforce_val = norm in ('on', 'true')
+        if norm not in ('on', 'off', 'auto', 'true', 'false'):
+            raise InstallError('ui_rules must be on, off, or auto')
         ui_sec = current_cfg.get('ui_rules')
         if not isinstance(ui_sec, dict):
             ui_sec = {}
-        ui_sec['enforce_default_ui_rules'] = enforce_val
+        if norm == 'auto':
+            ui_sec.pop('enforce_default_ui_rules', None)
+            current_cfg.pop('enforce_ui_rules', None)
+        else:
+            enforce_val = norm in ('on', 'true')
+            ui_sec['enforce_default_ui_rules'] = enforce_val
+            current_cfg['enforce_ui_rules'] = enforce_val
         current_cfg['ui_rules'] = ui_sec
-        current_cfg['enforce_ui_rules'] = enforce_val
         changed = True
 
     if briefing is not None and briefing.strip():
@@ -1582,7 +1618,7 @@ def manage_project_config(
     if apply and changed:
         write_bytes(root, cfg_rel, canonical(current_cfg))
 
-    eff_ui = route_planner.is_ui_rule_enforced(root) if not (changed and not apply) else bool(current_cfg.get('enforce_ui_rules', True))
+    eff_ui = route_planner.is_ui_rule_enforced(root) if not (changed and not apply) else bool(current_cfg.get('enforce_ui_rules', route_planner.is_ui_rule_enforced(root)))
     eff_briefing = route_planner.is_briefing_enabled(root) if not (changed and not apply) else bool(current_cfg.get('enforce_briefing', True))
     eff_sdd = sdd_engine.resolve_sdd_id_patterns(root) if not (changed and not apply) else current_cfg.get('sdd', sdd_engine.resolve_sdd_id_patterns(root))
     return {
@@ -1836,13 +1872,17 @@ def main(argv=None) -> int:
         return mcp_main(args[1:])
     p=argparse.ArgumentParser(description='dreampia: offline project install and internal workflow helper, Python >=3.9 cross-platform')
     p.add_argument('--version',action='version',version=VERSION)
-    p.add_argument('action',choices=('version','status','config','clean','release','bump-version','self-update','setup','install-global','uninstall-global','init','doctor','update','uninstall','rollback','scaffold','verify','export-client-summary','scaffold-app','plan-slice','package-client','app-check','ui-check','route-plan','expand-prompt','next-actions','interview-compile','learn-rule','visual-check','instruction-check','router-discover','router-materialize','router-export-plugin','router-dispatch','squad-worktree','reconstruct-doctor','reconstruct-inspect','reconstruct-ledger','reconstruct-spec','reconstruct-verify','reconstruct-compare','sdd-ledger','sdd-check','spec-check','audit-code','context-pack','golden-io','autopilot-gate','blast-radius','metric-climb','mcp-serve'))
+    p.add_argument('action',choices=('version','status','config','clean','release','bump-version','self-update','setup','install-global','uninstall-global','discover','onboard','init','doctor','update','uninstall','rollback','scaffold','verify','export-client-summary','scaffold-app','plan-slice','package-client','app-check','ui-check','route-plan','expand-prompt','next-actions','interview-compile','learn-rule','visual-check','instruction-check','router-discover','router-materialize','router-export-plugin','router-dispatch','squad-worktree','reconstruct-doctor','reconstruct-inspect','reconstruct-ledger','reconstruct-spec','reconstruct-verify','reconstruct-compare','sdd-ledger','sdd-check','spec-check','audit-code','context-pack','golden-io','autopilot-gate','blast-radius','metric-climb','mcp-serve'))
     p.add_argument('--project',default=None);p.add_argument('--apply',action='store_true',help='explicitly execute previewed project changes')
     p.add_argument('--global',dest='global_scope',action='store_true',help='operate on global 5-host skill installation and MCP config')
     p.add_argument('--check-remote',action='store_true',help='check remote origin/main version/commit status')
+    p.add_argument('--bootstrap-sdd',action='store_true',help='auto-generate baseline SDD specification for brownfield projects during discover')
+    p.add_argument('--changed-only',action='store_true',help='audit only Git-changed files during audit-code or autopilot-gate')
+    p.add_argument('--all',dest='all_files',action='store_true',help='force full-repository legacy code scan (changed_only=False) during audit-code or autopilot-gate')
+    p.add_argument('--base-ref',default='HEAD',help='Git base ref for --changed-only incremental audit')
     p.add_argument('--to',dest='to_version',default='',help='target semver version (X.Y.Z) for release / bump-version')
     p.add_argument('--notes',default='',help='release notes entry in Korean for CHANGELOG.md during release')
-    p.add_argument('--ui-rules',choices=('on','off'),default=None,help='enable or disable default UI rules (bg-transparent, lucide-react) in project config')
+    p.add_argument('--ui-rules',choices=('on','off','auto'),default=None,help='enable, disable, or auto-detect default UI rules (bg-transparent, lucide-react) in project config')
     p.add_argument('--briefing',choices=('on','off'),default=None,help='enable or disable top/bottom prompt expansion briefing in project config')
     p.add_argument('--state-dir',choices=('.dreampia','.dreampia-skill'),default=None,help='explicit skill state directory in project config')
     p.add_argument('--req-pattern',default=None,help='custom regex for SDD requirement IDs in project config')
@@ -1909,7 +1949,7 @@ def main(argv=None) -> int:
             out=reconstruct_doctor_check(install_tool=a.install_tool or a.target,apply=a.apply)
             print(json.dumps(out,ensure_ascii=False,indent=2))
             return 0 if out.get('status')=='PASS' else 1
-        if not a.project and a.action in ('status','doctor','config','clean'):
+        if not a.project and a.action in ('status','doctor','config','clean','discover','onboard'):
             default_dir = pathlib.Path.cwd()
             root = project_root(str(default_dir), allow_package=True, allow_home=False)
             implicit_global = (a.action == 'doctor')
@@ -1925,6 +1965,7 @@ def main(argv=None) -> int:
             except ImportError:import mcp_server  # type: ignore[no-redef]
             return mcp_server.serve_stdio(root)
         if a.action=='status':out=project_status(root)
+        elif a.action in ('discover','onboard'):out=discover_project_check(root,bootstrap_sdd=a.bootstrap_sdd,apply=a.apply)
         elif a.action=='doctor':out=doctor(root,include_global=(a.global_scope or implicit_global),check_remote=a.check_remote)
         elif a.action=='config':out=manage_project_config(root,ui_rules=a.ui_rules,briefing=a.briefing,state_dir=a.state_dir,req_pattern=a.req_pattern,task_pattern=a.task_pattern,test_pattern=a.test_pattern,apply=a.apply)
         elif a.action=='clean':out=clean_workspace(root,clean_evidence=a.clean_evidence,apply=a.apply)
@@ -1956,10 +1997,10 @@ def main(argv=None) -> int:
         elif a.action=='reconstruct-compare':out=reconstruct_compare_check(root,a.source or '',a.candidate or '')
         elif a.action=='sdd-ledger':out=sdd_ledger_check(root,a.apply)
         elif a.action in ('sdd-check','spec-check'):out=sdd_verify_check(root,a.ledger,not a.allow_doc_only)
-        elif a.action=='audit-code':out=audit_code_check(root,check_ui_rules=(False if a.no_ui_rules else None),apply=a.apply)
+        elif a.action=='audit-code':out=audit_code_check(root,check_ui_rules=(False if a.no_ui_rules else None),changed_only=(False if a.all_files else (True if a.changed_only else None)),force_all=a.all_files,base_ref=a.base_ref,apply=a.apply)
         elif a.action=='context-pack':out=context_pack_check(root,a.goal,a.apply)
         elif a.action=='golden-io':out=golden_io_check(root,a.ledger)
-        elif a.action=='autopilot-gate':out=autopilot_gate_check(root,a.goal,a.allow_doc_only,a.apply)
+        elif a.action=='autopilot-gate':out=autopilot_gate_check(root,a.goal,a.allow_doc_only,a.apply,changed_only=(False if a.all_files else (True if a.changed_only else None)),force_all=a.all_files,base_ref=a.base_ref)
         elif a.action=='blast-radius':out=blast_radius_check(root,a.target or '',a.apply)
         elif a.action=='metric-climb':out=metric_climb_check(root,a.cmd,a.metric_regex,a.direction,a.target or '',a.immutable,a.trials,a.confidence,a.goal or 'candidate-experiment',a.apply)
         else:out=install(root,a.action,a.apply)

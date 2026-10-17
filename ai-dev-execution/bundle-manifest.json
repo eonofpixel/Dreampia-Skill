@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "name": "ai-dev-execution",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "source": "dreampia-private-authored",
   "files": [
     {
       "path": "SKILL.md",
-      "sha256": "762871964e96f6f30c890e769021d337dcbdd6f61dccc4708ac9f3b3672e61e8",
+      "sha256": "5bc186de5e9d0f14b66c4d8a9c0bb2c6b159f61ae2f306ff77185f82ed81cc26",
       "required": true
     },
     {
@@ -466,7 +466,7 @@
     },
     {
       "path": "references/cleanroom-governance.md",
-      "sha256": "15f2b802fc7733e6ac9c7cdd6d77ce7a09f0d62b3c6a778498279ec72ae1f67e",
+      "sha256": "6c1df543cf6f44b40a9c5db1300a7242cdf0e625745c61ffa5347c36518db893",
       "required": true
     },
     {
@@ -501,7 +501,7 @@
     },
     {
       "path": "references/internal-os.md",
-      "sha256": "b2f28eb5429dd415112850cdf6ad33f9a78246a1c6ccb9b97f58d5426f28cb6e",
+      "sha256": "e5805d089c418738782aa8b2376d613c40845a06968a0d3620befbb711cdf1d5",
       "required": true
     },
     {

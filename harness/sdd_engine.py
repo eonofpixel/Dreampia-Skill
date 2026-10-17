@@ -20,7 +20,7 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 
-SDD_LEDGER_VERSION = "0.6.2"
+SDD_LEDGER_VERSION = "0.7.0"
 DEFAULT_SDD_LEDGER_REL = "evidence/sdd-ledger.json"
 
 _IGNORED_DIRS: frozenset[str] = frozenset(
@@ -64,7 +64,10 @@ _HEADING_RE = re.compile(r"^#{1,6}\s+")
 _TEMPLATE_PLACEHOLDER_RE = re.compile(r"\{\{[^}]+\}\}|첫\s*요구용\s*자리|작성\s*예시만")
 _STATUS_RE = re.compile(r"\b(draft|approved|inprogress|blocked|verified|deferred)\b", re.IGNORECASE)
 _VERDICT_RE = re.compile(r"\b(PASS|FAIL|NOT_RUN)\b")
-_TEST_FILE_RE = re.compile(r"(^test_.*|.*_test\.py$|.*\.(test|spec)\.(ts|tsx|js|jsx)$)", re.IGNORECASE)
+_TEST_FILE_RE = re.compile(
+    r"(^test_.*|.*_test\.(py|go|rs)$|.*\.(test|spec)\.(ts|tsx|js|jsx)$|.*Test\.(java|kt)$)",
+    re.IGNORECASE,
+)
 
 
 class SddEngineError(ValueError):
@@ -155,6 +158,13 @@ def _iter_project_files(root: Path) -> list[Path]:
             fpath = Path(current_root) / fname
             if not fpath.is_symlink() and fpath.is_file():
                 files.append(fpath)
+    for baseline_rel in (
+        ".dreampia/memory/brownfield-baseline.md",
+        ".dreampia-skill/memory/brownfield-baseline.md",
+    ):
+        bf_path = resolved / baseline_rel
+        if bf_path.is_file() and not bf_path.is_symlink() and bf_path not in files:
+            files.append(bf_path)
     return files
 
 
@@ -208,7 +218,7 @@ def scan_project_specs(root: Path) -> dict[str, object]:
             continue
 
         if _TEST_FILE_RE.search(fpath.name) or "tests" in parts:
-            if fpath.suffix.lower() in (".py", ".ts", ".tsx", ".js", ".jsx"):
+            if fpath.suffix.lower() in (".py", ".ts", ".tsx", ".js", ".jsx", ".go", ".rs", ".java", ".kt"):
                 test_files.append(rel)
                 text = fpath.read_text(encoding="utf-8", errors="replace")
                 for match in _ALL_ID_RE.findall(text):
@@ -219,8 +229,9 @@ def scan_project_specs(root: Path) -> dict[str, object]:
 
         if fpath.suffix.lower() != ".md":
             continue
-        if parts[0] in (".agents", ".claude", ".gemini", ".qwen", ".dreampia"):
-            continue
+        if parts[0] in (".agents", ".claude", ".gemini", ".qwen", ".dreampia", ".dreampia-skill"):
+            if fpath.name != "brownfield-baseline.md":
+                continue
 
         text = fpath.read_text(encoding="utf-8", errors="replace")
         is_delta_doc = "change-delta" in fpath.name.lower()

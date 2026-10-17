@@ -15,6 +15,10 @@ class AutopilotEngineTests(unittest.TestCase):
             src_dir = root / "src"
             tests_dir.mkdir(parents=True, exist_ok=True)
             src_dir.mkdir(parents=True, exist_ok=True)
+            (root / "package.json").write_text(
+                '{"dependencies": {"tailwindcss": "^3.4.0", "lucide-react": "^0.400.0"}}\n',
+                encoding="utf-8",
+            )
 
             # 1. Hollow Python test (assert True & zero-assert test)
             (tests_dir / "test_hollow.py").write_text(
@@ -348,6 +352,10 @@ class AutopilotEngineTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
+            (root / "package.json").write_text(
+                '{"dependencies": {"tailwindcss": "^3.4.0", "lucide-react": "^0.400.0"}}\n',
+                encoding="utf-8",
+            )
 
             # 1. Casual UI button prompt expands into Korean engineering spec with UI rules + SOLID + edge cases (without parroting)
             brief = route_planner.expand_prompt_brief("쿠폰 발급 버튼 만들어줘", root=root)
@@ -739,14 +747,251 @@ class AutopilotEngineTests(unittest.TestCase):
             self.assertFalse(rel_preview["applied"])
             self.assertGreaterEqual(int(rel_preview["updated_count"]), 10)  # type: ignore[arg-type]
 
-            # 7. All 8 prefix-free slash command markdown files exist and have no ** bold markers
-            for cmd_name in ("version", "status", "doctor", "config", "update", "uninstall", "release", "clean"):
+            # 7. All prefix-free slash command markdown files exist and have no ** bold markers
+            for cmd_name in ("version", "status", "doctor", "config", "update", "uninstall", "release", "clean", "discover"):
                 cmd_file = team_cli.PACKAGE / "commands" / f"{cmd_name}.md"
                 self.assertTrue(cmd_file.is_file(), f"Missing slash command file: {cmd_file}")
                 cmd_text = cmd_file.read_text(encoding="utf-8")
                 self.assertNotIn("**", cmd_text)
 
+    def test_brownfield_discover_incremental_diff_audit_and_adaptive_rigor(self) -> None:
+        import subprocess
+        from harness import autopilot_engine, mcp_server, route_planner, sdd_engine
+
+        # 1. Verify Adaptive Rigor Tiers (nano / standard / full)
+        nano_route = route_planner.plan_route("오타 문구 1줄 수정", repo_dirty=False)
+        self.assertEqual(nano_route.rigor_tier, "nano")
+        std_route = route_planner.plan_route("주문 내역 조회 API 추가", repo_dirty=False)
+        self.assertEqual(std_route.rigor_tier, "standard")
+        full_route = route_planner.plan_route("ulw 인증 토큰 보안 개편", repo_dirty=False)
+        self.assertEqual(full_route.rigor_tier, "full")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "legacy-repo"
+            root.mkdir(parents=True, exist_ok=True)
+            subprocess.run(["git", "init"], cwd=str(root), capture_output=True, check=False)
+            subprocess.run(["git", "config", "user.email", "dev@example.com"], cwd=str(root), capture_output=True, check=False)
+            subprocess.run(["git", "config", "user.name", "Dev"], cwd=str(root), capture_output=True, check=False)
+
+            # Create legacy backend code with technical debt (missing return type + Any) and commit it
+            (root / "pyproject.toml").write_text('[project]\nname = "legacy-api"\ndependencies = ["fastapi", "pytest"]\n', encoding="utf-8")
+            (root / "Cargo.toml").write_text('[package]\nname = "legacy-core"\nversion = "0.1.0"\n', encoding="utf-8")
+            src_dir = root / "src"
+            tests_dir = root / "tests"
+            src_dir.mkdir(parents=True, exist_ok=True)
+            tests_dir.mkdir(parents=True, exist_ok=True)
+
+            (src_dir / "legacy_debt.py").write_text(
+                "from typing import Any\n"
+                "def old_untyped_func(x) -> Any:\n"
+                "    return x\n",
+                encoding="utf-8",
+            )
+            (tests_dir / "test_legacy.py").write_text(
+                "def test_basic() -> None:\n"
+                "    assert 2 + 2 == 4\n",
+                encoding="utf-8",
+            )
+            subprocess.run(["git", "add", "."], cwd=str(root), capture_output=True, check=False)
+            subprocess.run(["git", "commit", "-m", "initial legacy commit"], cwd=str(root), capture_output=True, check=False)
+
+            # 2. Full repo audit catches legacy debt, but incremental (--changed-only) audit on clean new file passes!
+            (src_dir / "new_clean_feature.py").write_text(
+                "def calculate_discount(price: int) -> int:\n"
+                "    return max(0, price - 100)\n",
+                encoding="utf-8",
+            )
+            full_audit = autopilot_engine.audit_project_code(root, changed_only=False)
+            self.assertEqual(full_audit["status"], "FAIL")
+
+            inc_audit = autopilot_engine.audit_project_code(root, changed_only=True)
+            self.assertEqual(inc_audit["status"], "PASS")
+            self.assertEqual(inc_audit["audit_scope"], "changed_only")
+            self.assertEqual(inc_audit["scanned_file_count"], 1)
+
+            # 3. Adaptive Nano Tier gate passes on brownfield repo without SDD docs when changed_only=True
+            nano_gate = autopilot_engine.run_autopilot_gate(
+                root,
+                goal="오타 문구 1줄 수정",
+                changed_only=True,
+                apply=False,
+            )
+            self.assertEqual(nano_gate["status"], "PASS")
+            self.assertEqual(nano_gate["rigor_tier"], "nano")
+            self.assertEqual(nano_gate["audit_scope"], "changed_only")
+
+            # 4. Discover brownfield repo and bootstrap SDD baseline via MCP
+            disc_preview = mcp_server.execute_mcp_tool(
+                root,
+                "dreampia_discover",
+                {"bootstrap_sdd": False, "apply": False},
+            )
+            self.assertEqual(disc_preview["status"], "PASS")
+            self.assertEqual(disc_preview["project_mode"], "brownfield")
+            self.assertIn("python", disc_preview["languages"])  # type: ignore[operator]
+            self.assertIn("rust", disc_preview["languages"])  # type: ignore[operator]
+            self.assertFalse(disc_preview["ui_stack_detected"])
+
+            disc_apply = mcp_server.execute_mcp_tool(
+                root,
+                "dreampia_discover",
+                {"bootstrap_sdd": True, "apply": True},
+            )
+            self.assertEqual(disc_apply["status"], "PASS")
+            self.assertTrue(disc_apply["sdd_bootstrapped"])
+            self.assertEqual(disc_apply["project_mode"], "sdd-ready")
+            self.assertTrue((root / ".dreampia/memory/project-profile.json").is_file())
+            self.assertTrue((root / ".dreampia/memory/brownfield-baseline.md").is_file())
+            self.assertFalse(route_planner.is_ui_rule_enforced(root))
+
+            sdd_after = sdd_engine.verify_sdd_compliance(root)
+            self.assertEqual(sdd_after["status"], "PASS")
+            self.assertEqual(sdd_after["traceability_ratio"], 1.0)
+
+    def test_universal_oss_hardening_six_pillars(self) -> None:
+        import json
+        import subprocess
+        from harness import autopilot_engine, route_planner, team_cli
+
+        for required_dir in ("build", "dist", "out", "target", "vendor", "third_party", ".venv", "venv", "coverage", ".turbo", ".cache", ".omo"):
+            self.assertIn(required_dir, autopilot_engine._IGNORED_DIRS)
+        for required_ext in (".mjs", ".cjs", ".cpp", ".hpp", ".c", ".cs", ".swift"):
+            self.assertIn(required_ext, autopilot_engine._AUDIT_EXTENSIONS)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "trc-daw-hybrid"
+            root.mkdir(parents=True, exist_ok=True)
+            subprocess.run(["git", "init"], cwd=str(root), capture_output=True, check=False)
+            subprocess.run(["git", "config", "user.email", "daw@example.com"], cwd=str(root), capture_output=True, check=False)
+            subprocess.run(["git", "config", "user.name", "DAW Dev"], cwd=str(root), capture_output=True, check=False)
+
+            # Pillar 1: Git-aware file scan respects .gitignore and _IGNORED_DIRS (build/, custom_ignored/)
+            (root / ".gitignore").write_text("custom_ignored/\nbuild/\n", encoding="utf-8")
+            (root / "build").mkdir(parents=True, exist_ok=True)
+            (root / "build" / "bundle_bad.ts").write_text("export const x: any = 1;\n", encoding="utf-8")
+            (root / "custom_ignored").mkdir(parents=True, exist_ok=True)
+            (root / "custom_ignored" / "generated_bad.py").write_text("def bad(x):\n    return x\n", encoding="utf-8")
+
+            # Pillar 3: Repo-local rules (CLAUDE.md, AGENTS.md) precedence and split language policy
+            (root / "CLAUDE.md").write_text(
+                "# Repo Rules\n- Conversation in Korean, code identifiers and comments in English.\n",
+                encoding="utf-8",
+            )
+            (root / "AGENTS.md").write_text("# Agents Guide (see CLAUDE.md)\n", encoding="utf-8")
+
+            # Pillar 5: Hybrid native / polyglot layout (native/windows/package.json, CMakeLists.txt, Makefile, .csproj, Package.swift, tools/*.mjs)
+            (root / "CMakeLists.txt").write_text("cmake_minimum_required(VERSION 3.20)\nproject(TrcAudioEngine)\n", encoding="utf-8")
+            native_dir = root / "native"
+            native_win_dir = native_dir / "windows"
+            native_win_dir.mkdir(parents=True, exist_ok=True)
+            (native_dir / "Makefile").write_text("all:\n\t@echo build\n", encoding="utf-8")
+            (native_dir / "AudioHost.csproj").write_text("<Project Sdk=\"Microsoft.NET.Sdk\"></Project>\n", encoding="utf-8")
+            (root / "Package.swift").write_text("// swift-tools-version:5.9\n", encoding="utf-8")
+            (native_win_dir / "package.json").write_text(
+                json.dumps(
+                    {
+                        "name": "trc-daw-win-shell",
+                        "scripts": {"test": "node ../../tools/run-tests.mjs"},
+                        "dependencies": {"electron": "^30.0.0"},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            tools_dir = root / "tools"
+            tools_dir.mkdir(parents=True, exist_ok=True)
+            (tools_dir / "run-tests.mjs").write_text("export function runSuite() { return true; }\n", encoding="utf-8")
+
+            # Legacy file with `: any` committed in brownfield Git repo
+            src_dir = root / "src"
+            src_dir.mkdir(parents=True, exist_ok=True)
+            (src_dir / "legacy_mixer.ts").write_text(
+                "export function legacyMix(channel: any): number {\n  return 0;\n}\n",
+                encoding="utf-8",
+            )
+            subprocess.run(["git", "add", "."], cwd=str(root), capture_output=True, check=False)
+            subprocess.run(["git", "commit", "-m", "initial brownfield commit"], cwd=str(root), capture_output=True, check=False)
+
+            # Verify Pillar 1: _iter_auditable_files excludes build/ and .gitignore'd custom_ignored/
+            auditable_rels = [p.relative_to(root).as_posix() for p in autopilot_engine._iter_auditable_files(root)]
+            self.assertNotIn("build/bundle_bad.ts", auditable_rels)
+            self.assertNotIn("custom_ignored/generated_bad.py", auditable_rels)
+            self.assertIn("tools/run-tests.mjs", auditable_rels)
+
+            # Verify Pillar 2: Without Tailwind/Lucide, is_ui_rule_enforced is False by default (no false positives on standard <button>)
+            self.assertFalse(route_planner.is_ui_rule_enforced(root))
+            ui_caps = route_planner.detect_ui_rule_capabilities(root)
+            self.assertFalse(ui_caps["has_tailwind"])
+            self.assertFalse(ui_caps["has_lucide_react"])
+
+            # Verify Pillar 3: expand_prompt & build_execution_manifest include Repo-Local Rules Take Precedence clause
+            brief = route_planner.expand_prompt("오디오 트랙 솔로 버튼 추가해줘", root=root)
+            self.assertIn("CLAUDE.md", brief.repo_rule_files)
+            self.assertEqual(brief.chat_language, "ko")
+            self.assertEqual(brief.code_identifier_policy, "repo-convention")
+            self.assertIn("Repo-Local Rules Take Precedence", brief.expanded_prompt_ko)
+            self.assertNotIn("bg-transparent", brief.expanded_prompt_ko)
+            manifest = route_planner.build_execution_manifest("오디오 트랙 솔로 버튼 추가해줘", root=root)
+            self.assertIn("CLAUDE.md", manifest["repo_rule_files"])  # type: ignore[operator]
+
+            # Verify Pillar 4: Modify/add a clean file in brownfield Git repo -> audit_project_code & evaluate_autopilot_gate pass by default (changed_only=True)
+            (src_dir / "solo_button.tsx").write_text(
+                "import { FaPlay } from 'react-icons/fa';\n"
+                "export interface SoloProps { label: string; }\n"
+                "export function SoloButton(props: SoloProps): JSX.Element {\n"
+                "  return <button className=\"daw-btn\">{props.label}</button>;\n"
+                "}\n",
+                encoding="utf-8",
+            )
+            inc_audit = autopilot_engine.audit_project_code(root)
+            self.assertEqual(inc_audit["status"], "PASS")
+            self.assertEqual(inc_audit["audit_scope"], "changed_only")
+            self.assertEqual(inc_audit["scanned_file_count"], 1)
+
+            gate_res = autopilot_engine.evaluate_autopilot_gate(root)
+            self.assertEqual(gate_res["status"], "PASS")
+            self.assertEqual(gate_res["audit_scope"], "changed_only")
+
+            # When --all (force_all=True) is requested, legacy_mixer.ts with `any` is scanned and fails
+            all_audit = autopilot_engine.audit_project_code(root, force_all=True)
+            self.assertEqual(all_audit["status"], "FAIL")
+            self.assertEqual(all_audit["audit_scope"], "full")
+
+            # Commit solo_button.tsx so working tree is clean before testing Pillar 5 & Pillar 6
+            subprocess.run(["git", "add", "."], cwd=str(root), capture_output=True, check=False)
+            subprocess.run(["git", "commit", "-m", "add clean solo button"], cwd=str(root), capture_output=True, check=False)
+
+            # Verify Pillar 5 & Pillar 6: discover_project detects hybrid stacks/subpackages and keeps git status --porcelain 100% clean via .git/info/exclude
+            disc_res = autopilot_engine.discover_project(root, apply=True)
+            self.assertEqual(disc_res["status"], "PASS")
+            self.assertIn("cpp", disc_res["stacks"])  # type: ignore[operator]
+            self.assertIn("csharp", disc_res["stacks"])  # type: ignore[operator]
+            self.assertIn("swift", disc_res["stacks"])  # type: ignore[operator]
+            self.assertIn("native/windows/package.json", disc_res["manifests_found"])  # type: ignore[operator]
+            self.assertTrue((root / ".dreampia/memory/discovered-project.json").is_file())
+
+            # Also create .dreampia-workflow/ and .harness/ state files and verify git status --porcelain is empty
+            (root / ".dreampia-workflow").mkdir(parents=True, exist_ok=True)
+            (root / ".dreampia-workflow" / "state.json").write_text("{}\n", encoding="utf-8")
+            (root / ".harness").mkdir(parents=True, exist_ok=True)
+            (root / ".harness" / "session.json").write_text("{}\n", encoding="utf-8")
+            autopilot_engine.ensure_local_git_exclude(root)
+
+            exclude_text = (root / ".git" / "info" / "exclude").read_text(encoding="utf-8")
+            self.assertIn(".dreampia-workflow/", exclude_text)
+            self.assertIn(".harness/", exclude_text)
+
+            status_proc = subprocess.run(
+                ["git", "status", "--porcelain"],
+                cwd=str(root),
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(status_proc.stdout.strip(), "")
+            self.assertEqual(team_cli.main(["audit-code", "--project", str(root), "--all"]), 1)
+
 
 if __name__ == "__main__":
     unittest.main()
+
 

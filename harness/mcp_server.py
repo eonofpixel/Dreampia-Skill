@@ -32,7 +32,7 @@ except ImportError:
 
 MCP_PROTOCOL_VERSION = "2024-11-05"
 SERVER_NAME = "dreampia-skill-mcp"
-SERVER_VERSION = "0.6.2"
+SERVER_VERSION = "0.7.0"
 
 
 @dataclass(frozen=True)
@@ -179,12 +179,14 @@ MCP_TOOLS: tuple[McpToolDefinition, ...] = (
     ),
     McpToolDefinition(
         name="dreampia_audit_code",
-        description="Trinity(QA/감사) 정적 AST 및 코드 규칙 감사기: 가짜 TDD 테스트(assert True 등), any 타입 사용, 반환 타입 누락, 비표준 아이콘 import, 버튼 bg-transparent 누락을 Fail-Closed로 감사하고 선택적으로 evidence/code-audit.json에 저장합니다.",
+        description="Trinity(QA/감사) 정적 AST 및 코드 규칙 감사기: 가짜 TDD 테스트(assert True 등), any 타입 사용, 반환 타입 누락, 비표준 아이콘 import, 버튼 bg-transparent 누락을 Fail-Closed로 감사하고 선택적으로 evidence/code-audit.json에 저장합니다 (changed_only 지정 시 Git 변경 파일만 증분 감사).",
         input_schema={
             "type": "object",
             "properties": {
                 "project": {"type": "string", "description": "대상 프로젝트 루트 경로"},
                 "check_ui_rules": {"type": "boolean", "description": "선택적: 기본 UI 규칙(bg-transparent, lucide-react) 검사 여부 (생략 시 프로젝트 설정 따름)"},
+                "changed_only": {"type": "boolean", "description": "true 지정 시 Git 변경·신규 파일만 증분 감사하여 레거시 기술 부채와 분리"},
+                "base_ref": {"type": "string", "description": "changed_only 기준 Git 커밋/브랜치 참조 (기본값 HEAD)"},
                 "apply": {"type": "boolean", "description": "true 지정 시 evidence/code-audit.json 파일로 저장"},
             },
         },
@@ -214,12 +216,15 @@ MCP_TOOLS: tuple[McpToolDefinition, ...] = (
     ),
     McpToolDefinition(
         name="dreampia_autopilot_gate",
-        description="Morpheus & Tank 통합 자율 완주 게이트: 지침 동기화, SDD+TDD 추적성, Trinity 코드 감사, 클린룸/Golden I/O/시각 수용 검증을 단일 파이프라인으로 실행하고 변조 방지 판정서(evidence/autopilot-verdict.json)를 발급합니다.",
+        description="Morpheus & Tank 통합 자율 완주 게이트: 지침 동기화, SDD+TDD 추적성(Adaptive Nano 티어 지원), Trinity 코드 감사(증분 감사 지원), 클린룸/Golden I/O/시각 수용 검증을 단일 파이프라인으로 실행하고 변조 방지 판정서(evidence/autopilot-verdict.json)를 발급합니다.",
         input_schema={
             "type": "object",
             "properties": {
                 "project": {"type": "string", "description": "대상 프로젝트 루트 경로"},
+                "goal": {"type": "string", "description": "작업 목표 설명 (작업 규모별 nano/standard/full 탄력 티어 판정에 사용)"},
                 "allow_doc_only": {"type": "boolean", "description": "문서 전용 단계에서 실제 테스트 코드 파일 필수 검사를 생략할지 여부"},
+                "changed_only": {"type": "boolean", "description": "true 지정 시 코드 감사를 Git 변경 파일로만 한정"},
+                "base_ref": {"type": "string", "description": "changed_only 기준 Git 참조 (기본값 HEAD)"},
                 "apply": {"type": "boolean", "description": "기본값 true (evidence/autopilot-verdict.json 저장)"},
             },
         },
@@ -412,11 +417,23 @@ MCP_TOOLS: tuple[McpToolDefinition, ...] = (
         input_schema={
             "type": "object",
             "properties": {
-                "target_version": {"type": "string", "description": "릴리즈할 새 버전 (예: 0.6.2)"},
+                "target_version": {"type": "string", "description": "릴리즈할 새 버전 (예: 0.7.0)"},
                 "notes": {"type": "string", "description": "CHANGELOG.md에 기록할 한글 변경 요약"},
                 "apply": {"type": "boolean", "description": "true 지정 시 실제 파일 및 매니페스트 일괄 갱신 (기본값 false 미리보기)"},
             },
             "required": ["target_version"],
+        },
+    ),
+    McpToolDefinition(
+        name="dreampia_discover",
+        description="브라운필드/폴리글랏/모노레포 자동 탐색 및 온보딩(/discover): 프로젝트 매니페스트(package.json, pyproject.toml, Cargo.toml, go.mod 등)와 소스/테스트 파일을 스캔해 스택 프로필(project-profile.json)을 생성하고, 선택적으로 브라운필드 SDD 베이스라인 명세(brownfield-baseline.md)를 자동 부트스트랩합니다.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "project": {"type": "string", "description": "대상 프로젝트 루트 경로"},
+                "bootstrap_sdd": {"type": "boolean", "description": "true 지정 시 SDD 문서가 없는 브라운필드 저장소에 최소 SDD 베이스라인 명세 및 원장을 자동 생성"},
+                "apply": {"type": "boolean", "description": "true 지정 시 project-profile.json 및 선택적 베이스라인 명세 실제 저장"},
+            },
         },
     ),
 )
@@ -451,6 +468,11 @@ def execute_mcp_tool(default_root: Path, tool_name: str, arguments: dict[str, ob
 
     if tool_name == "dreampia_status":
         return team_cli.project_status(root)
+
+    if tool_name == "dreampia_discover":
+        bootstrap_flag = bool(arguments.get("bootstrap_sdd", False))
+        apply_flag = bool(arguments.get("apply", False))
+        return team_cli.discover_project_check(root, bootstrap_sdd=bootstrap_flag, apply=apply_flag)
 
     if tool_name == "dreampia_doctor":
         inc_global = bool(arguments.get("include_global", True))
@@ -585,7 +607,18 @@ def execute_mcp_tool(default_root: Path, tool_name: str, arguments: dict[str, ob
         apply_flag = bool(arguments.get("apply", False))
         raw_ui = arguments.get("check_ui_rules")
         ui_flag = raw_ui if isinstance(raw_ui, bool) else None
-        return team_cli.audit_code_check(root, check_ui_rules=ui_flag, apply=apply_flag)
+        raw_co = arguments.get("changed_only")
+        force_all_flag = bool(arguments.get("all", False))
+        changed_only_flag: bool | None = False if force_all_flag else (raw_co if isinstance(raw_co, bool) else None)
+        base_ref_arg = str(arguments.get("base_ref") or "HEAD").strip()
+        return team_cli.audit_code_check(
+            root,
+            check_ui_rules=ui_flag,
+            changed_only=changed_only_flag,
+            force_all=force_all_flag,
+            base_ref=base_ref_arg,
+            apply=apply_flag,
+        )
 
     if tool_name == "dreampia_context_pack":
         goal_arg = str(arguments.get("goal") or "").strip()
@@ -599,8 +632,20 @@ def execute_mcp_tool(default_root: Path, tool_name: str, arguments: dict[str, ob
     if tool_name == "dreampia_autopilot_gate":
         goal_arg = str(arguments.get("goal") or "").strip()
         allow_doc_only = bool(arguments.get("allow_doc_only", False))
+        raw_co = arguments.get("changed_only")
+        force_all_flag = bool(arguments.get("all", False))
+        changed_only_flag = False if force_all_flag else (raw_co if isinstance(raw_co, bool) else None)
+        base_ref_arg = str(arguments.get("base_ref") or "HEAD").strip()
         apply_flag = bool(arguments.get("apply", True))
-        return team_cli.autopilot_gate_check(root, goal=goal_arg, allow_doc_only=allow_doc_only, apply=apply_flag)
+        return team_cli.autopilot_gate_check(
+            root,
+            goal=goal_arg,
+            allow_doc_only=allow_doc_only,
+            changed_only=changed_only_flag,
+            force_all=force_all_flag,
+            base_ref=base_ref_arg,
+            apply=apply_flag,
+        )
 
     if tool_name == "dreampia_blast_radius":
         target_arg = str(arguments.get("target") or "").strip()

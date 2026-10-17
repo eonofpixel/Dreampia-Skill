@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "dreampia-skill",
-  "version": "0.6.2",
-  "description": "All-in-One 6-Host Agentic Harness (29 MCP Tools): Visible Prompt Expansion, Socratic SDD Compiler, 2-Tier Cleanroom RE, Self-Learning Rule Memory, Parallel Squad Worktrees, Metric-Climb, Blast-Radius, and Next-Action Navigator.",
+  "version": "0.7.0",
+  "description": "All-in-One 6-Host Agentic Harness (30 MCP Tools): Brownfield Auto-Discovery, Incremental Diff Audit, Adaptive Rigor Tiers, Visible Prompt Expansion, Socratic SDD Compiler, 2-Tier Cleanroom RE, Self-Learning Rule Memory, Parallel Squad Worktrees, Metric-Climb, and Blast-Radius.",
   "author": {
     "name": "Dreampia"
   },

@@ -1,3 +1,15 @@
+# 0.7.0
+
+- 브라운필드·폴리글랏·하이브리드 네이티브 프로젝트 자동 탐색(`discover`), `discovered-project.json` 생성 및 SDD 베이스라인 자동 부트스트랩(`--bootstrap-sdd`).
+- 범용 오픈소스 무충돌(Universal OSS Hardening) 6대 고도화:
+  1. Git-Aware 파일 스캔(`git ls-files -z --cached --others --exclude-standard`) 및 `_IGNORED_DIRS`/`_AUDIT_EXTENSIONS`(`.mjs`, `.cjs`, `.cpp`, `.hpp`, `.c`, `.cs`, `.swift`) 확장.
+  2. `tailwindcss` 및 `lucide-react` 실의존성 기반 UI 스타일 규칙 자동 감지(`has_tailwind`, `has_lucide_react`)로 비-Tailwind/네이티브 프로젝트 오탐 원천 차단.
+  3. 저장소 로컬 규칙 문서(`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.cursorrules`) 우선권 보장(`Repo-Local Rules Take Precedence`) 및 대화 언어(`chat_language: "ko"`)와 코드 식별자 정책(`code_identifier_policy: "repo-convention"`) 분리.
+  4. 브라운필드 Git 저장소 변경 파일 증분 감사(`changed_only=True`) 기본화 및 전체 레거시 감사 강제 플래그(`--all`) 지원.
+  5. 2단계 하위 패키지(`native/windows/package.json` 등) 및 C/C++/C#/Swift(`CMakeLists.txt`, `Makefile`, `*.sln`, `*.csproj`, `Package.swift`, `tools/*.mjs`) 하이브리드 탐색 확장.
+  6. `.git/info/exclude` 자동 관리(`ensure_local_git_exclude`)를 통한 외부 저장소 `git status` 100% 무오염(Zero-Footprint) 보장.
+- 작업 규모별 3단 탄력 게이트(`nano`/`standard`/`full`) 및 폴리글랏(Go/Rust) 정적 감사 확장.
+
 # 0.6.2
 
 - 접두사 없는 표준 운영 슬래시·CLI 명령어 체계(/version, /status, /doctor, /config, /update, /uninstall, /release, /clean) 및 29종 MCP 서버 도구 일원화
