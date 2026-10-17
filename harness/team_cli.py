@@ -19,7 +19,7 @@ try:
 except ImportError:
     import autopilot_engine, benchmark_suite, checkpoint_manager, guild_camp, hook_dispatcher, memory_compactor, mutation_engine, process as _proc, reconstruct_engine, route_planner, sdd_engine, skill_bundle, symbol_indexer, universal_router, visual_acceptance, write_boundary
 
-VERSION='1.0.0'
+VERSION='1.1.0'
 PACKAGE=pathlib.Path(__file__).resolve().parents[1]
 META='.dreampia-install'
 SKILL='.agents/skills/ai-dev-execution/'

@@ -27,7 +27,7 @@ except ImportError:
     import visual_acceptance  # type: ignore[no-redef]
     import write_boundary  # type: ignore[no-redef]
 
-AUTOPILOT_VERSION = "1.0.0"
+AUTOPILOT_VERSION = "1.1.0"
 DEFAULT_CONTEXT_PACK_REL = "evidence/context-pack.json"
 DEFAULT_AUTOPILOT_VERDICT_REL = "evidence/autopilot-verdict.json"
 DEFAULT_CODE_AUDIT_REL = "evidence/code-audit.json"

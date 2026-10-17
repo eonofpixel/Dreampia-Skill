@@ -29,7 +29,7 @@ class UniversalRouterDiscoveryAndReasoningTests(unittest.TestCase):
             self.root,
             which_fn=lambda exe: f"/usr/bin/{exe}" if exe in ("codex", "claude", "agy") else None,
         )
-        self.assertEqual(disc["default_version"], "1.0.0")
+        self.assertEqual(disc["default_version"], "1.1.0")
         self.assertTrue(disc["capabilities"]["plugins"])
         by_base = {h["base"]: h for h in disc["harnesses"]}  # type: ignore[index]
         self.assertTrue(by_base["codex"]["available"])

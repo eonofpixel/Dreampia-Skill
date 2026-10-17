@@ -6,9 +6,9 @@ class ProductTests(unittest.TestCase):
     def setUp(self):self.tmp=tempfile.TemporaryDirectory();self.root=pathlib.Path(self.tmp.name)
     def tearDown(self):self.tmp.cleanup()
     def test_zipapp_runs_version(self):
-        p=self.root/'harness-1.0.0.pyz';build.build(p)
+        p=self.root/'harness-1.1.0.pyz';build.build(p)
         r=subprocess.run([sys.executable,str(p),'--version'],capture_output=True,text=True)
-        self.assertEqual(r.returncode,0);self.assertEqual(r.stdout.strip(),'1.0.0')
+        self.assertEqual(r.returncode,0);self.assertEqual(r.stdout.strip(),'1.1.0')
         with self.assertRaises(ValueError):build.build(p)
     def test_module_entrypoint(self):
         r=subprocess.run([sys.executable,'-m','harness','--version'],cwd=ROOT,capture_output=True,text=True,env={**os.environ,'PYTHONDONTWRITEBYTECODE':'1'})

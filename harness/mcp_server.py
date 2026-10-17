@@ -32,7 +32,7 @@ except ImportError:
 
 MCP_PROTOCOL_VERSION = "2024-11-05"
 SERVER_NAME = "dreampia-skill-mcp"
-SERVER_VERSION = "1.0.0"
+SERVER_VERSION = "1.1.0"
 
 
 @dataclass(frozen=True)
@@ -423,7 +423,7 @@ MCP_TOOLS: tuple[McpToolDefinition, ...] = (
         input_schema={
             "type": "object",
             "properties": {
-                "target_version": {"type": "string", "description": "릴리즈할 새 버전 (예: 1.0.0)"},
+                "target_version": {"type": "string", "description": "릴리즈할 새 버전 (예: 1.1.0)"},
                 "notes": {"type": "string", "description": "CHANGELOG.md에 기록할 한글 변경 요약"},
                 "apply": {"type": "boolean", "description": "true 지정 시 실제 파일 및 매니페스트 일괄 갱신 (기본값 false 미리보기)"},
             },
