@@ -221,7 +221,7 @@ def _iter_jsx_button_attrs(comment_masked: str) -> list[tuple[int, str]]:
     return results
 
 
-_TS_ANY_RE = re.compile(r"(:\s*any\b|<any>|\bas\s+any\b|:\s*Array<any>|:\s*Record<[^,>]+,\s*any>|\bany\[\])")
+_TS_ANY_RE = re.compile(r"(:\s*any\b|<any>|\bas\s+any\b|\bArray<any>|\bRecord<[^,>]+,\s*any>|\bany\[\])")
 _TS_HOLLOW_TEST_RE = re.compile(
     r"(?:expect\s*\(\s*(?:true|1)\s*\)\s*\.\s*(?:toBe|toEqual|toStrictEqual)\s*\(\s*(?:true|1)\s*\)"
     r"|expect\s*\(\s*false\s*\)\s*\.\s*(?:toBe|toEqual|toStrictEqual)\s*\(\s*false\s*\)"
@@ -233,6 +233,12 @@ _TS_REAL_ASSERT_RE = re.compile(
     r"(?:\b(?:expect|expectTypeOf|assert|should)\b"
     r"|\b(?:assert\w*|expect\w*|verify\w*|check\w*)\s*\("
     r"|\.(?:toBe\w*|toEqual\w*|toStrictEqual|toHave\w*|toContain\w*|toMatch\w*|toThrow\w*|rejects|resolves)\s*\()"
+)
+_TS_WEAK_MATCHER_RE = re.compile(r"\.(?:toBeDefined|toBeNull|toBeUndefined)\s*\(")
+_TS_STRONG_ASSERT_RE = re.compile(
+    r"(?:\b(?:expectTypeOf|assert|should)\b"
+    r"|\b(?:assert\w*|verify\w*|check\w*|expect[A-Z]\w*)\s*\("
+    r"|\.(?:toBe|toBeTruthy|toBeFalsy|toBeGreaterThan\w*|toBeLessThan\w*|toBeCloseTo|toBeInstanceOf|toEqual\w*|toStrictEqual|toHave\w*|toContain\w*|toMatch\w*|toThrow\w*|rejects|resolves)\s*\()"
 )
 _C_EMPTY_CATCH_RE = re.compile(r"\bcatch\b\s*(?:\([^)]*\))?\s*\{")
 _FORBIDDEN_ICON_RE = re.compile(
@@ -348,6 +354,41 @@ def _has_real_assertion_in_py_func(func_node: ast.FunctionDef | ast.AsyncFunctio
                 has_assertion = True
 
     return has_assertion, tautology_line
+
+
+def _find_weak_only_assertion_in_py_func(func_node: ast.FunctionDef | ast.AsyncFunctionDef) -> int | None:
+    """Python 테스트 함수 내부에 구체적 값 검증 없이 단순 `assert x is not None` 단독 단언만 존재하는지 검사한다."""
+    weak_lines: list[int] = []
+    strong_count = 0
+
+    for node in ast.walk(func_node):
+        if isinstance(node, ast.Assert):
+            test_expr = node.test
+            if (
+                isinstance(test_expr, ast.Compare)
+                and len(test_expr.ops) == 1
+                and isinstance(test_expr.ops[0], ast.IsNot)
+                and len(test_expr.comparators) == 1
+                and isinstance(test_expr.comparators[0], ast.Constant)
+                and test_expr.comparators[0].value is None
+                and isinstance(test_expr.left, (ast.Name, ast.Call))
+            ):
+                weak_lines.append(node.lineno)
+            elif not (isinstance(test_expr, ast.Constant) and test_expr.value is True):
+                strong_count += 1
+        elif isinstance(node, ast.Call):
+            func = node.func
+            if isinstance(func, ast.Attribute):
+                if func.attr == "assertIsNotNone" and len(node.args) >= 1 and isinstance(node.args[0], (ast.Name, ast.Call)):
+                    weak_lines.append(node.lineno)
+                elif func.attr.startswith("assert") or func.attr in ("fail", "raises", "reject"):
+                    strong_count += 1
+            elif isinstance(func, ast.Name) and func.id.startswith("assert"):
+                strong_count += 1
+
+    if len(weak_lines) == 1 and strong_count == 0:
+        return weak_lines[0]
+    return None
 
 
 DEFAULT_PROJECT_RULES_REL = ".dreampia/memory/project-rules.json"
@@ -980,7 +1021,7 @@ _RUST_REAL_ASSERT_RE = re.compile(
     r"(?:\b(?:assert|assert_eq|assert_ne|debug_assert|debug_assert_eq|debug_assert_ne|matches|panic)!\s*\("
     r"|\b(?:assert\w*|expect\w*|verify\w*|check\w*)\s*\()"
 )
-_GO_ANY_RE = re.compile(r"\b(interface\s*\{\s*\})\b")
+_GO_ANY_RE = re.compile(r"\b(interface\s*\{\s*\})")
 _GO_HOLLOW_TEST_RE = re.compile(
     r"\b(?:assert|require)\.(?:True|Equal)\s*\(\s*[A-Za-z0-9_]+\s*,\s*true(?:\s*,\s*true)?\s*\)"
 )
@@ -1104,6 +1145,7 @@ def audit_project_code(
                 if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     if is_test_file and node.name.startswith("test_"):
                         has_assert, taut_line = _has_real_assertion_in_py_func(node)
+                        weak_line = _find_weak_only_assertion_in_py_func(node) if (has_assert and taut_line is None) else None
                         if taut_line is not None:
                             findings.append(
                                 AuditFinding(
@@ -1122,6 +1164,16 @@ def audit_project_code(
                                     evidence=f"{rel}:{node.lineno}",
                                     issue_ko=f"테스트 함수 '{node.name}'에 실제 검증 단언문(assertion)이 없습니다.",
                                     fix_ko="정상·거부·경계 조건을 실제로 검증하는 assertion을 추가하십시오.",
+                                )
+                            )
+                        elif weak_line is not None:
+                            findings.append(
+                                AuditFinding(
+                                    severity="HIGH",
+                                    rule_id="hollow-tdd-weak-assertion",
+                                    evidence=f"{rel}:{weak_line}",
+                                    issue_ko=f"테스트 함수 '{node.name}'에 구체적 값 비교 없이 단순 존재 확인(is not None)만 단독으로 사용되었습니다.",
+                                    fix_ko="반환값의 실제 값, 필드 상태 또는 경계 조건을 검증하는 구체적 단언문(assert actual == expected)을 추가하십시오.",
                                 )
                             )
                     elif (
@@ -1223,6 +1275,21 @@ def audit_project_code(
                                 evidence=f"{rel}:{line_no}",
                                 issue_ko="TS/JS 테스트 블록에 실제 검증 단언문(expect/assert)이 없습니다.",
                                 fix_ko="정상·거부·경계 조건을 실제로 검증하는 expect() 또는 assert 단언문을 추가하십시오.",
+                            )
+                        )
+                    elif (
+                        not _TS_HOLLOW_TEST_RE.search(call_skel)
+                        and _TS_WEAK_MATCHER_RE.search(call_skel)
+                        and not _TS_STRONG_ASSERT_RE.search(call_skel)
+                    ):
+                        line_no = code_skeleton[:prefix_start].count("\n") + 1
+                        findings.append(
+                            AuditFinding(
+                                severity="HIGH",
+                                rule_id="hollow-tdd-weak-assertion",
+                                evidence=f"{rel}:{line_no}",
+                                issue_ko="TS/JS 테스트 블록에 구체적 값 비교 없이 단순 존재 확인(toBeDefined/not.toBeNull)만 단독으로 사용되었습니다.",
+                                fix_ko="실제 반환값이나 상태를 비교하는 toBe(), toEqual(), toStrictEqual() 등의 구체적 단언문을 추가하십시오.",
                             )
                         )
 
@@ -2360,6 +2427,26 @@ def analyze_blast_radius(
                     break
         if hit:
             transitive_dependents.append(rel)
+            if _is_test_or_check_file(rel, file_paths[rel]) and rel not in linked_test_files:
+                linked_test_files.append(rel)
+
+    recommended_test_commands: list[str] = []
+    for t_file in sorted(linked_test_files):
+        t_suf = PurePosixPath(t_file).suffix.lower()
+        if t_suf == ".py":
+            mod_name = t_file[:-3].replace("/", ".")
+            cmd_str = f"python -m unittest {mod_name}"
+        elif t_suf in (".ts", ".tsx", ".js", ".jsx"):
+            cmd_str = f"npx vitest run {t_file}"
+        elif t_suf == ".rs":
+            cmd_str = "cargo test"
+        elif t_suf == ".go":
+            parent_p = str(PurePosixPath(t_file).parent)
+            cmd_str = f"go test ./{parent_p}" if parent_p != "." else "go test ./..."
+        else:
+            continue
+        if cmd_str not in recommended_test_commands:
+            recommended_test_commands.append(cmd_str)
 
     test_passed = False
     if test_command:
@@ -2406,11 +2493,13 @@ def analyze_blast_radius(
         "direct_dependents": direct_dependents,
         "transitive_dependents": sorted(transitive_dependents),
         "linked_test_files": sorted(linked_test_files),
+        "recommended_test_commands": recommended_test_commands,
         "safety_proof_level": proof_level,
         "safety_proof_label": proof_label,
         "message_ko": (
             f"폭발 반경 분석 완료: 1차 영향 파일 {len(direct_dependents)}개, "
-            f"2차 전이 파일 {len(transitive_dependents)}개, 안전 증명 등급 {proof_level}단계({proof_label})."
+            f"2차 전이 파일 {len(transitive_dependents)}개, 추천 타깃 테스트 {len(recommended_test_commands)}개, "
+            f"안전 증명 등급 {proof_level}단계({proof_label})."
         ),
     }
 
@@ -2481,6 +2570,7 @@ def run_metric_climb(
     trials: int = 3,
     confidence_threshold: float = 0.90,
     hypothesis: str = "candidate-experiment",
+    auto_rollback: bool = False,
     apply: bool = False,
 ) -> dict[str, object]:
     """Dreampia 자율 지표 등반 엔진(Metric Climb): 불변 채점 파일 가드, 중복 실험 해시 차단, Fast-Fail, 몬테카를로 유의성 및 단순성 기준(Simplicity Criterion)을 집행한다."""
@@ -2684,7 +2774,34 @@ def run_metric_climb(
         "message_ko": reason_ko,
     }
 
+    rolled_back = False
+    checkpoint_id: str | None = None
     if apply:
+        try:
+            from . import checkpoint_manager
+        except ImportError:
+            import checkpoint_manager  # type: ignore[no-redef]
+
+        if verdict == "KEEP" and norm_targets:
+            ckpt_res = checkpoint_manager.create_checkpoint(
+                resolved,
+                norm_targets,
+                label=f"metric-keep-{config_hash}",
+                apply=True,
+            )
+            ckpt_obj = ckpt_res.get("checkpoint")
+            if isinstance(ckpt_obj, dict):
+                checkpoint_id = str(ckpt_obj.get("checkpoint_id") or "")
+        elif verdict == "DISCARD" and auto_rollback:
+            try:
+                rest_res = checkpoint_manager.restore_checkpoint(resolved, "latest", apply=True)
+                rolled_back = rest_res.get("status") == "PASS"
+                checkpoint_id = str(rest_res.get("checkpoint_id") or "")
+            except ValueError:
+                rolled_back = False
+
+        entry_doc["auto_rolled_back"] = rolled_back
+        entry_doc["checkpoint_id"] = checkpoint_id
         entries.append(entry_doc)
         ledger_data["immutable_baseline"] = immutable_baseline
         ledger_data["entries"] = entries

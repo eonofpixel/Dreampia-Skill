@@ -1,0 +1,748 @@
+{
+  "action": "benchmark",
+  "schema_version": "0.7.5",
+  "generated_at": "2026-10-17T14:59:41.190930+00:00",
+  "status": "PASS",
+  "applied": true,
+  "report_path": "evidence/benchmark-report.json",
+  "language_filter": "all",
+  "total_cases": 50,
+  "defect_cases": 30,
+  "clean_guard_cases": 20,
+  "metrics": {
+    "true_positives": 30,
+    "true_negatives": 20,
+    "false_positives": 0,
+    "false_negatives": 0,
+    "recall": 1.0,
+    "precision": 1.0,
+    "false_positive_rate": 0.0,
+    "total_elapsed_ms": 333.59,
+    "avg_case_ms": 6.67
+  },
+  "failed_cases": [],
+  "evaluations": [
+    {
+      "case_id": "py-defect-01",
+      "language": "python",
+      "category": "hollow_tdd",
+      "expected_defect": true,
+      "detected_defect": true,
+      "expected_rule_ids": [
+        "hollow-tdd-assert-true"
+      ],
+      "actual_rule_ids": [
+        "hollow-tdd-assert-true"
+      ],
+      "outcome": "TP",
+      "passed": true,
+      "elapsed_ms": 8.727
+    },
+    {
+      "case_id": "py-defect-02",
+      "language": "python",
+      "category": "hollow_tdd",
+      "expected_defect": true,
+      "detected_defect": true,
+      "expected_rule_ids": [
+        "hollow-tdd-no-assertion"
+      ],
+      "actual_rule_ids": [
+        "hollow-tdd-no-assertion"
+      ],
+      "outcome": "TP",
+      "passed": true,
+      "elapsed_ms": 3.333
+    },
+    {
+      "case_id": "py-defect-03",
+      "language": "python",
+      "category": "hollow_tdd",
+      "expected_defect": true,
+      "detected_defect": true,
+      "expected_rule_ids": [
+        "hollow-tdd-weak-assertion"
+      ],
+      "actual_rule_ids": [
+        "hollow-tdd-weak-assertion"
+      ],
+      "outcome": "TP",
+      "passed": true,
+      "elapsed_ms": 8.158
+    },
+    {
+      "case_id": "py-defect-04",
+      "language": "python",
+      "category": "slop",
+      "expected_defect": true,
+      "detected_defect": true,
+      "expected_rule_ids": [
+        "slop-bare-except-pass"
+      ],
+      "actual_rule_ids": [
+        "slop-bare-except-pass"
+      ],
+      "outcome": "TP",
+      "passed": true,
+      "elapsed_ms": 3.644
+    },
+    {
+      "case_id": "py-defect-05",
+      "language": "python",
+      "category": "type_safety",
+      "expected_defect": true,
+      "detected_defect": true,
+      "expected_rule_ids": [
+        "missing-return-type"
+      ],
+      "actual_rule_ids": [
+        "missing-return-type"
+      ],
+      "outcome": "TP",
+      "passed": true,
+      "elapsed_ms": 8.296
+    },
+    {
+      "case_id": "py-defect-06",
+      "language": "python",
+      "category": "type_safety",
+      "expected_defect": true,
+      "detected_defect": true,
+      "expected_rule_ids": [
+        "forbidden-any-type"
+      ],
+      "actual_rule_ids": [
+        "forbidden-any-type"
+      ],
+      "outcome": "TP",
+      "passed": true,
+      "elapsed_ms": 3.844
+    },
+    {
+      "case_id": "py-defect-07",
+      "language": "python",
+      "category": "slop",
+      "expected_defect": true,
+      "detected_defect": true,
+      "expected_rule_ids": [
+        "python-syntax-error"
+      ],
+      "actual_rule_ids": [
+        "python-syntax-error"
+      ],
+      "outcome": "TP",
+      "passed": true,
+      "elapsed_ms": 3.319
+    },
+    {
+      "case_id": "py-defect-08",
+      "language": "python",
+      "category": "hollow_tdd",
+      "expected_defect": true,
+      "detected_defect": true,
+      "expected_rule_ids": [
+        "hollow-tdd-weak-assertion"
+      ],
+      "actual_rule_ids": [
+        "hollow-tdd-weak-assertion"
+      ],
+      "outcome": "TP",
+      "passed": true,
+      "elapsed_ms": 3.39
+    },
+    {
+      "case_id": "ts-defect-01",
+      "language": "typescript",
+      "category": "hollow_tdd",
+      "expected_defect": true,
+      "detected_defect": true,
+      "expected_rule_ids": [
+        "hollow-tdd-assert-true"
+      ],
+      "actual_rule_ids": [
+        "hollow-tdd-assert-true"
+      ],
+      "outcome": "TP",
+      "passed": true,
+      "elapsed_ms": 3.407
+    },
+    {
+      "case_id": "ts-defect-02",
+      "language": "typescript",
+      "category": "hollow_tdd",
+      "expected_defect": true,
+      "detected_defect": true,
+      "expected_rule_ids": [
+        "hollow-tdd-no-assertion"
+      ],
+      "actual_rule_ids": [
+        "hollow-tdd-no-assertion"
+      ],
+      "outcome": "TP",
+      "passed": true,
+      "elapsed_ms": 3.269
+    },
+    {
+      "case_id": "ts-defect-03",
+      "language": "typescript",
+      "category": "hollow_tdd",
+      "expected_defect": true,
+      "detected_defect": true,
+      "expected_rule_ids": [
+        "hollow-tdd-weak-assertion"
+      ],
+      "actual_rule_ids": [
+        "hollow-tdd-weak-assertion"
+      ],
+      "outcome": "TP",
+      "passed": true,
+      "elapsed_ms": 3.385
+    },
+    {
+      "case_id": "ts-defect-04",
+      "language": "typescript",
+      "category": "type_safety",
+      "expected_defect": true,
+      "detected_defect": true,
+      "expected_rule_ids": [
+        "forbidden-any-type"
+      ],
+      "actual_rule_ids": [
+        "forbidden-any-type"
+      ],
+      "outcome": "TP",
+      "passed": true,
+      "elapsed_ms": 3.831
+    },
+    {
+      "case_id": "ts-defect-05",
+      "language": "typescript",
+      "category": "type_safety",
+      "expected_defect": true,
+      "detected_defect": true,
+      "expected_rule_ids": [
+        "forbidden-any-type"
+      ],
+      "actual_rule_ids": [
+        "forbidden-any-type"
+      ],
+      "outcome": "TP",
+      "passed": true,
+      "elapsed_ms": 3.881
+    },
+    {
+      "case_id": "ts-defect-06",
+      "language": "typescript",
+      "category": "slop",
+      "expected_defect": true,
+      "detected_defect": true,
+      "expected_rule_ids": [
+        "slop-bare-except-pass"
+      ],
+      "actual_rule_ids": [
+        "slop-bare-except-pass"
+      ],
+      "outcome": "TP",
+      "passed": true,
+      "elapsed_ms": 4.063
+    },
+    {
+      "case_id": "tsx-defect-07",
+      "language": "tsx",
+      "category": "ui_rule",
+      "expected_defect": true,
+      "detected_defect": true,
+      "expected_rule_ids": [
+        "button-bg-transparent-missing"
+      ],
+      "actual_rule_ids": [
+        "button-bg-transparent-missing"
+      ],
+      "outcome": "TP",
+      "passed": true,
+      "elapsed_ms": 5.19
+    },
+    {
+      "case_id": "tsx-defect-08",
+      "language": "tsx",
+      "category": "ui_rule",
+      "expected_defect": true,
+      "detected_defect": true,
+      "expected_rule_ids": [
+        "button-bg-transparent-missing"
+      ],
+      "actual_rule_ids": [
+        "button-bg-transparent-missing"
+      ],
+      "outcome": "TP",
+      "passed": true,
+      "elapsed_ms": 3.907
+    },
+    {
+      "case_id": "tsx-defect-09",
+      "language": "tsx",
+      "category": "ui_rule",
+      "expected_defect": true,
+      "detected_defect": true,
+      "expected_rule_ids": [
+        "forbidden-icon-library"
+      ],
+      "actual_rule_ids": [
+        "forbidden-icon-library"
+      ],
+      "outcome": "TP",
+      "passed": true,
+      "elapsed_ms": 11.378
+    },
+    {
+      "case_id": "tsx-defect-10",
+      "language": "tsx",
+      "category": "ui_rule",
+      "expected_defect": true,
+      "detected_defect": true,
+      "expected_rule_ids": [
+        "forbidden-icon-library"
+      ],
+      "actual_rule_ids": [
+        "forbidden-icon-library"
+      ],
+      "outcome": "TP",
+      "passed": true,
+      "elapsed_ms": 4.522
+    },
+    {
+      "case_id": "ts-defect-11",
+      "language": "typescript",
+      "category": "hollow_tdd",
+      "expected_defect": true,
+      "detected_defect": true,
+      "expected_rule_ids": [
+        "hollow-tdd-assert-true"
+      ],
+      "actual_rule_ids": [
+        "hollow-tdd-assert-true"
+      ],
+      "outcome": "TP",
+      "passed": true,
+      "elapsed_ms": 3.855
+    },
+    {
+      "case_id": "ts-defect-12",
+      "language": "typescript",
+      "category": "hollow_tdd",
+      "expected_defect": true,
+      "detected_defect": true,
+      "expected_rule_ids": [
+        "hollow-tdd-no-assertion"
+      ],
+      "actual_rule_ids": [
+        "hollow-tdd-no-assertion"
+      ],
+      "outcome": "TP",
+      "passed": true,
+      "elapsed_ms": 9.17
+    },
+    {
+      "case_id": "rs-defect-01",
+      "language": "rust",
+      "category": "hollow_tdd",
+      "expected_defect": true,
+      "detected_defect": true,
+      "expected_rule_ids": [
+        "hollow-tdd-assert-true"
+      ],
+      "actual_rule_ids": [
+        "hollow-tdd-assert-true"
+      ],
+      "outcome": "TP",
+      "passed": true,
+      "elapsed_ms": 4.04
+    },
+    {
+      "case_id": "rs-defect-02",
+      "language": "rust",
+      "category": "hollow_tdd",
+      "expected_defect": true,
+      "detected_defect": true,
+      "expected_rule_ids": [
+        "hollow-tdd-no-assertion"
+      ],
+      "actual_rule_ids": [
+        "hollow-tdd-no-assertion"
+      ],
+      "outcome": "TP",
+      "passed": true,
+      "elapsed_ms": 4.119
+    },
+    {
+      "case_id": "rs-defect-03",
+      "language": "rust",
+      "category": "slop",
+      "expected_defect": true,
+      "detected_defect": true,
+      "expected_rule_ids": [
+        "slop-unimplemented-macro"
+      ],
+      "actual_rule_ids": [
+        "slop-unimplemented-macro"
+      ],
+      "outcome": "TP",
+      "passed": true,
+      "elapsed_ms": 3.82
+    },
+    {
+      "case_id": "rs-defect-04",
+      "language": "rust",
+      "category": "slop",
+      "expected_defect": true,
+      "detected_defect": true,
+      "expected_rule_ids": [
+        "slop-unimplemented-macro"
+      ],
+      "actual_rule_ids": [
+        "slop-unimplemented-macro"
+      ],
+      "outcome": "TP",
+      "passed": true,
+      "elapsed_ms": 3.789
+    },
+    {
+      "case_id": "rs-defect-05",
+      "language": "rust",
+      "category": "hollow_tdd",
+      "expected_defect": true,
+      "detected_defect": true,
+      "expected_rule_ids": [
+        "hollow-tdd-no-assertion"
+      ],
+      "actual_rule_ids": [
+        "hollow-tdd-no-assertion"
+      ],
+      "outcome": "TP",
+      "passed": true,
+      "elapsed_ms": 3.461
+    },
+    {
+      "case_id": "go-defect-01",
+      "language": "go",
+      "category": "hollow_tdd",
+      "expected_defect": true,
+      "detected_defect": true,
+      "expected_rule_ids": [
+        "hollow-tdd-assert-true"
+      ],
+      "actual_rule_ids": [
+        "hollow-tdd-assert-true"
+      ],
+      "outcome": "TP",
+      "passed": true,
+      "elapsed_ms": 3.995
+    },
+    {
+      "case_id": "go-defect-02",
+      "language": "go",
+      "category": "hollow_tdd",
+      "expected_defect": true,
+      "detected_defect": true,
+      "expected_rule_ids": [
+        "hollow-tdd-no-assertion"
+      ],
+      "actual_rule_ids": [
+        "hollow-tdd-no-assertion"
+      ],
+      "outcome": "TP",
+      "passed": true,
+      "elapsed_ms": 3.179
+    },
+    {
+      "case_id": "go-defect-03",
+      "language": "go",
+      "category": "type_safety",
+      "expected_defect": true,
+      "detected_defect": true,
+      "expected_rule_ids": [
+        "forbidden-any-type"
+      ],
+      "actual_rule_ids": [
+        "forbidden-any-type"
+      ],
+      "outcome": "TP",
+      "passed": true,
+      "elapsed_ms": 9.332
+    },
+    {
+      "case_id": "go-defect-04",
+      "language": "go",
+      "category": "hollow_tdd",
+      "expected_defect": true,
+      "detected_defect": true,
+      "expected_rule_ids": [
+        "hollow-tdd-assert-true"
+      ],
+      "actual_rule_ids": [
+        "hollow-tdd-assert-true"
+      ],
+      "outcome": "TP",
+      "passed": true,
+      "elapsed_ms": 3.785
+    },
+    {
+      "case_id": "go-defect-05",
+      "language": "go",
+      "category": "type_safety",
+      "expected_defect": true,
+      "detected_defect": true,
+      "expected_rule_ids": [
+        "forbidden-any-type"
+      ],
+      "actual_rule_ids": [
+        "forbidden-any-type"
+      ],
+      "outcome": "TP",
+      "passed": true,
+      "elapsed_ms": 7.443
+    },
+    {
+      "case_id": "py-clean-01",
+      "language": "python",
+      "category": "clean_guard",
+      "expected_defect": false,
+      "detected_defect": false,
+      "expected_rule_ids": [],
+      "actual_rule_ids": [],
+      "outcome": "TN",
+      "passed": true,
+      "elapsed_ms": 3.361
+    },
+    {
+      "case_id": "py-clean-02",
+      "language": "python",
+      "category": "clean_guard",
+      "expected_defect": false,
+      "detected_defect": false,
+      "expected_rule_ids": [],
+      "actual_rule_ids": [],
+      "outcome": "TN",
+      "passed": true,
+      "elapsed_ms": 3.826
+    },
+    {
+      "case_id": "py-clean-03",
+      "language": "python",
+      "category": "clean_guard",
+      "expected_defect": false,
+      "detected_defect": false,
+      "expected_rule_ids": [],
+      "actual_rule_ids": [],
+      "outcome": "TN",
+      "passed": true,
+      "elapsed_ms": 9.897
+    },
+    {
+      "case_id": "py-clean-04",
+      "language": "python",
+      "category": "clean_guard",
+      "expected_defect": false,
+      "detected_defect": false,
+      "expected_rule_ids": [],
+      "actual_rule_ids": [],
+      "outcome": "TN",
+      "passed": true,
+      "elapsed_ms": 4.01
+    },
+    {
+      "case_id": "py-clean-05",
+      "language": "python",
+      "category": "clean_guard",
+      "expected_defect": false,
+      "detected_defect": false,
+      "expected_rule_ids": [],
+      "actual_rule_ids": [],
+      "outcome": "TN",
+      "passed": true,
+      "elapsed_ms": 3.851
+    },
+    {
+      "case_id": "ts-clean-01",
+      "language": "typescript",
+      "category": "clean_guard",
+      "expected_defect": false,
+      "detected_defect": false,
+      "expected_rule_ids": [],
+      "actual_rule_ids": [],
+      "outcome": "TN",
+      "passed": true,
+      "elapsed_ms": 11.495
+    },
+    {
+      "case_id": "ts-clean-02",
+      "language": "typescript",
+      "category": "clean_guard",
+      "expected_defect": false,
+      "detected_defect": false,
+      "expected_rule_ids": [],
+      "actual_rule_ids": [],
+      "outcome": "TN",
+      "passed": true,
+      "elapsed_ms": 14.809
+    },
+    {
+      "case_id": "ts-clean-03",
+      "language": "typescript",
+      "category": "clean_guard",
+      "expected_defect": false,
+      "detected_defect": false,
+      "expected_rule_ids": [],
+      "actual_rule_ids": [],
+      "outcome": "TN",
+      "passed": true,
+      "elapsed_ms": 4.769
+    },
+    {
+      "case_id": "ts-clean-04",
+      "language": "typescript",
+      "category": "clean_guard",
+      "expected_defect": false,
+      "detected_defect": false,
+      "expected_rule_ids": [],
+      "actual_rule_ids": [],
+      "outcome": "TN",
+      "passed": true,
+      "elapsed_ms": 4.326
+    },
+    {
+      "case_id": "ts-clean-05",
+      "language": "typescript",
+      "category": "clean_guard",
+      "expected_defect": false,
+      "detected_defect": false,
+      "expected_rule_ids": [],
+      "actual_rule_ids": [],
+      "outcome": "TN",
+      "passed": true,
+      "elapsed_ms": 4.126
+    },
+    {
+      "case_id": "tsx-clean-06",
+      "language": "tsx",
+      "category": "clean_guard",
+      "expected_defect": false,
+      "detected_defect": false,
+      "expected_rule_ids": [],
+      "actual_rule_ids": [],
+      "outcome": "TN",
+      "passed": true,
+      "elapsed_ms": 4.347
+    },
+    {
+      "case_id": "tsx-clean-07",
+      "language": "tsx",
+      "category": "clean_guard",
+      "expected_defect": false,
+      "detected_defect": false,
+      "expected_rule_ids": [],
+      "actual_rule_ids": [],
+      "outcome": "TN",
+      "passed": true,
+      "elapsed_ms": 4.135
+    },
+    {
+      "case_id": "ts-clean-08",
+      "language": "typescript",
+      "category": "clean_guard",
+      "expected_defect": false,
+      "detected_defect": false,
+      "expected_rule_ids": [],
+      "actual_rule_ids": [],
+      "outcome": "TN",
+      "passed": true,
+      "elapsed_ms": 3.585
+    },
+    {
+      "case_id": "ts-clean-09",
+      "language": "typescript",
+      "category": "clean_guard",
+      "expected_defect": false,
+      "detected_defect": false,
+      "expected_rule_ids": [],
+      "actual_rule_ids": [],
+      "outcome": "TN",
+      "passed": true,
+      "elapsed_ms": 9.894
+    },
+    {
+      "case_id": "rs-clean-01",
+      "language": "rust",
+      "category": "clean_guard",
+      "expected_defect": false,
+      "detected_defect": false,
+      "expected_rule_ids": [],
+      "actual_rule_ids": [],
+      "outcome": "TN",
+      "passed": true,
+      "elapsed_ms": 4.34
+    },
+    {
+      "case_id": "rs-clean-02",
+      "language": "rust",
+      "category": "clean_guard",
+      "expected_defect": false,
+      "detected_defect": false,
+      "expected_rule_ids": [],
+      "actual_rule_ids": [],
+      "outcome": "TN",
+      "passed": true,
+      "elapsed_ms": 3.833
+    },
+    {
+      "case_id": "rs-clean-03",
+      "language": "rust",
+      "category": "clean_guard",
+      "expected_defect": false,
+      "detected_defect": false,
+      "expected_rule_ids": [],
+      "actual_rule_ids": [],
+      "outcome": "TN",
+      "passed": true,
+      "elapsed_ms": 9.875
+    },
+    {
+      "case_id": "go-clean-01",
+      "language": "go",
+      "category": "clean_guard",
+      "expected_defect": false,
+      "detected_defect": false,
+      "expected_rule_ids": [],
+      "actual_rule_ids": [],
+      "outcome": "TN",
+      "passed": true,
+      "elapsed_ms": 3.471
+    },
+    {
+      "case_id": "go-clean-02",
+      "language": "go",
+      "category": "clean_guard",
+      "expected_defect": false,
+      "detected_defect": false,
+      "expected_rule_ids": [],
+      "actual_rule_ids": [],
+      "outcome": "TN",
+      "passed": true,
+      "elapsed_ms": 8.63
+    },
+    {
+      "case_id": "go-clean-03",
+      "language": "go",
+      "category": "clean_guard",
+      "expected_defect": false,
+      "detected_defect": false,
+      "expected_rule_ids": [],
+      "actual_rule_ids": [],
+      "outcome": "TN",
+      "passed": true,
+      "elapsed_ms": 10.963
+    }
+  ],
+  "message_ko": "다국어 적대적 벤치마크 스위트(50종) 검증 통과: 적발률(Recall)=100.0%, 오탐률(FPR)=0.0%, 소요시간=333.6ms",
+  "report_sha256": "f850977c2343353b2d7c30a6706cceae19d6f5052b7016276c8a5fbfbe906bc2"
+}

@@ -444,15 +444,15 @@ MCP_TOOLS: tuple[McpToolDefinition, ...] = (
     ),
     McpToolDefinition(
         name="dreampia_guild_camp",
-        description="제로트러스트 길드 야영지(1~10호기 bot-01~bot-10) 및 서명 퀘스트 보안 엔진(guild-camp): 인바운드 포트 0개(Outbound-Only), 6자리 페어링 코드 발급(pair), 캠프별 다중 길드원 배치(configure), HMAC-SHA256 서명+일회용 논스 퀘스트 발급(dispatch)/검증(verify), 시크릿/파괴적 명령 차단(ZeroSecretGuard), Cleric PASS + Hero 승인 필수 병합 보호(merge-guard)를 수행합니다.",
+        description="제로트러스트 길드 야영지(1~10호기 bot-01~bot-10) 및 서명 퀘스트 보안 엔진(guild-camp): 인바운드 포트 0개(Outbound-Only), 6자리 페어링 코드 발급(pair), 캠프별 다중 길드원 배치(configure), HMAC-SHA256 서명+일회용 논스 퀘스트 발급(dispatch)/검증(verify)/라이브 워커 실행(worker-run), 시크릿/파괴적 명령 차단(ZeroSecretGuard), Cleric PASS + Hero 승인 필수 병합 보호(merge-guard)를 수행합니다.",
         input_schema={
             "type": "object",
             "properties": {
                 "project": {"type": "string", "description": "대상 프로젝트 루트 경로"},
                 "mode": {
                     "type": "string",
-                    "enum": ["status", "pair", "configure", "dispatch", "verify", "merge-guard"],
-                    "description": "실행 모드 (status, pair, configure, dispatch, verify, merge-guard)",
+                    "enum": ["status", "pair", "configure", "dispatch", "verify", "merge-guard", "worker-run"],
+                    "description": "실행 모드 (status, pair, configure, dispatch, verify, merge-guard, worker-run)",
                 },
                 "slot": {"type": "string", "description": "대상 야영지 슬롯 ID (bot-01 ~ bot-10)"},
                 "goal": {"type": "string", "description": "하달할 퀘스트 목표 설명 (dispatch 모드)"},
@@ -461,6 +461,121 @@ MCP_TOOLS: tuple[McpToolDefinition, ...] = (
                 "quest_file": {"type": "string", "description": "검증할 서명 퀘스트 JSON 상대 경로 (verify 모드)"},
                 "hero_approve": {"type": "boolean", "description": "주인공 영웅(Hero)의 명시적 최종 병합 승인 여부 (merge-guard 모드)"},
                 "apply": {"type": "boolean", "description": "true 지정 시 페어링 티켓/캠프 설정/서명 퀘스트 파일 실제 저장"},
+            },
+        },
+    ),
+    McpToolDefinition(
+        name="dreampia_benchmark",
+        description="다국어 50종 적대적 슬롭·결함 벤치마크 스위트(benchmark): Python, TypeScript, TSX, Rust, Go 5개 언어의 가짜 TDD·슬롭·타입·UI 규칙 위반 30종 및 오탐 방지용 정상 코드 20종을 실행하여 적발률(Recall 100%)과 오탐률(FPR 0%)을 정량 검증합니다.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "project": {"type": "string", "description": "대상 프로젝트 루트 경로"},
+                "language": {"type": "string", "description": "언어 필터 (all, python, ts, tsx, rust, go)"},
+                "apply": {"type": "boolean", "description": "true 지정 시 evidence/benchmark-report.json 저장"},
+            },
+        },
+    ),
+    McpToolDefinition(
+        name="dreampia_mutation_check",
+        description="무의존성 AST·렉서 기반 뮤테이션 테스팅 게이트(mutation-check): 프로덕션 코드의 연산자(산술·비교·불리언)에 변이를 주입해 AI가 작성한 테스트가 실제로 실패(Mutant Killed)하는지 격리 샌드박스에서 검증합니다.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "project": {"type": "string", "description": "대상 프로젝트 루트 경로"},
+                "target": {"type": "string", "description": "쉼표로 구분된 변이 대상 소스 파일 상대 경로"},
+                "cmd": {"type": "string", "description": "실행할 테스트 명령어 (예: python -m unittest)"},
+                "max_mutants": {"type": "integer", "description": "최대 변이 후보 개수 (기본값 15)"},
+                "min_score": {"type": "number", "description": "최소 요구 변이 사살률 (0.0~1.0, 기본값 0.8)"},
+                "apply": {"type": "boolean", "description": "true 지정 시 evidence/mutation-report.json 저장"},
+            },
+            "required": ["target", "cmd"],
+        },
+    ),
+    McpToolDefinition(
+        name="dreampia_hook_dispatch",
+        description="네이티브 호스트 생애주기 훅 디스패처(hook-dispatch): PreToolUse(경계/위험명령 차단), PostToolUse(단일 파일 증분 감사), Stop(Sisyphus 미완료 종료 방어), UserPromptSubmit(핵심 규칙 주입)를 수행합니다.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "project": {"type": "string", "description": "대상 프로젝트 루트 경로"},
+                "event": {"type": "string", "enum": ["PreToolUse", "PostToolUse", "Stop", "UserPromptSubmit"]},
+                "payload": {"type": "object", "description": "호스트 훅 이벤트 입력 JSON"},
+            },
+        },
+    ),
+    McpToolDefinition(
+        name="dreampia_symbol_map",
+        description="무의존성 다국어 시맨틱 심볼 맵(symbol-map): 파일 전체를 읽지 않고 클래스·인터페이스·함수·메서드 시그니처와 줄 번호 범위(L10-L55) 목차만 추출하여 컨텍스트 토큰을 75% 이상 절감합니다.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "project": {"type": "string", "description": "대상 프로젝트 루트 경로"},
+                "target": {"type": "string", "description": "심볼 목차를 추출할 파일 또는 디렉터리 상대 경로"},
+            },
+            "required": ["target"],
+        },
+    ),
+    McpToolDefinition(
+        name="dreampia_symbol_slice",
+        description="시맨틱 심볼 본문 슬라이서(symbol-slice): 지정된 파일과 심볼 이름(함수·메서드·클래스)에 해당하는 시작~종료 줄 코드 구간만 정확히 발췌하여 반환합니다.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "project": {"type": "string", "description": "대상 프로젝트 루트 경로"},
+                "target": {"type": "string", "description": "대상 파일 상대 경로 (또는 파일::심볼명)"},
+                "symbol": {"type": "string", "description": "발췌할 심볼 이름 (예: ClassName.method_name)"},
+            },
+            "required": ["target"],
+        },
+    ),
+    McpToolDefinition(
+        name="dreampia_checkpoint",
+        description="자율 루프 Golden Checkpoint 스냅샷 매니저(checkpoint): 대상 파일들의 원본 바이트와 SHA-256 해시를 백업(create), 조회(list), 또는 100% 바이트 일치 상태로 무손실 복원(restore)합니다.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "project": {"type": "string", "description": "대상 프로젝트 루트 경로"},
+                "mode": {"type": "string", "enum": ["list", "create", "restore"]},
+                "target": {"type": "string", "description": "쉼표 구분 대상 파일 목록(create) 또는 복원할 checkpoint_id(restore)"},
+                "label": {"type": "string", "description": "체크포인트 라벨"},
+                "apply": {"type": "boolean", "description": "true 지정 시 실제 저장 또는 복원 수행"},
+            },
+        },
+    ),
+    McpToolDefinition(
+        name="dreampia_squad_merge_check",
+        description="병렬 워크트리 Dry-Run 병합 충돌 시뮬레이터(squad-merge-check): 여러 서브에이전트 워크트리 간 수정 파일 겹침 및 충돌 여부를 병합 전에 사전 시뮬레이션합니다.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "project": {"type": "string", "description": "대상 프로젝트 루트 경로"},
+                "target": {"type": "string", "description": "쉼표로 구분된 후보 워크트리 디렉터리 경로 목록"},
+            },
+            "required": ["target"],
+        },
+    ),
+    McpToolDefinition(
+        name="dreampia_memory_compact",
+        description="스마트 프로젝트 학습 메모리 압축기(memory-compact): 누적된 project-rules.json의 중복 정규식을 병합하고 심각도·최신순 상위 32개 핵심 활성 규칙으로 가지치기합니다.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "project": {"type": "string", "description": "대상 프로젝트 루트 경로"},
+                "max_rules": {"type": "integer", "description": "유지할 최대 핵심 활성 규칙 수 (기본값 32)"},
+                "apply": {"type": "boolean", "description": "true 지정 시 압축된 project-rules.json 저장"},
+            },
+        },
+    ),
+    McpToolDefinition(
+        name="dreampia_sdd_synthesize",
+        description="양방향 SDD-골든 I/O 및 단위 테스트 스켈레톤 자동 합성기(sdd-synthesize): SDD 명세 원장으로부터 approved-spec/golden-io.json과 언어별 단위 테스트 파일을 자동 생성합니다.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "project": {"type": "string", "description": "대상 프로젝트 루트 경로"},
+                "language": {"type": "string", "description": "합성할 테스트 언어 (python, ts)"},
+                "apply": {"type": "boolean", "description": "true 지정 시 실제 파일 생성"},
             },
         },
     ),
@@ -495,7 +610,10 @@ def execute_mcp_tool(default_root: Path, tool_name: str, arguments: dict[str, ob
     root = _resolve_project_root(default_root, arguments.get("project"))
 
     if tool_name == "dreampia_status":
-        return team_cli.project_status(root)
+        out = team_cli.project_status(root)
+        if bool(arguments.get("export_html", False)):
+            out.update(team_cli.memory_compactor.export_dashboard_html(root, out, apply=True))
+        return out
 
     if tool_name == "dreampia_discover":
         bootstrap_flag = bool(arguments.get("bootstrap_sdd", False))
@@ -541,6 +659,12 @@ def execute_mcp_tool(default_root: Path, tool_name: str, arguments: dict[str, ob
             "universal_router",
             "guild_camp",
             "autopilot_engine",
+            "benchmark_suite",
+            "mutation_engine",
+            "hook_dispatcher",
+            "symbol_indexer",
+            "checkpoint_manager",
+            "memory_compactor",
             "team_cli",
         ):
             for candidate_name in (f"harness.{mod_suffix}", mod_suffix):
@@ -750,6 +874,7 @@ def execute_mcp_tool(default_root: Path, tool_name: str, arguments: dict[str, ob
         trials_arg = int(arguments.get("trials") or 3)  # type: ignore[call-overload]
         conf_arg = float(arguments.get("confidence") or 0.90)  # type: ignore[arg-type]
         hyp_arg = str(arguments.get("hypothesis") or "candidate-experiment").strip()
+        auto_rb_flag = bool(arguments.get("auto_rollback", False))
         apply_flag = bool(arguments.get("apply", False))
         return team_cli.metric_climb_check(
             root,
@@ -761,8 +886,72 @@ def execute_mcp_tool(default_root: Path, tool_name: str, arguments: dict[str, ob
             trials=trials_arg,
             confidence=conf_arg,
             hypothesis=hyp_arg,
+            auto_rollback=auto_rb_flag,
             apply=apply_flag,
         )
+
+    if tool_name == "dreampia_benchmark":
+        lang_arg = str(arguments.get("language") or "all").strip()
+        apply_flag = bool(arguments.get("apply", False))
+        return team_cli.benchmark_check(root, language_filter=lang_arg, apply=apply_flag)
+
+    if tool_name == "dreampia_mutation_check":
+        target_arg = str(arguments.get("target") or "").strip()
+        cmd_arg = str(arguments.get("cmd") or "").strip()
+        max_mut_arg = int(arguments.get("max_mutants") or 15)  # type: ignore[call-overload]
+        min_score_arg = float(arguments.get("min_score") or 0.80)  # type: ignore[arg-type]
+        apply_flag = bool(arguments.get("apply", False))
+        return team_cli.mutation_check_cmd(
+            root,
+            target_rel=target_arg,
+            test_cmd_str=cmd_arg,
+            max_mutants=max_mut_arg,
+            min_score=min_score_arg,
+            apply=apply_flag,
+        )
+
+    if tool_name == "dreampia_hook_dispatch":
+        event_arg = str(arguments.get("event") or "PreToolUse").strip()
+        raw_payload = arguments.get("payload")
+        payload_dict: dict[str, object] = raw_payload if isinstance(raw_payload, dict) else {}
+        return team_cli.hook_dispatch_cmd(root, event_name=event_arg, payload=payload_dict)
+
+    if tool_name == "dreampia_symbol_map":
+        target_arg = str(arguments.get("target") or "").strip()
+        return team_cli.symbol_map_cmd(root, target_rel=target_arg)
+
+    if tool_name == "dreampia_symbol_slice":
+        target_arg = str(arguments.get("target") or "").strip()
+        sym_arg = str(arguments.get("symbol") or "").strip()
+        return team_cli.symbol_slice_cmd(root, target_rel=target_arg, symbol_name=sym_arg)
+
+    if tool_name == "dreampia_checkpoint":
+        mode_arg = str(arguments.get("mode") or "list").strip()
+        target_arg = str(arguments.get("target") or "").strip()
+        label_arg = str(arguments.get("label") or "manual").strip()
+        apply_flag = bool(arguments.get("apply", False))
+        return team_cli.checkpoint_cmd(
+            root,
+            mode=mode_arg,
+            target_rel=target_arg,
+            checkpoint_id=target_arg,
+            label=label_arg,
+            apply=apply_flag,
+        )
+
+    if tool_name == "dreampia_squad_merge_check":
+        target_arg = str(arguments.get("target") or "").strip()
+        return team_cli.squad_merge_check_cmd(root, worktree_dirs_str=target_arg)
+
+    if tool_name == "dreampia_memory_compact":
+        max_rules_arg = int(arguments.get("max_rules") or 32)  # type: ignore[call-overload]
+        apply_flag = bool(arguments.get("apply", False))
+        return team_cli.memory_compact_cmd(root, max_active_rules=max_rules_arg, apply=apply_flag)
+
+    if tool_name == "dreampia_sdd_synthesize":
+        lang_arg = str(arguments.get("language") or "python").strip()
+        apply_flag = bool(arguments.get("apply", False))
+        return team_cli.sdd_synthesize_cmd(root, language=lang_arg, apply=apply_flag)
 
     raise KeyError(f"등록되지 않은 MCP 도구입니다: {tool_name}")
 

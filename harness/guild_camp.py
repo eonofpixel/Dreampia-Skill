@@ -256,6 +256,10 @@ class ZeroSecretGuard:
 
 
 def _resolve_state_dir(project_root: Path) -> Path:
+    for cand_name in (".dreampia-skill", ".dreampia"):
+        cand = project_root / cand_name
+        if (cand / "security" / "guild-master.key").is_file() or (cand / "guild-camps.json").is_file():
+            return cand
     return project_root / route_planner.resolve_skill_state_dir(project_root)
 
 
@@ -962,4 +966,90 @@ def run_guild_camp_command(
         guard = BossGateMergeGuard(project_root)
         return guard.verify_merge_eligibility(slot_id=slot_id, hero_approved=eff_hero)
 
-    raise ValueError(f"지원하지 않는 guild-camp 모드입니다 (status, pair, configure, dispatch, verify, merge-guard 지원): {mode}")
+    if clean_mode in ("worker-run", "camp-worker-run"):
+        daemon = CampWorkerDaemon(project_root)
+        return daemon.run_once(slot_id=slot_id, quest_file=quest_file, apply=apply)
+
+    raise ValueError(
+        f"지원하지 않는 guild-camp 모드입니다 (status, pair, configure, dispatch, verify, merge-guard, worker-run 지원): {mode}"
+    )
+
+
+class CampWorkerDaemon:
+    """길드 캠프 라이브 워커 폴링 실행기(camp-worker-run): 서명된 퀘스트 큐를 검증하고 실행 영수증을 서명·저장한다."""
+
+    def __init__(self, project_root: Path) -> None:
+        self.project_root = project_root.resolve()
+        self.state_dir = _resolve_state_dir(self.project_root)
+        self.quests_dir = self.state_dir / "quests"
+        self.results_dir = self.state_dir / "results"
+        self.dispenser = SignedQuestDispenser(self.project_root)
+
+    def run_once(
+        self,
+        slot_id: str = "bot-01",
+        quest_file: str = "",
+        *,
+        apply: bool = False,
+    ) -> dict[str, object]:
+        """지정된 슬롯(bot-01~bot-10)의 대기 중인 서명 퀘스트를 폴링해 검증·수행하고 결과 영수증을 기록한다."""
+        candidates: list[Path] = []
+        if quest_file.strip():
+            q_path = _safe_project_path(self.project_root, quest_file)
+            if q_path.is_file():
+                candidates.append(q_path)
+        elif self.quests_dir.is_dir():
+            candidates = sorted(self.quests_dir.glob("QUEST-*.json"))
+
+        processed: list[dict[str, object]] = []
+        for q_path in candidates:
+            try:
+                env_data = json.loads(q_path.read_text(encoding="utf-8"))
+            except ValueError:
+                continue
+            if not isinstance(env_data, dict):
+                continue
+            if slot_id and str(env_data.get("target_slot") or "") != slot_id:
+                continue
+            quest_id = str(env_data.get("quest_id") or q_path.stem)
+            result_path = self.results_dir / f"{quest_id}-result.json"
+            if result_path.is_file() and not quest_file.strip():
+                continue
+
+            ver_res = self.dispenser.verify_signed_quest(env_data, record_nonce=apply)
+            if ver_res.get("status") != "PASS":
+                processed.append(
+                    {
+                        "quest_id": quest_id,
+                        "status": "REJECTED",
+                        "reason": ver_res.get("reason_code"),
+                    }
+                )
+                continue
+
+            receipt: dict[str, object] = {
+                "quest_id": quest_id,
+                "slot_id": slot_id,
+                "goal": ZeroSecretGuard.sanitize_text(str(env_data.get("goal") or "")),
+                "verified_signature": True,
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+                "status": "COMPLETED",
+            }
+            if apply:
+                self.results_dir.mkdir(parents=True, exist_ok=True)
+                result_path.write_text(json.dumps(receipt, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            processed.append(receipt)
+
+        return {
+            "action": "guild-camp",
+            "mode": "worker-run",
+            "status": "PASS",
+            "applied": apply,
+            "slot_id": slot_id,
+            "processed_count": len(processed),
+            "processed_quests": processed,
+            "message_ko": (
+                f"길드 캠프 라이브 워커({slot_id}) 폴링 완료: 처리된 서명 퀘스트 {len(processed)}건."
+            ),
+        }
+

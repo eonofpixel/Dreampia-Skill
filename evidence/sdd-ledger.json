@@ -249,15 +249,16 @@
   ],
   "delta_modified_ids": [],
   "evidence_files": {
-    "evidence/autopilot-verdict.json": "c2770ebc50af7de82fa1a4bfd4617f104e8e14463ed01a5ec62d2b63a30c72a4",
+    "evidence/autopilot-verdict.json": "25c0267bf53bd3db6587bbe049e0dbbab165e484e5b1b48d62d1642445bc8f21",
+    "evidence/benchmark-report.json": "d94b22b40447f97fe45eef2abb4468e69ebaa8256ff1c418d0e0d160e0420839",
     "evidence/blast-radius-report.json": "48cea6b91cd8b1df94ffb33d1d96ce3200783df1fb13643d1e8eca4cccdf76b5",
-    "evidence/code-audit.json": "687093c8283b68d8750724f13dfca63fb3afc1f519a993d095dc00f8859b436e",
-    "evidence/context-pack.json": "0eaa36e65f1d84c531ccf31064bb68b33e20e987a5bcf145200b6c3b43675dee",
+    "evidence/code-audit.json": "0be3a846073bfafd324eabe693fa9fd143e04b56530a03f338f77a091a3d8f88",
+    "evidence/context-pack.json": "f2e9aa48e890c957f7e2426bc6e15a1b2a919b808c59dbfccb7060586a6fe055",
     "evidence/metric-climb-last.log": "161beb8fe3a48f56f307dbb6f21ddcadef798fe143d1b34364d3f2dd758f15b1",
     "evidence/metric-climb-ledger.json": "671e558ac02d89b2569b72f2c7a384bd42f7052df3564c2610f8315fc726bfc4",
     "evidence/verification.json": "40fe6dc2077dfb19a1439631f1627a9acd6cbcb98bf2504636178fa34ffd9566"
   },
-  "generated_at": "2026-10-17T10:44:53.945407+00:00",
+  "generated_at": "2026-10-17T14:59:41.639579+00:00",
   "requirements": [
     {
       "id": "PRD-R001",
@@ -644,11 +645,11 @@
   "summary": {
     "contract_count": 7,
     "delta_modified_count": 0,
-    "evidence_file_count": 7,
+    "evidence_file_count": 8,
     "requirement_count": 6,
     "task_count": 4,
     "test_count": 10,
-    "test_file_count": 26
+    "test_file_count": 33
   },
   "tasks": [
     {
@@ -814,13 +815,19 @@
     "ai-dev-execution/assets/scaffolds/next-assessment-app/tests/unit/store.test.ts",
     "harness/examples/slots/test_slots.py",
     "harness/tests/test_autopilot_engine.py",
+    "harness/tests/test_benchmark_suite.py",
+    "harness/tests/test_checkpoint_manager.py",
     "harness/tests/test_cleanroom_governance.py",
     "harness/tests/test_codex.py",
     "harness/tests/test_core.py",
     "harness/tests/test_design_delivery.py",
+    "harness/tests/test_guild_camp.py",
     "harness/tests/test_handoff_contract.py",
     "harness/tests/test_hardening.py",
+    "harness/tests/test_hook_dispatcher.py",
     "harness/tests/test_local_ci.py",
+    "harness/tests/test_memory_compactor.py",
+    "harness/tests/test_mutation_engine.py",
     "harness/tests/test_package_boundaries.py",
     "harness/tests/test_process.py",
     "harness/tests/test_product.py",
@@ -829,6 +836,7 @@
     "harness/tests/test_sdd_engine.py",
     "harness/tests/test_skill_bundle.py",
     "harness/tests/test_strict.py",
+    "harness/tests/test_symbol_indexer.py",
     "harness/tests/test_team.py",
     "harness/tests/test_universal_router.py",
     "harness/tests/test_v03_regressions.py",

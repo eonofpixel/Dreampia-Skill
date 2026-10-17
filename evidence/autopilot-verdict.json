@@ -1,6 +1,6 @@
 {
   "schema_version": "0.7.0",
-  "generated_at": "2026-10-17T14:17:47.045516+00:00",
+  "generated_at": "2026-10-17T15:00:00.505156+00:00",
   "status": "PASS",
   "protagonist": {
     "callsign": "Hero",
@@ -80,13 +80,13 @@
       "owner": "Inquisitor (reviewer)",
       "status": "PASS",
       "audit_scope": "full",
-      "scanned_file_count": 73,
+      "scanned_file_count": 85,
       "blocking_count": 0,
       "finding_count": 0,
       "findings": [],
-      "detail": "Inquisitor 코드·TDD·규칙 정적 감사(full)를 통과했습니다. (검사 파일 73개, 차단 결함 0건)"
+      "detail": "Inquisitor 코드·TDD·규칙 정적 감사(full)를 통과했습니다. (검사 파일 85개, 차단 결함 0건)"
     }
   ],
   "message_ko": "GuildMaster & Cleric 오토파일럿 보스 관문(team, 티어=standard) 전 단계(3개) 검증을 통과했습니다.",
-  "verdict_sha256": "ff44d83e8e0dd969e9e7936ef197e845881d0beef16cb61d77015b3deac40ba5"
+  "verdict_sha256": "30f3299482347172e4950865d56ed848c91f399e1917144cd7259f5b4f0b3979"
 }

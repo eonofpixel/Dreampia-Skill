@@ -15,9 +15,9 @@ import stat
 import sys
 import uuid
 try:
-    from . import autopilot_engine, guild_camp, process as _proc, reconstruct_engine, route_planner, sdd_engine, skill_bundle, universal_router, visual_acceptance, write_boundary
+    from . import autopilot_engine, benchmark_suite, checkpoint_manager, guild_camp, hook_dispatcher, memory_compactor, mutation_engine, process as _proc, reconstruct_engine, route_planner, sdd_engine, skill_bundle, symbol_indexer, universal_router, visual_acceptance, write_boundary
 except ImportError:
-    import autopilot_engine, guild_camp, process as _proc, reconstruct_engine, route_planner, sdd_engine, skill_bundle, universal_router, visual_acceptance, write_boundary
+    import autopilot_engine, benchmark_suite, checkpoint_manager, guild_camp, hook_dispatcher, memory_compactor, mutation_engine, process as _proc, reconstruct_engine, route_planner, sdd_engine, skill_bundle, symbol_indexer, universal_router, visual_acceptance, write_boundary
 
 VERSION='0.7.0'
 PACKAGE=pathlib.Path(__file__).resolve().parents[1]
@@ -1137,6 +1137,7 @@ def metric_climb_check(
     trials: int = 3,
     confidence: float = 0.90,
     hypothesis: str = 'candidate-experiment',
+    auto_rollback: bool = False,
     apply: bool = False,
 ) -> dict[str, object]:
     import shlex
@@ -1155,6 +1156,7 @@ def metric_climb_check(
         trials=trials,
         confidence_threshold=confidence,
         hypothesis=hypothesis,
+        auto_rollback=auto_rollback,
         apply=apply,
     )
 
@@ -1239,6 +1241,97 @@ def guild_camp_check(
         hero_approve=hero_approve,
         apply=apply,
     )
+
+
+def benchmark_check(
+    root: pathlib.Path,
+    language: str = 'all',
+    apply: bool = False,
+) -> dict[str, object]:
+    return benchmark_suite.run_benchmark_suite(root, language=language, apply=apply)
+
+
+def mutation_check_cmd(
+    root: pathlib.Path,
+    target_rel: str,
+    test_cmd: str,
+    *,
+    max_mutants: int = 15,
+    min_score: float = 0.8,
+    apply: bool = False,
+) -> dict[str, object]:
+    targets = [t.strip() for t in (target_rel or '').split(',') if t.strip()]
+    return mutation_engine.run_mutation_check(
+        root,
+        targets,
+        test_cmd,
+        max_mutants=max_mutants,
+        min_score=min_score,
+        apply=apply,
+    )
+
+
+def hook_dispatch_check(
+    root: pathlib.Path,
+    event_name: str = 'PreToolUse',
+    raw_payload: dict[str, object] | None = None,
+) -> dict[str, object]:
+    payload = dict(raw_payload) if isinstance(raw_payload, dict) else {}
+    if not payload and not sys.stdin.isatty():
+        try:
+            stdin_txt = sys.stdin.read().strip()
+            if stdin_txt:
+                loaded = json.loads(stdin_txt)
+                if isinstance(loaded, dict):
+                    payload = loaded
+        except (OSError, ValueError):
+            payload = {}
+    return hook_dispatcher.dispatch_hook_event(root, event_name=event_name, raw_payload=payload)
+
+
+def symbol_map_check(root: pathlib.Path, target_rel: str) -> dict[str, object]:
+    return symbol_indexer.build_symbol_map(root, target_rel)
+
+
+def symbol_slice_check(root: pathlib.Path, target_rel: str, symbol_query: str = '') -> dict[str, object]:
+    return symbol_indexer.extract_symbol_slice(root, target_rel, symbol_query)
+
+
+def checkpoint_check(
+    root: pathlib.Path,
+    mode: str = 'list',
+    target_rel: str = '',
+    label: str = 'golden',
+    apply: bool = False,
+) -> dict[str, object]:
+    eff_mode = (mode or 'list').strip().lower()
+    if eff_mode == 'create':
+        targets = [t.strip() for t in (target_rel or '').split(',') if t.strip()]
+        return checkpoint_manager.create_checkpoint(root, targets, label=label or 'golden', apply=apply)
+    if eff_mode in ('restore', 'rollback'):
+        return checkpoint_manager.restore_checkpoint(root, checkpoint_id=target_rel or 'latest', apply=apply)
+    return checkpoint_manager.list_checkpoints(root)
+
+
+def squad_merge_check(root: pathlib.Path, target_rel: str) -> dict[str, object]:
+    dirs = [d.strip() for d in (target_rel or '').split(',') if d.strip()]
+    return checkpoint_manager.simulate_worktree_merge(root, dirs)
+
+
+def memory_compact_check(
+    root: pathlib.Path,
+    max_rules: int = 32,
+    apply: bool = False,
+) -> dict[str, object]:
+    return memory_compactor.compact_project_memory(root, max_active_rules=max_rules, apply=apply)
+
+
+def sdd_synthesize_check(
+    root: pathlib.Path,
+    language: str = 'python',
+    apply: bool = False,
+) -> dict[str, object]:
+    return memory_compactor.synthesize_sdd_tests_and_golden_io(root, language=language, apply=apply)
 
 
 _GLOBAL_SKILL_REL_TARGETS: tuple[str, ...] = (
@@ -2162,7 +2255,7 @@ def main(argv=None) -> int:
         return mcp_main(args[1:])
     p=argparse.ArgumentParser(description='dreampia: offline project install and internal workflow helper, Python >=3.9 cross-platform')
     p.add_argument('--version',action='version',version=VERSION)
-    p.add_argument('action',choices=('version','status','config','clean','release','bump-version','self-update','setup','install-global','uninstall-global','discover','onboard','init','doctor','update','uninstall','rollback','scaffold','verify','export-client-summary','scaffold-app','plan-slice','package-client','app-check','ui-check','route-plan','expand-prompt','next-actions','interview-compile','learn-rule','visual-check','instruction-check','router-discover','router-materialize','router-export-plugin','router-dispatch','squad-worktree','guild-camp','reconstruct-doctor','reconstruct-inspect','reconstruct-ledger','reconstruct-spec','reconstruct-verify','reconstruct-compare','sdd-ledger','sdd-check','spec-check','audit-code','context-pack','golden-io','autopilot-gate','blast-radius','metric-climb','mcp-serve'))
+    p.add_argument('action',choices=('version','status','config','clean','release','bump-version','self-update','setup','install-global','uninstall-global','discover','onboard','init','doctor','update','uninstall','rollback','scaffold','verify','export-client-summary','scaffold-app','plan-slice','package-client','app-check','ui-check','route-plan','expand-prompt','next-actions','interview-compile','learn-rule','visual-check','instruction-check','router-discover','router-materialize','router-export-plugin','router-dispatch','squad-worktree','guild-camp','reconstruct-doctor','reconstruct-inspect','reconstruct-ledger','reconstruct-spec','reconstruct-verify','reconstruct-compare','sdd-ledger','sdd-check','spec-check','audit-code','context-pack','golden-io','autopilot-gate','blast-radius','metric-climb','benchmark','mutation-check','hook-dispatch','symbol-map','symbol-slice','checkpoint','squad-merge-check','camp-worker-run','memory-compact','sdd-synthesize','mcp-serve'))
     p.add_argument('--project',default=None);p.add_argument('--apply',action='store_true',help='explicitly execute previewed project changes')
     p.add_argument('--global',dest='global_scope',action='store_true',help='operate on global 5-host skill installation and MCP config')
     p.add_argument('--check-remote',action='store_true',help='check remote origin/main version/commit status')
@@ -2203,12 +2296,19 @@ def main(argv=None) -> int:
     p.add_argument('--source',default=None,help='project-relative source artifact or directory path for reconstruct-ledger/spec/compare')
     p.add_argument('--ledger',default=None,help='project-relative ledger path for reconstruct-verify, sdd-check, or golden-io')
     p.add_argument('--verify-cmd',dest='verify_cmd',action='append',default=None,help='verification command(s) for autopilot-gate or config (supports multiple --verify-cmd flags, && or ; chaining, or JSON array)')
-    p.add_argument('--cmd',default='',help='benchmark command string for metric-climb')
+    p.add_argument('--cmd',default='',help='benchmark command string for metric-climb or mutation-check')
     p.add_argument('--metric-regex',default=r'metric:\s*([0-9]+(?:\.[0-9]+)?)',help='regex capturing numeric metric for metric-climb')
     p.add_argument('--direction',choices=('minimize','maximize'),default='minimize',help='metric optimization direction for metric-climb')
     p.add_argument('--immutable',default='',help='comma-separated read-only files guarded during metric-climb')
     p.add_argument('--trials',type=int,default=3,help='number of trials for metric-climb')
     p.add_argument('--confidence',type=float,default=0.90,help='Monte Carlo win probability threshold for metric-climb')
+    p.add_argument('--auto-rollback',action='store_true',help='auto-restore from latest Golden Checkpoint when metric-climb verdict is DISCARD')
+    p.add_argument('--language',default='all',help='language filter (all, python, ts, tsx, rust, go) for benchmark or sdd-synthesize')
+    p.add_argument('--max-mutants',type=int,default=15,help='max mutants to evaluate during mutation-check')
+    p.add_argument('--min-score',type=float,default=0.80,help='minimum required mutation kill score (0.0~1.0) for mutation-check')
+    p.add_argument('--max-rules',type=int,default=32,help='maximum active project rules to retain during memory-compact')
+    p.add_argument('--export-html',action='store_true',help='export single-file offline HTML dashboard during status')
+    p.add_argument('--with-hooks',action='store_true',help='also install PreToolUse/PostToolUse/Stop lifecycle hooks into host settings during setup')
     p.add_argument('--allow-doc-only',action='store_true',help='skip executable TDD test file requirement during doc-only SDD check')
     p.add_argument('--max-diff-ratio',type=float,default=0.0,help='max changed pixel ratio for visual-check')
     p.add_argument('--harness',default='all',help='target harness base for router-materialize or router-dispatch')
@@ -2230,6 +2330,13 @@ def main(argv=None) -> int:
         if a.action in ('setup','install-global'):
             proj_root=project_root(a.project,allow_package=True) if a.project else None
             out=setup_global(apply=a.apply,project_dir=proj_root)
+            if a.with_hooks:
+                abs_cli = f'"{sys.executable}" "{(PACKAGE / "harness/team_cli.py").resolve()}"'
+                out['hooks_setup'] = hook_dispatcher.install_host_hooks(
+                    pathlib.Path.home() / '.claude' / 'settings.json',
+                    abs_cli,
+                    apply=a.apply,
+                )
             _safe_print_json(out)
             return 0
         if a.action=='self-update' or (a.action=='update' and (a.global_scope or not a.project)):
@@ -2245,7 +2352,7 @@ def main(argv=None) -> int:
             out=reconstruct_doctor_check(install_tool=a.install_tool or a.target,apply=a.apply)
             _safe_print_json(out)
             return 0 if out.get('status')=='PASS' else 1
-        if not a.project and a.action in ('status','doctor','config','clean','discover','onboard','guild-camp'):
+        if not a.project and a.action in ('status','doctor','config','clean','discover','onboard','guild-camp','benchmark','hook-dispatch','symbol-map','symbol-slice','checkpoint','squad-merge-check','camp-worker-run','memory-compact','sdd-synthesize'):
             default_dir = pathlib.Path.cwd()
             root = project_root(str(default_dir), allow_package=True, allow_home=False)
             implicit_global = (a.action == 'doctor')
@@ -2260,7 +2367,10 @@ def main(argv=None) -> int:
             try:from . import mcp_server
             except ImportError:import mcp_server  # type: ignore[no-redef]
             return mcp_server.serve_stdio(root)
-        if a.action=='status':out=project_status(root)
+        if a.action=='status':
+            out=project_status(root)
+            if a.export_html:
+                out.update(memory_compactor.export_dashboard_html(root, out, apply=True))
         elif a.action in ('discover','onboard'):out=discover_project_check(root,bootstrap_sdd=a.bootstrap_sdd,apply=a.apply)
         elif a.action=='doctor':out=doctor(root,include_global=(a.global_scope or implicit_global),check_remote=a.check_remote)
         elif a.action=='config':out=manage_project_config(root,ui_rules=a.ui_rules,briefing=a.briefing,state_dir=a.state_dir,req_pattern=a.req_pattern,task_pattern=a.task_pattern,test_pattern=a.test_pattern,verify_cmd=a.verify_cmd,apply=a.apply)
@@ -2287,6 +2397,7 @@ def main(argv=None) -> int:
         elif a.action=='router-dispatch':out=router_dispatch_check(root,a.goal,a.harness,a.previous_response_id)
         elif a.action=='squad-worktree':out=squad_worktree_check(root,a.goal,a.mode,a.apply)
         elif a.action=='guild-camp':out=guild_camp_check(root,a.mode,slot_id=a.slot,goal=a.goal,party_classes=a.party,owned_paths=a.owned_paths,quest_file=a.quest_file or a.target or '',hero_approve=a.hero_approve,apply=a.apply)
+        elif a.action=='camp-worker-run':out=guild_camp_check(root,'worker-run',slot_id=a.slot,quest_file=a.quest_file or a.target or '',apply=a.apply)
         elif a.action=='reconstruct-inspect':out=reconstruct_inspect_check(root,a.target or '')
         elif a.action=='reconstruct-ledger':out=reconstruct_ledger_check(root,a.source or '',a.apply)
         elif a.action=='reconstruct-spec':out=reconstruct_spec_check(root,a.source or 'contaminated-zone',a.apply)
@@ -2299,10 +2410,21 @@ def main(argv=None) -> int:
         elif a.action=='golden-io':out=golden_io_check(root,a.ledger)
         elif a.action=='autopilot-gate':out=autopilot_gate_check(root,a.goal,a.allow_doc_only,a.apply,changed_only=(False if a.all_files else (True if a.changed_only else None)),force_all=a.all_files,base_ref=a.base_ref,verify_cmd=a.verify_cmd)
         elif a.action=='blast-radius':out=blast_radius_check(root,a.target or '',a.apply)
-        elif a.action=='metric-climb':out=metric_climb_check(root,a.cmd,a.metric_regex,a.direction,a.target or '',a.immutable,a.trials,a.confidence,a.goal or 'candidate-experiment',a.apply)
+        elif a.action=='metric-climb':out=metric_climb_check(root,a.cmd,a.metric_regex,a.direction,a.target or '',a.immutable,a.trials,a.confidence,a.goal or 'candidate-experiment',a.auto_rollback,a.apply)
+        elif a.action=='benchmark':out=benchmark_check(root,language=a.language,apply=a.apply)
+        elif a.action=='mutation-check':out=mutation_check_cmd(root,a.target or '',a.cmd or (a.verify_cmd[0] if a.verify_cmd else ''),max_mutants=a.max_mutants,min_score=a.min_score,apply=a.apply)
+        elif a.action=='hook-dispatch':out=hook_dispatch_check(root,event_name=(a.mode if a.mode!='plan' else 'PreToolUse'))
+        elif a.action=='symbol-map':out=symbol_map_check(root,a.target or '')
+        elif a.action=='symbol-slice':out=symbol_slice_check(root,a.target or '',a.goal)
+        elif a.action=='checkpoint':out=checkpoint_check(root,mode=(a.mode if a.mode!='plan' else 'list'),target_rel=a.target or '',label=a.goal or 'golden',apply=a.apply)
+        elif a.action=='squad-merge-check':out=squad_merge_check(root,a.target or a.candidate or '')
+        elif a.action=='memory-compact':out=memory_compact_check(root,max_rules=a.max_rules,apply=a.apply)
+        elif a.action=='sdd-synthesize':out=sdd_synthesize_check(root,language=(a.language if a.language!='all' else 'python'),apply=a.apply)
         else:out=install(root,a.action,a.apply)
         _safe_print_json(out)
-        return 0 if a.action not in ('doctor','verify','app-check','ui-check','route-plan','expand-prompt','next-actions','interview-compile','learn-rule','visual-check','instruction-check','router-dispatch','squad-worktree','guild-camp','reconstruct-inspect','reconstruct-ledger','reconstruct-spec','reconstruct-verify','reconstruct-compare','sdd-ledger','sdd-check','spec-check','audit-code','context-pack','golden-io','autopilot-gate','blast-radius','metric-climb') or out.get('healthy') or out.get('status')=='PASS' else 1
+        if a.action == 'hook-dispatch' and out.get('status') == 'BLOCKED':
+            return 2
+        return 0 if a.action not in ('doctor','verify','app-check','ui-check','route-plan','expand-prompt','next-actions','interview-compile','learn-rule','visual-check','instruction-check','router-dispatch','squad-worktree','guild-camp','camp-worker-run','reconstruct-inspect','reconstruct-ledger','reconstruct-spec','reconstruct-verify','reconstruct-compare','sdd-ledger','sdd-check','spec-check','audit-code','context-pack','golden-io','autopilot-gate','blast-radius','metric-climb','benchmark','mutation-check','symbol-map','symbol-slice','checkpoint','squad-merge-check','memory-compact','sdd-synthesize') or out.get('healthy') or out.get('status') in ('PASS','WARN') else 1
     except (ValueError,TypeError,KeyError,OSError,RuntimeError) as e:
         print(json.dumps({'error':{'code':getattr(e,'code','INSTALL_INPUT_INVALID'),'type':type(e).__name__}},ensure_ascii=False));return 2
 
