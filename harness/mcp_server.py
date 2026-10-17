@@ -527,8 +527,34 @@ def execute_mcp_tool(default_root: Path, tool_name: str, arguments: dict[str, ob
         )
 
     if tool_name == "dreampia_self_update":
+        import importlib
+
         apply_flag = bool(arguments.get("apply", False))
-        return team_cli.self_update(apply=apply_flag)
+        res = team_cli.self_update(apply=apply_flag)
+        reloaded: list[str] = []
+        for mod_suffix in (
+            "write_boundary",
+            "route_planner",
+            "sdd_engine",
+            "reconstruct_engine",
+            "visual_acceptance",
+            "universal_router",
+            "guild_camp",
+            "autopilot_engine",
+            "team_cli",
+        ):
+            for candidate_name in (f"harness.{mod_suffix}", mod_suffix):
+                mod_obj = sys.modules.get(candidate_name)
+                if mod_obj is not None:
+                    try:
+                        importlib.reload(mod_obj)
+                        reloaded.append(candidate_name)
+                    except Exception:
+                        pass
+        if apply_flag:
+            res = team_cli.self_update(apply=True)
+        res["hot_reloaded_modules"] = reloaded
+        return res
 
     if tool_name == "dreampia_clean":
         clean_ev = bool(arguments.get("clean_evidence", False))
